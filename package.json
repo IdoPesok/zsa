@@ -5,7 +5,10 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "postinstall": "manypkg check",
+    "publish-packages": "turbo run build lint && changeset version && changeset publish",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
@@ -20,5 +23,9 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@changesets/cli": "^2.27.1",
+    "@manypkg/cli": "^0.21.4"
+  }
 }

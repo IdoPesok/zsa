@@ -1,0 +1,13 @@
+{
+  "name": "server-actions-wrapper",
+  "version": "0.0.1",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts"
+  },
+  "dependencies": {
+    "typescript": "latest"
+  }
+}
