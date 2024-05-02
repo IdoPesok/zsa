@@ -8,8 +8,9 @@ export type TDataOrErrorAsync<TData> =
   | Promise<[null, TSAWError]>
 
 export type TDataOrError<TData> =
-  | TDataOrErrorSync<TData>
-  | TDataOrErrorAsync<TData>
+  TData extends Promise<any>
+    ? TDataOrErrorAsync<TData>
+    : TDataOrErrorSync<TData>
 
 type TNoHandlerFunc<
   TRet extends any,
@@ -262,7 +263,7 @@ export class ZodSafeFunction<
       }
       throw new SAWError("OUTPUT_PARSE_ERROR", safe.error)
     }
-    return this.$outputSchema.parse(data)
+    return safe.data
   }
 
   public parseOutputData(
@@ -276,7 +277,7 @@ export class ZodSafeFunction<
       }
       throw new SAWError("OUTPUT_PARSE_ERROR", safe.error)
     }
-    return this.$outputSchema.parse(data)
+    return safe.data
   }
 
   public handleError(err: any): [null, TSAWError] {
@@ -307,13 +308,14 @@ export class ZodSafeFunction<
     if (!this.$inputSchema) return data
     const safe = this.$inputSchema.safeParse(data)
     if (!safe.success) {
+      console.log("no success")
       if (this.$onInputParseError) {
         this.$onInputParseError(safe.error)
       }
       throw new SAWError("INPUT_PARSE_ERROR", safe.error)
     }
 
-    return this.$inputSchema.parse(data)
+    return safe.data
   }
 
   public async parseInputDataAsync(
@@ -328,7 +330,7 @@ export class ZodSafeFunction<
       throw new SAWError("INPUT_PARSE_ERROR", safe.error)
     }
 
-    return this.$inputSchema.parse(data)
+    return safe.data
   }
 
   public isAsync = (func: Function): boolean => {
@@ -400,7 +402,10 @@ export class ZodSafeFunction<
       try {
         if (!this.$inputSchema) throw new Error("No input schema")
         const ctx = await this.getProcedureChainOutputAsync()
-        const data = await fn({ input: this.parseInputData(args), ctx })
+        const data = await fn({
+          input: await this.parseInputDataAsync(args),
+          ctx,
+        })
         const parsed = await this.parseOutputDataAsync(data)
         return [parsed, null]
       } catch (err) {

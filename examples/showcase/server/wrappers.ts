@@ -4,24 +4,25 @@ import {
 } from "server-actions-wrapper"
 import { z } from "zod"
 
-const protectedProcedure = createServerActionProcedure().noInputHandler(
-  async () => {
-    return {
-      user: {
-        name: "IDO",
-        id: 1,
-      },
-    }
+const protectedProcedure = createServerActionProcedure().noInputHandler(() => {
+  return {
+    user: {
+      name: "IDO",
+      id: 1,
+      email: "dsfdsfdsf",
+    },
   }
-)
+})
 
 const admin = createServerActionProcedure()
   .input(z.object({ user: z.object({ id: z.number(), name: z.string() }) }))
-  .handler(({ input }) => {
+  .handler(async ({ input }) => {
     if (input.user.id !== 1) throw new Error("You are not authorized")
     return {
       user: input.user,
-    }
+      isAdmin: true,
+      message: `hello ${input.user}`,
+    } as const
   })
 
 const baseAction = createServerActionWrapper().onError((err) => {

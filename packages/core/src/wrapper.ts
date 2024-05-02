@@ -2,7 +2,6 @@ import { SAWError } from "./errors"
 import {
   TAnyZodSafeFunctionHandler,
   TDataOrError,
-  TDataOrErrorAsync,
   TZodSafeFunction,
   TZodSafeFunctionDefaultOmitted,
   ZodSafeFunction,
@@ -70,7 +69,7 @@ class ServerActionWrapper<
   ): TServerActionWrapper<
     Awaited<T>,
     Exclude<TOmitted, "chainProcedure"> | "procedure",
-    T extends TDataOrErrorAsync<any> ? true : false
+    ReturnType<typeof $procedure> extends Promise<any> ? true : false
   > {
     return new ServerActionWrapper({
       procedureChain: [$procedure],
@@ -85,7 +84,7 @@ class ServerActionWrapper<
   ): TServerActionWrapper<
     Awaited<T>,
     TOmitted,
-    T extends TDataOrErrorAsync<any> ? true : TProcedureAsync
+    ReturnType<typeof procedure> extends Promise<any> ? true : TProcedureAsync
   > {
     const temp = [...this.$procedureChain]
     temp.push(procedure)

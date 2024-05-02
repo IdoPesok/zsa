@@ -41,8 +41,8 @@ export default function ClientPlayground() {
           }
 
           const [data, err] = await fakeAction.execute({
-            min: 1000,
-            max: 100,
+            min: 100,
+            max: 1000,
           })
 
           if (err) {

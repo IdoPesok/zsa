@@ -1,7 +1,7 @@
 "use server"
 
 import { z } from "zod"
-import { protectedAction } from "./wrappers"
+import { adminAction, protectedAction } from "./wrappers"
 
 export const generateRandomNumber = protectedAction
   .createAction()
@@ -37,3 +37,5 @@ export const getFakeData = protectedAction
     }
     return Array.from({ length: input.length }, () => Math.random())
   })
+
+const testAction = adminAction.createAction().noInputHandler(({ ctx }) => {})
