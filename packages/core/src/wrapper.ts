@@ -1,30 +1,30 @@
-import { SAWError } from "./errors";
+import { SAWError } from "./errors"
 import {
   TAnyZodSafeFunctionHandler,
   TDataOrError,
   TDataOrErrorAsync,
   TZodSafeFunctionDefaultOmitted,
   ZodSafeFunction,
-} from "./safe-zod-function";
+} from "./safe-zod-function"
 
-export class ServerActionWrapper<
+class ServerActionWrapper<
   TProcedureChainOutput extends any,
   TOmitted extends string,
   TProcedureAsync extends boolean,
 > {
-  $procedureChain: TAnyZodSafeFunctionHandler[] = [];
-  $onError: ((err: SAWError) => any) | undefined;
+  $procedureChain: TAnyZodSafeFunctionHandler[] = []
+  $onError: ((err: SAWError) => any) | undefined
 
   constructor(params?: {
-    procedureChain: TAnyZodSafeFunctionHandler[];
-    onError?: ((err: SAWError) => any) | undefined;
+    procedureChain: TAnyZodSafeFunctionHandler[]
+    onError?: ((err: SAWError) => any) | undefined
   }) {
-    this.$procedureChain = params?.procedureChain || [];
-    this.$onError = params?.onError;
+    this.$procedureChain = params?.procedureChain || []
+    this.$onError = params?.onError
   }
 
   public onError(
-    fn: (err: SAWError) => any,
+    fn: (err: SAWError) => any
   ): Omit<
     ServerActionWrapper<
       TProcedureChainOutput,
@@ -33,12 +33,12 @@ export class ServerActionWrapper<
     >,
     TOmitted
   > {
-    this.$onError = fn;
-    return this as any;
+    this.$onError = fn
+    return this as any
   }
 
   public procedure<T extends () => TDataOrError<any>>(
-    procedure: T,
+    procedure: T
   ): Omit<
     ServerActionWrapper<
       Awaited<ReturnType<T> extends TDataOrError<infer TData> ? TData : never>,
@@ -47,17 +47,17 @@ export class ServerActionWrapper<
     >,
     Exclude<TOmitted, "chainProcedure"> | "procedure"
   > {
-    this.$procedureChain.push(procedure);
+    this.$procedureChain.push(procedure)
     return new ServerActionWrapper({
       procedureChain: this.$procedureChain,
       onError: this.$onError,
-    }) as any;
+    }) as any
   }
 
   public chainProcedure<
     T extends (input: TProcedureChainOutput) => TDataOrError<any>,
   >(
-    procedure: T,
+    procedure: T
   ): Omit<
     ServerActionWrapper<
       Awaited<ReturnType<T> extends TDataOrError<infer TData> ? TData : never>,
@@ -66,12 +66,12 @@ export class ServerActionWrapper<
     >,
     TOmitted
   > {
-    const temp = [...this.$procedureChain];
-    temp.push(procedure);
+    const temp = [...this.$procedureChain]
+    temp.push(procedure)
     return new ServerActionWrapper({
       procedureChain: temp,
       onError: this.$onError,
-    }) as any;
+    }) as any
   }
 
   public createAction(): Omit<
@@ -89,17 +89,15 @@ export class ServerActionWrapper<
       outputSchema: undefined,
       procedureChain: this.$procedureChain,
       onErrorFromWrapper: this.$onError,
-    }) as any;
+    }) as any
   }
 }
 
+type TDefaultOmitted = "$procedureChain" | "chainProcedure" | "$onError"
+
 export function createServerActionWrapper(): Omit<
-  ServerActionWrapper<
-    never,
-    "$procedureChain" | "chainProcedure" | "$onError",
-    false
-  >,
-  "$procedureChain" | "chainProcedure" | "$onError"
+  ServerActionWrapper<undefined, TDefaultOmitted, false>,
+  TDefaultOmitted
 > {
-  return new ServerActionWrapper() as any;
+  return new ServerActionWrapper() as any
 }

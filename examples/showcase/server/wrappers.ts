@@ -1,32 +1,31 @@
-"use server";
+"use server"
 
 import {
+  createServerActionProcedure,
   createServerActionWrapper,
-  createServerActionMiddleware,
-} from "server-actions-wrapper";
-import { z } from "zod";
+} from "server-actions-wrapper"
+import { z } from "zod"
 
-const protectedProcedure = createServerActionMiddleware().noInputHandler(() => {
+const protectedProcedure = createServerActionProcedure().noInputHandler(() => {
   return {
     user: {
       name: "IDO",
       id: 1,
     },
-  };
-});
+  }
+})
 
-const admin = createServerActionMiddleware()
+const admin = createServerActionProcedure()
   .input(z.object({ user: z.object({ id: z.number(), name: z.string() }) }))
   .handler(({ input }) => {
-    if (input.user.id !== 1) throw new Error("You are not authorized");
+    if (input.user.id !== 1) throw new Error("You are not authorized")
     return {
       user: input.user,
-    };
-  });
+    }
+  })
 
-export const protectedWrapper =
-  createServerActionWrapper().middleware(protectedProcedure);
+export const protectedWrapper = createServerActionWrapper()
 
 export const adminWrapper = createServerActionWrapper()
-  .middleware(protectedProcedure)
-  .chainMiddleware(admin);
+  .procedure(protectedProcedure)
+  .chainProcedure(admin)
