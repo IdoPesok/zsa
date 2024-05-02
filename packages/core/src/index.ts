@@ -1,24 +1,22 @@
-import z from "zod"
 import { createServerActionProcedure } from "./procedure"
-import { TAnyZodSafeFunctionHandler } from "./safe-zod-function"
-import { createServerActionWrapper } from "./wrapper"
+import {
+  TAnyZodSafeFunctionHandler,
+  inferServerActionInput,
+  inferServerActionReturnData,
+  inferServerActionReturnType,
+} from "./safe-zod-function"
+import { TCreateAction, createServerActionWrapper } from "./wrapper"
+
+export * from "./errors"
 
 export { createServerActionProcedure, createServerActionWrapper }
 
-export { type TAnyZodSafeFunctionHandler }
-
-const userSchema = z.object({
-  username: z.string(),
-  id: z.number(),
-})
-
-const auth = () => {
-  let num = 5
-  if (num < 5) return null
-  return {
-    username: "idopesok",
-    id: 1,
-  }
+export {
+  type TAnyZodSafeFunctionHandler,
+  type TCreateAction,
+  type inferServerActionInput,
+  type inferServerActionReturnData,
+  type inferServerActionReturnType,
 }
 
 // const main = async () => {

@@ -1,19 +1,19 @@
-"use server"
-
 import {
   createServerActionProcedure,
   createServerActionWrapper,
 } from "server-actions-wrapper"
 import { z } from "zod"
 
-const protectedProcedure = createServerActionProcedure().noInputHandler(() => {
-  return {
-    user: {
-      name: "IDO",
-      id: 1,
-    },
+const protectedProcedure = createServerActionProcedure().noInputHandler(
+  async () => {
+    return {
+      user: {
+        name: "IDO",
+        id: 1,
+      },
+    }
   }
-})
+)
 
 const admin = createServerActionProcedure()
   .input(z.object({ user: z.object({ id: z.number(), name: z.string() }) }))
@@ -24,8 +24,10 @@ const admin = createServerActionProcedure()
     }
   })
 
-export const protectedWrapper = createServerActionWrapper()
+const baseAction = createServerActionWrapper().onError((err) => {
+  console.log("BASE ACTION ERROR", err)
+})
 
-export const adminWrapper = createServerActionWrapper()
-  .procedure(protectedProcedure)
-  .chainProcedure(admin)
+export const protectedAction = baseAction.procedure(protectedProcedure)
+
+export const adminAction = protectedAction.chainProcedure(admin)

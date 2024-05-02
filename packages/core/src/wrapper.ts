@@ -3,16 +3,47 @@ import {
   TAnyZodSafeFunctionHandler,
   TDataOrError,
   TDataOrErrorAsync,
+  TZodSafeFunction,
   TZodSafeFunctionDefaultOmitted,
   ZodSafeFunction,
 } from "./safe-zod-function"
+
+export interface TCreateAction<
+  TProcedureChainOutput extends any,
+  TProcedureAsync extends boolean,
+> extends TZodSafeFunction<
+    undefined,
+    undefined,
+    TZodSafeFunctionDefaultOmitted,
+    TProcedureChainOutput,
+    TProcedureAsync
+  > {}
+
+export interface TServerActionWrapperInner<
+  TProcedureChainOutput extends any,
+  TOmitted extends string,
+  TProcedureAsync extends boolean,
+> extends ServerActionWrapper<
+    TProcedureChainOutput,
+    TOmitted,
+    TProcedureAsync
+  > {}
+
+type TServerActionWrapper<
+  TProcedureChainOutput extends any,
+  TOmitted extends string,
+  TProcedureAsync extends boolean,
+> = Omit<
+  TServerActionWrapperInner<TProcedureChainOutput, TOmitted, TProcedureAsync>,
+  TOmitted
+>
 
 class ServerActionWrapper<
   TProcedureChainOutput extends any,
   TOmitted extends string,
   TProcedureAsync extends boolean,
 > {
-  $procedureChain: TAnyZodSafeFunctionHandler[] = []
+  $procedureChain: TAnyZodSafeFunctionHandler[]
   $onError: ((err: SAWError) => any) | undefined
 
   constructor(params?: {
@@ -25,46 +56,36 @@ class ServerActionWrapper<
 
   public onError(
     fn: (err: SAWError) => any
-  ): Omit<
-    ServerActionWrapper<
-      TProcedureChainOutput,
-      TOmitted | "onError",
-      TProcedureAsync
-    >,
-    TOmitted
+  ): TServerActionWrapper<
+    TProcedureChainOutput,
+    TOmitted | "onError",
+    TProcedureAsync
   > {
     this.$onError = fn
     return this as any
   }
 
-  public procedure<T extends () => TDataOrError<any>>(
-    procedure: T
-  ): Omit<
-    ServerActionWrapper<
-      Awaited<ReturnType<T> extends TDataOrError<infer TData> ? TData : never>,
-      Exclude<TOmitted, "chainProcedure"> | "procedure",
-      ReturnType<T> extends TDataOrErrorAsync<any> ? true : TProcedureAsync
-    >,
-    Exclude<TOmitted, "chainProcedure"> | "procedure"
+  public procedure<T extends any>(
+    $procedure: () => TDataOrError<T>
+  ): TServerActionWrapper<
+    Awaited<T>,
+    Exclude<TOmitted, "chainProcedure"> | "procedure",
+    T extends TDataOrErrorAsync<any> ? true : false
   > {
-    this.$procedureChain.push(procedure)
     return new ServerActionWrapper({
-      procedureChain: this.$procedureChain,
+      procedureChain: [$procedure],
       onError: this.$onError,
     }) as any
   }
 
-  public chainProcedure<
-    T extends (input: TProcedureChainOutput) => TDataOrError<any>,
-  >(
-    procedure: T
-  ): Omit<
-    ServerActionWrapper<
-      Awaited<ReturnType<T> extends TDataOrError<infer TData> ? TData : never>,
-      TOmitted,
-      ReturnType<T> extends TDataOrErrorAsync<any> ? true : TProcedureAsync
-    >,
-    TOmitted
+  public chainProcedure<T extends any>(
+    procedure: TProcedureChainOutput extends undefined
+      ? () => TDataOrError<T>
+      : (input: TProcedureChainOutput) => TDataOrError<T>
+  ): TServerActionWrapper<
+    Awaited<T>,
+    TOmitted,
+    T extends TDataOrErrorAsync<any> ? true : TProcedureAsync
   > {
     const temp = [...this.$procedureChain]
     temp.push(procedure)
@@ -74,16 +95,7 @@ class ServerActionWrapper<
     }) as any
   }
 
-  public createAction(): Omit<
-    ZodSafeFunction<
-      undefined,
-      undefined,
-      TZodSafeFunctionDefaultOmitted,
-      TProcedureChainOutput,
-      TProcedureAsync
-    >,
-    TZodSafeFunctionDefaultOmitted
-  > {
+  public createAction(): TCreateAction<TProcedureChainOutput, TProcedureAsync> {
     return new ZodSafeFunction({
       inputSchema: undefined,
       outputSchema: undefined,
@@ -93,11 +105,10 @@ class ServerActionWrapper<
   }
 }
 
-type TDefaultOmitted = "$procedureChain" | "chainProcedure" | "$onError"
-
-export function createServerActionWrapper(): Omit<
-  ServerActionWrapper<undefined, TDefaultOmitted, false>,
-  TDefaultOmitted
+export function createServerActionWrapper(): TServerActionWrapper<
+  undefined,
+  "$procedureChain" | "chainProcedure" | "$onError",
+  false
 > {
   return new ServerActionWrapper() as any
 }

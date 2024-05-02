@@ -111,7 +111,7 @@ export const useServerAction = <
   const [result, setResult] = useState<{
     isError: boolean
     error: undefined | unknown
-    data: undefined | Awaited<ReturnType<TServerAction>>
+    data: undefined | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
   }>({
     isError: false,
     error: undefined,
@@ -128,29 +128,24 @@ export const useServerAction = <
       input: Parameters<TServerAction>[0]
     ): Promise<Awaited<ReturnType<TServerAction>>> => {
       setIsExecuting(true)
+      setInput(input)
 
-      try {
-        setInput(input)
+      const [data, err] = await serverAction(input)
 
-        const [data, err] = await serverAction(input)
-
-        if (err) {
-          throw err
-        }
-
-        setResult({
-          isError: false,
-          error: undefined,
-          data: data ?? undefined,
-        })
+      if (err) {
+        setResult({ error: err, isError: true, data: undefined })
         setIsExecuting(false)
-
-        return data
-      } catch (e) {
-        setResult({ error: e, isError: true, data: undefined })
-        setIsExecuting(false)
-        throw e
+        return [data, err] as any
       }
+
+      setResult({
+        isError: false,
+        error: undefined,
+        data: data ?? undefined,
+      })
+      setIsExecuting(false)
+
+      return [data, err] as any
     },
     [serverAction]
   )
