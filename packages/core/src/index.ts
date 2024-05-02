@@ -1,37 +1,69 @@
-import { z } from "zod";
-import { createServerActionMiddleware } from "./middleware";
+import z from "zod";
+import { createServerActionProcedure } from "./procedure";
 import { createServerActionWrapper } from "./wrapper";
+import { SAWError } from "./errors";
+
+export {
+  createServerActionProcedure as createServerActionMiddleware,
+  createServerActionWrapper,
+};
+
+const userSchema = z.object({
+  username: z.string(),
+  id: z.number(),
+});
+
+const auth = () => {
+  let num = 5;
+  if (num < 5) return null;
+  return {
+    username: "idopesok",
+    id: 1,
+  };
+};
 
 const main = async () => {
-  const first = createServerActionMiddleware().noInputHandler(() => {
-    return {
-      name: "IDO",
-    };
-  });
+  const protectedProcedure = createServerActionProcedure().noInputHandler(
+    () => {
+      const user = auth();
+      if (!user) throw new SAWError("NOT_AUTHORIZED");
+      return { user };
+    },
+  );
 
-  const second = createServerActionMiddleware()
-    .input(z.object({ name: z.string() }))
-    .ouptut(z.object({ greeting: z.string() }))
+  const adminProcedure = createServerActionProcedure()
+    .input(z.object({ user: userSchema }))
     .handler(({ input }) => {
+      if (input.user.id !== 1) throw new SAWError("NOT_AUTHORIZED");
       return {
-        greeting: `Hello ${input.name}!`,
+        user: {
+          ...input.user,
+          isAdmin: true,
+        },
       } as const;
     });
 
-  const wrapper = createServerActionWrapper()
-    .middleware(first)
-    .chainMiddleware(second);
-
-  const myAction = wrapper
-    .createAction()
+  const protectedAction = createServerActionWrapper()
     .onError((err) => {
       console.log("LOGGIN ERROR", err);
     })
-    .noInputHandler(({ ctx }) => {
-      return ctx.greeting;
+    .procedure(protectedProcedure);
+
+  const adminAction = protectedAction.chainProcedure(adminProcedure);
+
+  const getAdminGreeting = adminAction
+    .createAction()
+    .input(z.object({ message: z.string() }).default({ message: "Take care!" }))
+    .onError((err) => {
+      console.log("LOGGIN ERROR", err);
+    })
+    .handler(({ input, ctx }) => {
+      return {
+        greeting: `Hi ${ctx.user.username}. ${input.message}`,
+      };
     });
 
-  const [data, err] = myAction();
+  const [data, err] = getAdminGreeting({ message: "Have a wonderful day!" });
 
   if (err) {
     return;
@@ -42,83 +74,3 @@ const main = async () => {
 };
 
 main();
-
-// export const createServerActionWrapper = <
-//   TMiddlewareInput extends TMiddlewareObject<any> | undefined,
-// >(args?: {
-//   middleware?: TMiddlewareInput
-// }) => {};
-
-// createServerActionWrapper({
-//   middleware: {
-//     input: z.object({
-//       name: z.string()
-//     }),
-//     handler: (args) => {
-//       args.name
-//     }
-//   }
-// })
-
-// class ServerAction<
-//   TInputSchema extends z.AnyZodObject | undefined,
-//   TOutputSchema extends z.AnyZodObject | undefined,
-//   TMiddlewareFn extends TFunc,
-// > {
-//   public inputSchema: TInputSchema;
-//   public outputSchema: TOutputSchema;
-//   public middlewareFn: TMiddlewareFn;
-
-//   constructor(params: {
-//     middlewareFn: TMiddlewareFn;
-//     inputSchema: TInputSchema;
-//     outputSchema: TOutputSchema;
-//   }) {
-//     this.inputSchema = params.inputSchema;
-//     this.outputSchema = params.outputSchema;
-//     this.middlewareFn = params.middlewareFn;
-//   }
-
-//   public input(schema: z.AnyZodObject) {
-//     return new ServerAction({
-//       middlewareFn: this.middlewareFn,
-//       inputSchema: schema,
-//       outputSchema: this.outputSchema,
-//     });
-//   }
-
-//   public ouptut(schema: z.AnyZodObject) {
-//     return new ServerAction({
-//       middlewareFn: this.middlewareFn,
-//       inputSchema: this.inputSchema,
-//       outputSchema: schema,
-//     });
-//   }
-
-//   public handler<
-//     TReturnType extends TOutputSchema extends z.AnyZodObject
-//       ? z.output<TOutputSchema>
-//       : any,
-//   >(
-//     fn: (
-//       args: (Parameters<TMiddlewareFn>[0] extends infer T
-//         ? T extends z.AnyZodObject
-//           ? z.input<T>
-//           : {}
-//         : {}) &
-//         (TInputSchema extends z.AnyZodObject ? z.input<TInputSchema> : {}),
-//       context: ReturnType<TMiddlewareFn>
-//     ) => TReturnType
-//   ) {
-//     const wrapper = (args: Parameters<typeof fn>[0]) => {
-//       const context = this.middlewareFn(fn);
-//       const data = fn(args, context);
-
-//       if (!this.outputSchema) return data;
-
-//       return this.outputSchema.parse(data);
-//     };
-
-//     return wrapper;
-//   }
-// }

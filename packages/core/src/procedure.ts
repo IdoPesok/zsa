@@ -1,5 +1,5 @@
 import { createZodSafeFunction } from "./safe-zod-function";
 
-export const createServerActionMiddleware = () => {
+export const createServerActionProcedure = () => {
   return createZodSafeFunction();
 };

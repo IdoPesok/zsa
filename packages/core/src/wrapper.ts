@@ -1,3 +1,4 @@
+import { SAWError } from "./errors";
 import {
   TAnyZodSafeFunctionHandler,
   TDataOrError,
@@ -7,64 +8,98 @@ import {
 } from "./safe-zod-function";
 
 export class ServerActionWrapper<
-  TMiddlewareChainOutput extends any,
+  TProcedureChainOutput extends any,
   TOmitted extends string,
-  IsMiddlewareAsync extends boolean,
+  TProcedureAsync extends boolean,
 > {
-  $middlewareChain: TAnyZodSafeFunctionHandler[] = [];
+  $procedureChain: TAnyZodSafeFunctionHandler[] = [];
+  $onError: ((err: SAWError) => any) | undefined;
 
-  public middleware<T extends () => TDataOrError<any>>(middleware: T) {
-    type TNewOmitted = Exclude<TOmitted, "chainMiddleware"> | "middleware";
-    this.$middlewareChain.push(middleware);
-    return this as Omit<
-      ServerActionWrapper<
-        Awaited<
-          ReturnType<T> extends TDataOrError<infer TData> ? TData : never
-        >,
-        TNewOmitted,
-        ReturnType<T> extends TDataOrErrorAsync<any> ? true : IsMiddlewareAsync
-      >,
-      TNewOmitted
-    >;
+  constructor(params?: {
+    procedureChain: TAnyZodSafeFunctionHandler[];
+    onError?: ((err: SAWError) => any) | undefined;
+  }) {
+    this.$procedureChain = params?.procedureChain || [];
+    this.$onError = params?.onError;
   }
 
-  public chainMiddleware<
-    T extends (input: TMiddlewareChainOutput) => TDataOrError<any>,
-  >(middleware: T) {
-    this.$middlewareChain.push(middleware);
-    return this as Omit<
-      ServerActionWrapper<
-        Awaited<
-          ReturnType<T> extends TDataOrError<infer TData> ? TData : never
-        >,
-        TOmitted,
-        ReturnType<T> extends TDataOrErrorAsync<any> ? true : IsMiddlewareAsync
-      >,
-      TOmitted
-    >;
+  public onError(
+    fn: (err: SAWError) => any,
+  ): Omit<
+    ServerActionWrapper<
+      TProcedureChainOutput,
+      TOmitted | "onError",
+      TProcedureAsync
+    >,
+    TOmitted
+  > {
+    this.$onError = fn;
+    return this as any;
   }
 
-  public createAction() {
+  public procedure<T extends () => TDataOrError<any>>(
+    procedure: T,
+  ): Omit<
+    ServerActionWrapper<
+      Awaited<ReturnType<T> extends TDataOrError<infer TData> ? TData : never>,
+      Exclude<TOmitted, "chainProcedure"> | "procedure",
+      ReturnType<T> extends TDataOrErrorAsync<any> ? true : TProcedureAsync
+    >,
+    Exclude<TOmitted, "chainProcedure"> | "procedure"
+  > {
+    this.$procedureChain.push(procedure);
+    return new ServerActionWrapper({
+      procedureChain: this.$procedureChain,
+      onError: this.$onError,
+    }) as any;
+  }
+
+  public chainProcedure<
+    T extends (input: TProcedureChainOutput) => TDataOrError<any>,
+  >(
+    procedure: T,
+  ): Omit<
+    ServerActionWrapper<
+      Awaited<ReturnType<T> extends TDataOrError<infer TData> ? TData : never>,
+      TOmitted,
+      ReturnType<T> extends TDataOrErrorAsync<any> ? true : TProcedureAsync
+    >,
+    TOmitted
+  > {
+    const temp = [...this.$procedureChain];
+    temp.push(procedure);
+    return new ServerActionWrapper({
+      procedureChain: temp,
+      onError: this.$onError,
+    }) as any;
+  }
+
+  public createAction(): Omit<
+    ZodSafeFunction<
+      undefined,
+      undefined,
+      TZodSafeFunctionDefaultOmitted,
+      TProcedureChainOutput,
+      TProcedureAsync
+    >,
+    TZodSafeFunctionDefaultOmitted
+  > {
     return new ZodSafeFunction({
       inputSchema: undefined,
       outputSchema: undefined,
-      middlewareChain: this.$middlewareChain,
-    }) as Omit<
-      ZodSafeFunction<
-        undefined,
-        undefined,
-        TZodSafeFunctionDefaultOmitted,
-        TMiddlewareChainOutput,
-        IsMiddlewareAsync
-      >,
-      TZodSafeFunctionDefaultOmitted
-    >;
+      procedureChain: this.$procedureChain,
+      onErrorFromWrapper: this.$onError,
+    }) as any;
   }
 }
 
-export const createServerActionWrapper = () => {
-  return new ServerActionWrapper() as Omit<
-    ServerActionWrapper<never, "$middlewareChain" | "chainMiddleware", false>,
-    "$middlewareChain" | "chainMiddleware"
-  >;
-};
+export function createServerActionWrapper(): Omit<
+  ServerActionWrapper<
+    never,
+    "$procedureChain" | "chainProcedure" | "$onError",
+    false
+  >,
+  "$procedureChain" | "chainProcedure" | "$onError"
+> {
+  return new ServerActionWrapper() as any;
+}
