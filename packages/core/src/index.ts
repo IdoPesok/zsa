@@ -12,10 +12,7 @@ const main = async () => {
   const second = createServerActionMiddleware()
     .input(z.object({ name: z.string() }))
     .ouptut(z.object({ greeting: z.string() }))
-    .handler(async ({ input }) => {
-      console.log("made it to the second handler", new Date().getTime());
-      await new Promise((r) => setTimeout(r, 5000));
-      console.log("passed", new Date().getTime());
+    .handler(({ input }) => {
       return {
         greeting: `Hello ${input.name}!`,
       } as const;
@@ -28,13 +25,13 @@ const main = async () => {
   const myAction = wrapper
     .createAction()
     .onError((err) => {
-      console.log("LOGGIN ERROR");
+      console.log("LOGGIN ERROR", err);
     })
     .noInputHandler(({ ctx }) => {
       return ctx.greeting;
     });
 
-  const [data, err] = await myAction();
+  const [data, err] = myAction();
 
   if (err) {
     return;

@@ -94,7 +94,6 @@ export class ZodSafeFunction<
     for (let i = 0; i < this.$middlewareChain.length; i += 1) {
       const fn = this.$middlewareChain[i]!;
       const [data, err] = await fn(accData);
-
       if (err) {
         throw err;
       }
@@ -300,7 +299,7 @@ export class ZodSafeFunction<
       try {
         if (!this.$inputSchema) throw new Error("No input schema");
         const ctx = this.getMiddlewareChainOutput();
-        const data = fn(this.parseInputData({ input: args, ctx }));
+        const data = fn({ input: this.parseInputData(args), ctx });
         return [this.parseOutputData(data), null];
       } catch (err) {
         return this.handleError(err);
