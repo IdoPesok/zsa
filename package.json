@@ -11,9 +11,11 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.2.1",
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "prettier": "^3.2.5",
+    "prettier-plugin-organize-imports": "^3.2.4",
     "turbo": "latest"
   },
   "engines": {
@@ -21,11 +23,12 @@
   },
   "packageManager": "npm@10.2.3",
   "workspaces": [
-    "apps/*",
+    "examples/*",
     "packages/*"
   ],
   "dependencies": {
     "@changesets/cli": "^2.27.1",
-    "@manypkg/cli": "^0.21.4"
+    "@manypkg/cli": "^0.21.4",
+    "zod": "^3.23.5"
   }
 }

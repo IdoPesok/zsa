@@ -1,11 +1,27 @@
 {
   "name": "server-actions-wrapper",
   "version": "0.0.1",
-  "exports": {
-    ".": "./src/index.ts"
+  "publishConfig": {
+    "access": "public"
   },
+  "files": [
+    "dist/**"
+  ],
+  "sideEffects": false,
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts"
+    "lint": "eslint .",
+    "lint:fix": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format:write": "prettier --write \"**/*.{ts,tsx,mdx}\" --cache",
+    "format:check": "prettier --check \"**/*.{ts,tsx,mdx}\" --cache",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "typecheck": "tsc --noEmit",
+    "dev": "npm run build -- --watch",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
   "dependencies": {
     "typescript": "latest"

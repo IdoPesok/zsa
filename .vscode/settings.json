@@ -1,8 +1,7 @@
 {
   "eslint.workingDirectories": [
-    { "pattern": "apps/*/" },
-    { "pattern": "packages/*/" },
-    { "pattern": "tools/*/" }
+    { "pattern": "examples/*/" },
+    { "pattern": "packages/*/" }
   ],
   "tailwindCSS.experimental.classRegex": [
     ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
