@@ -19,25 +19,34 @@ export interface TCreateAction<
   > {}
 
 export interface TServerActionWrapperInner<
+  TProcedureChainInput extends any,
   TProcedureChainOutput extends any,
   TOmitted extends string,
   TProcedureAsync extends boolean,
 > extends ServerActionWrapper<
+    TProcedureChainInput,
     TProcedureChainOutput,
     TOmitted,
     TProcedureAsync
   > {}
 
 type TServerActionWrapper<
+  TProcedureChainInput extends any,
   TProcedureChainOutput extends any,
   TOmitted extends string,
   TProcedureAsync extends boolean,
 > = Omit<
-  TServerActionWrapperInner<TProcedureChainOutput, TOmitted, TProcedureAsync>,
+  TServerActionWrapperInner<
+    TProcedureChainInput,
+    TProcedureChainOutput,
+    TOmitted,
+    TProcedureAsync
+  >,
   TOmitted
 >
 
 class ServerActionWrapper<
+  TProcedureChainInput extends any,
   TProcedureChainOutput extends any,
   TOmitted extends string,
   TProcedureAsync extends boolean,
@@ -56,6 +65,7 @@ class ServerActionWrapper<
   public onError(
     fn: (err: SAWError) => any
   ): TServerActionWrapper<
+    TProcedureChainInput,
     TProcedureChainOutput,
     TOmitted | "onError",
     TProcedureAsync
@@ -64,11 +74,20 @@ class ServerActionWrapper<
     return this as any
   }
 
-  public procedure<T extends any>(
-    $procedure: () => TDataOrError<T>
+  public procedure<T extends any, TInput extends any>(
+    $procedure: (() => TDataOrError<T>) | ((input: TInput) => TDataOrError<T>)
   ): TServerActionWrapper<
+    TInput,
     Awaited<T>,
-    Exclude<TOmitted, "chainProcedure"> | "procedure",
+    | Exclude<
+        TOmitted,
+        TInput extends { [key: string]: any }
+          ? "createActionWithProcedureInput" | "chainProcedure"
+          : "chainProcedure"
+      >
+    | (TInput extends { [key: string]: any }
+        ? "createAction" | "procedure"
+        : "procedure"),
     ReturnType<typeof $procedure> extends Promise<any> ? true : false
   > {
     return new ServerActionWrapper({
@@ -82,6 +101,7 @@ class ServerActionWrapper<
       ? () => TDataOrError<T>
       : (input: TProcedureChainOutput) => TDataOrError<T>
   ): TServerActionWrapper<
+    TProcedureChainInput,
     Awaited<T>,
     TOmitted,
     ReturnType<typeof procedure> extends Promise<any> ? true : TProcedureAsync
@@ -102,11 +122,27 @@ class ServerActionWrapper<
       onErrorFromWrapper: this.$onError,
     }) as any
   }
+
+  public createActionWithProcedureInput(
+    input: TProcedureChainInput
+  ): TCreateAction<TProcedureChainOutput, TProcedureAsync> {
+    return new ZodSafeFunction({
+      inputSchema: undefined,
+      outputSchema: undefined,
+      procedureChain: this.$procedureChain,
+      onErrorFromWrapper: this.$onError,
+      firstProcedureInput: input,
+    }) as any
+  }
 }
 
 export function createServerActionWrapper(): TServerActionWrapper<
   undefined,
-  "$procedureChain" | "chainProcedure" | "$onError",
+  undefined,
+  | "$procedureChain"
+  | "chainProcedure"
+  | "$onError"
+  | "createActionWithProcedureInput",
   false
 > {
   return new ServerActionWrapper() as any

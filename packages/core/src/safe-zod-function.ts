@@ -42,6 +42,8 @@ const DefaultOmitted = {
   $onOutputParseError: 1,
   $onError: 1,
   onInputParseError: 1,
+  parseInputDataAsync: 1,
+  parseOutputDataAsync: 1,
   $onErrorFromWrapper: 1,
   procedureChain: 1,
   getParams: 1,
@@ -52,6 +54,7 @@ const DefaultOmitted = {
   isAsync: 1,
   onOutputParseError: 1,
   $procedureChain: 1,
+  $firstProcedureInput: 1,
 } as const
 
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
@@ -117,6 +120,7 @@ export class ZodSafeFunction<
   public $onOutputParseError: ((err: any) => any) | undefined
   public $onError: ((err: SAWError) => any) | undefined
   public $onErrorFromWrapper: ((err: SAWError) => any) | undefined
+  public $firstProcedureInput: any
 
   constructor(params: {
     inputSchema: TInputSchema
@@ -126,6 +130,7 @@ export class ZodSafeFunction<
     onError?: ((err: SAWError) => any) | undefined
     procedureChain?: TAnyZodSafeFunctionHandler[]
     onErrorFromWrapper?: ((err: SAWError) => any) | undefined
+    firstProcedureInput?: any
   }) {
     this.$inputSchema = params.inputSchema
     this.$outputSchema = params.outputSchema
@@ -134,6 +139,7 @@ export class ZodSafeFunction<
     this.$onError = params.onError
     this.$procedureChain = params.procedureChain || []
     this.$onErrorFromWrapper = params.onErrorFromWrapper
+    this.$firstProcedureInput = params.firstProcedureInput
   }
 
   public getParams() {
@@ -149,7 +155,7 @@ export class ZodSafeFunction<
   }
 
   public getProcedureChainOutput(): TProcedureChainOutput {
-    let accData
+    let accData = this.$firstProcedureInput
     for (let i = 0; i < this.$procedureChain.length; i += 1) {
       const fn = this.$procedureChain[i]! as TAnyZodSafeFunctionSyncHandler
       const [data, err] = fn(accData)
@@ -163,7 +169,7 @@ export class ZodSafeFunction<
   }
 
   public async getProcedureChainOutputAsync(): Promise<TProcedureChainOutput> {
-    let accData
+    let accData = this.$firstProcedureInput
     for (let i = 0; i < this.$procedureChain.length; i += 1) {
       const fn = this.$procedureChain[i]!
       const [data, err] = await fn(accData)

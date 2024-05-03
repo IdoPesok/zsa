@@ -4,15 +4,21 @@ import {
 } from "server-actions-wrapper"
 import { z } from "zod"
 
-const protectedProcedure = createServerActionProcedure().noInputHandler(() => {
-  return {
-    user: {
-      name: "IDO",
-      id: 1,
-      email: "dsfdsfdsf",
-    },
-  }
-})
+const protectedProcedure = createServerActionProcedure()
+  .input(
+    z.object({
+      test: z.string(),
+    })
+  )
+  .handler(() => {
+    return {
+      user: {
+        name: "IDO",
+        id: 1,
+        email: "dsfdsfdsf",
+      },
+    }
+  })
 
 const admin = createServerActionProcedure()
   .input(z.object({ user: z.object({ id: z.number(), name: z.string() }) }))

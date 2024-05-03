@@ -5,7 +5,9 @@ import { z } from "zod"
 import { adminAction, protectedAction } from "./wrappers"
 
 export const generateRandomNumber = protectedAction
-  .createAction()
+  .createActionWithProcedureInput({
+    test: "sdfsdfasf",
+  })
   .input(
     z
       .object({
@@ -22,7 +24,9 @@ export const generateRandomNumber = protectedAction
   })
 
 export const searchContacts = protectedAction
-  .createAction()
+  .createActionWithProcedureInput({
+    test: "sdflkjsdfsa",
+  })
   .input(
     z.object({
       query: z.string().min(1),
@@ -38,7 +42,9 @@ export const searchContacts = protectedAction
   })
 
 export const getFakeData = protectedAction
-  .createAction()
+  .createActionWithProcedureInput({
+    test: "dsfsfdsakfjlsdjf",
+  })
   .input(
     z
       .object({
@@ -54,4 +60,8 @@ export const getFakeData = protectedAction
     return Array.from({ length: input.length }, () => Math.random())
   })
 
-const testAction = adminAction.createAction().noInputHandler(({ ctx }) => {})
+const testAction = adminAction
+  .createActionWithProcedureInput({
+    test: "sdfdsfsafafsd",
+  })
+  .noInputHandler(({ ctx }) => {})
