@@ -509,10 +509,7 @@ export class ZodSafeFunction<
     }
   }
 
-  public async handleError(
-    err: any,
-    timeoutStatus: TimeoutStatus
-  ): Promise<[null, TSAWError]> {
+  public async handleError(err: any): Promise<[null, TSAWError]> {
     const customError =
       err instanceof SAWError ? err : new SAWError("ERROR", err)
 
@@ -603,7 +600,7 @@ export class ZodSafeFunction<
 
         return [parsed, null]
       } catch (err) {
-        return await this.handleError(err, timeoutStatus)
+        return await this.handleError(err)
       }
     }
 
@@ -617,7 +614,7 @@ export class ZodSafeFunction<
         .then((r) => r)
         .catch(async (err) => {
           timeoutStatus.isTimeout = true
-          return await this.handleError(err, timeoutStatus)
+          return await this.handleError(err)
         })
     }
 
@@ -670,7 +667,7 @@ export class ZodSafeFunction<
 
         return [parsed, null]
       } catch (err) {
-        return await this.handleError(err, timeoutStatus)
+        return await this.handleError(err)
       }
     }
 
@@ -684,7 +681,7 @@ export class ZodSafeFunction<
         .then((r) => r)
         .catch((err) => {
           timeoutStatus.isTimeout = true
-          return this.handleError(err, timeoutStatus)
+          return this.handleError(err)
         })
     }
 
