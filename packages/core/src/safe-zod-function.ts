@@ -1,60 +1,47 @@
 import { z } from "zod"
 import { SAWError, TSAWError } from "./errors"
 
-export type TDataOrErrorSync<TData> = [TData, null] | [null, TSAWError]
-
-export type TDataOrErrorAsync<TData> =
+export type TDataOrError<TData> =
   | Promise<[Awaited<TData>, null]>
   | Promise<[null, TSAWError]>
 
-export type TDataOrError<TData> =
-  TData extends Promise<any>
-    ? TDataOrErrorAsync<TData>
-    : TDataOrErrorSync<TData>
-
-type TNoHandlerFunc<
-  TRet extends any,
-  TProcedureAsync extends boolean,
-> = () => TRet extends Promise<any>
-  ? TDataOrErrorAsync<TRet>
-  : TProcedureAsync extends true
-    ? TDataOrErrorAsync<TRet>
-    : TDataOrErrorSync<TRet>
+type TNoHandlerFunc<TRet extends any> = () => TDataOrError<TRet>
 
 type THandlerFunc<
   TInputSchema extends TZodObject | undefined,
   TRet extends any,
-  TProcedureAsync extends boolean,
 > = (
   args: z.input<TInputSchema extends TZodObject ? TInputSchema : z.ZodAny>
-) => TRet extends Promise<any>
-  ? TDataOrErrorAsync<TRet>
-  : TProcedureAsync extends true
-    ? TDataOrErrorAsync<TRet>
-    : TDataOrErrorSync<TRet>
+) => TDataOrError<TRet>
 
 const DefaultOmitted = {
   $inputSchema: 1,
   $outputSchema: 1,
   handler: 1,
   handleError: 1,
+  getErrorObject: 1,
   $onInputParseError: 1,
   $onOutputParseError: 1,
   $onError: 1,
   onInputParseError: 1,
-  parseInputDataAsync: 1,
-  parseOutputDataAsync: 1,
   $onErrorFromWrapper: 1,
+  $onStartFromWrapper: 1,
+  $onSuccessFromWrapper: 1,
+  $onCompleteFromWrapper: 1,
   procedureChain: 1,
   getParams: 1,
   getProcedureChainOutput: 1,
-  getProcedureChainOutputAsync: 1,
+  handleSuccess: 1,
+  handleStart: 1,
   parseInputData: 1,
   parseOutputData: 1,
-  isAsync: 1,
   onOutputParseError: 1,
   $procedureChain: 1,
   $firstProcedureInput: 1,
+  $id: 1,
+  $onStartFn: 1,
+  $onSuccessFn: 1,
+  $onCompleteFn: 1,
 } as const
 
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
@@ -63,11 +50,7 @@ export type TAnyZodSafeFunctionHandler =
   | ((input: any) => TDataOrError<any>)
   | (() => TDataOrError<any>)
 
-type TAnyZodSafeFunctionSyncHandler =
-  | ((input: any) => TDataOrErrorSync<any>)
-  | (() => TDataOrErrorSync<any>)
-
-export type TAnyZodSafeFunction = ZodSafeFunction<any, any, any, any, any>
+export type TAnyZodSafeFunction = ZodSafeFunction<any, any, any, any>
 
 export type TZodObject =
   | z.ZodDefault<z.AnyZodObject>
@@ -80,13 +63,11 @@ interface TZodSafeFunctionInner<
   TOutputSchema extends TZodObject | undefined,
   TOmitted extends string,
   TProcedureChainOutput extends any,
-  TProcedureAsync extends boolean,
 > extends ZodSafeFunction<
     TInputSchema,
     TOutputSchema,
     TOmitted,
-    TProcedureChainOutput,
-    TProcedureAsync
+    TProcedureChainOutput
   > {}
 
 export type TZodSafeFunction<
@@ -94,52 +75,151 @@ export type TZodSafeFunction<
   TOutputSchema extends TZodObject | undefined,
   TOmitted extends string,
   TProcedureChainOutput extends any,
-  TProcedureAsync extends boolean,
 > = Omit<
   TZodSafeFunctionInner<
     TInputSchema,
     TOutputSchema,
     TOmitted,
-    TProcedureChainOutput,
-    TProcedureAsync
+    TProcedureChainOutput
   >,
   TOmitted
 >
+
+interface TOnStartFn<TInputSchema extends TZodObject | undefined> {
+  (value: {
+    args: TInputSchema extends TZodObject ? z.input<TInputSchema> : undefined
+  }): any
+}
+
+interface TOnSuccessFn<
+  TInputSchema extends TZodObject | undefined,
+  TOutputSchema extends TZodObject | undefined,
+> {
+  (value: {
+    args: TInputSchema extends TZodObject ? z.input<TInputSchema> : undefined
+    data: TOutputSchema extends TZodObject ? z.output<TOutputSchema> : any
+  }): any
+}
+
+interface TOnCompleteFn<
+  TInputSchema extends TZodObject | undefined,
+  TOutputSchema extends TZodObject | undefined,
+> {
+  (
+    value:
+      | {
+          isSuccess: true
+          isError: false
+          status: "success"
+          args: TInputSchema extends TZodObject
+            ? z.input<TInputSchema>
+            : undefined
+          data: TOutputSchema extends TZodObject ? z.output<TOutputSchema> : any
+        }
+      | {
+          isSuccess: false
+          isError: true
+          status: "error"
+          error: SAWError
+        }
+  ): any
+}
+
+type TId = string | undefined
+
+export interface TOnStartFnFromWrapper {
+  (value: { args: unknown; id: TId }): any
+}
+
+export interface TOnSuccessFnFromWrapper {
+  (value: { args: unknown; data: unknown; id: TId }): any
+}
+
+export interface TOnCompleteFnFromWrapper {
+  (
+    value:
+      | {
+          isSuccess: true
+          isError: false
+          status: "success"
+          args: unknown
+          data: unknown
+          id: TId
+        }
+      | {
+          isSuccess: false
+          isError: true
+          status: "error"
+          error: SAWError
+          id: TId
+        }
+  ): any
+}
+
+export interface TOnErrorFnFromWrapper {
+  (value: { err: SAWError; id: TId }): any
+}
 
 export class ZodSafeFunction<
   TInputSchema extends TZodObject | undefined,
   TOutputSchema extends TZodObject | undefined,
   TOmitted extends string,
   TProcedureChainOutput extends any,
-  TProcedureAsync extends boolean,
 > {
   public $procedureChain: TAnyZodSafeFunctionHandler[] = []
   public $inputSchema: TInputSchema
   public $outputSchema: TOutputSchema
   public $onInputParseError: ((err: any) => any) | undefined
   public $onOutputParseError: ((err: any) => any) | undefined
-  public $onError: ((err: SAWError) => any) | undefined
-  public $onErrorFromWrapper: ((err: SAWError) => any) | undefined
   public $firstProcedureInput: any
+  public $id: string | undefined
+
+  public $onError: ((err: SAWError) => any) | undefined
+  public $onStartFn: TOnStartFn<TInputSchema> | undefined
+  public $onSuccessFn: TOnSuccessFn<TInputSchema, TOutputSchema> | undefined
+  public $onCompleteFn: TOnCompleteFn<TInputSchema, TOutputSchema> | undefined
+
+  public $onErrorFromWrapper: TOnErrorFnFromWrapper | undefined
+  public $onStartFromWrapper: TOnStartFnFromWrapper | undefined
+  public $onSuccessFromWrapper: TOnSuccessFnFromWrapper | undefined
+  public $onCompleteFromWrapper: TOnCompleteFnFromWrapper | undefined
 
   constructor(params: {
     inputSchema: TInputSchema
     outputSchema: TOutputSchema
     onInputParseError?: ((err: z.ZodError<TInputSchema>) => any) | undefined
     onOutputParseError?: ((err: z.ZodError<TOutputSchema>) => any) | undefined
-    onError?: ((err: SAWError) => any) | undefined
     procedureChain?: TAnyZodSafeFunctionHandler[]
-    onErrorFromWrapper?: ((err: SAWError) => any) | undefined
     firstProcedureInput?: any
+    id?: string | undefined
+
+    onError?: ((err: SAWError) => any) | undefined
+    onStart?: TOnStartFn<TInputSchema> | undefined
+    onSuccess?: TOnSuccessFn<TInputSchema, TOutputSchema> | undefined
+    onComplete?: TOnCompleteFn<TInputSchema, TOutputSchema> | undefined
+
+    onErrorFromWrapper?: TOnErrorFnFromWrapper | undefined
+    onStartFromWrapper?: TOnStartFnFromWrapper | undefined
+    onSuccessFromWrapper?: TOnSuccessFnFromWrapper | undefined
+    onCompleteFromWrapper?: TOnCompleteFnFromWrapper | undefined
   }) {
     this.$inputSchema = params.inputSchema
     this.$outputSchema = params.outputSchema
     this.$onInputParseError = params.onInputParseError
     this.$onOutputParseError = params.onOutputParseError
-    this.$onError = params.onError
     this.$procedureChain = params.procedureChain || []
-    this.$onErrorFromWrapper = params.onErrorFromWrapper
     this.$firstProcedureInput = params.firstProcedureInput
+    this.$id = params.id
+
+    this.$onError = params.onError
+    this.$onStartFn = params.onStart
+    this.$onSuccessFn = params.onSuccess
+    this.$onCompleteFn = params.onComplete
+
+    this.$onErrorFromWrapper = params.onErrorFromWrapper
+    this.$onStartFromWrapper = params.onStartFromWrapper
+    this.$onSuccessFromWrapper = params.onSuccessFromWrapper
+    this.$onCompleteFromWrapper = params.onCompleteFromWrapper
   }
 
   public getParams() {
@@ -150,26 +230,20 @@ export class ZodSafeFunction<
       onInputParseError: this.$onInputParseError,
       onOutputParseError: this.$onOutputParseError,
       onError: this.$onError,
-      onErrorFromWrapper: this.$onErrorFromWrapper,
       firstProcedureInput: this.$firstProcedureInput,
+      id: this.$id,
+      onStart: this.$onStartFn,
+      onSuccess: this.$onSuccessFn,
+      onComplete: this.$onCompleteFn,
+
+      onErrorFromWrapper: this.$onErrorFromWrapper,
+      onStartFromWrapper: this.$onStartFromWrapper,
+      onSuccessFromWrapper: this.$onSuccessFromWrapper,
+      onCompleteFromWrapper: this.$onCompleteFromWrapper,
     } as const
   }
 
-  public getProcedureChainOutput(): TProcedureChainOutput {
-    let accData = this.$firstProcedureInput
-    for (let i = 0; i < this.$procedureChain.length; i += 1) {
-      const fn = this.$procedureChain[i]! as TAnyZodSafeFunctionSyncHandler
-      const [data, err] = fn(accData)
-
-      if (err) {
-        throw err
-      }
-      accData = data as any
-    }
-    return accData as any
-  }
-
-  public async getProcedureChainOutputAsync(): Promise<TProcedureChainOutput> {
+  public async getProcedureChainOutput(): Promise<TProcedureChainOutput> {
     let accData = this.$firstProcedureInput
     for (let i = 0; i < this.$procedureChain.length; i += 1) {
       const fn = this.$procedureChain[i]!
@@ -182,6 +256,20 @@ export class ZodSafeFunction<
     return accData as any
   }
 
+  public id<T extends string>(
+    id: T
+  ): TZodSafeFunction<
+    TInputSchema,
+    TOutputSchema,
+    TOmitted | "id",
+    TProcedureChainOutput
+  > {
+    return new ZodSafeFunction({
+      ...this.getParams(),
+      id,
+    }) as any
+  }
+
   public input<T extends TZodObject>(
     schema: T
   ): TZodSafeFunction<
@@ -190,12 +278,14 @@ export class ZodSafeFunction<
     | "input"
     | "noInputHandler"
     | Exclude<TOmitted, "handler" | "onInputParseError">, // bring back the handler and onInputParseError
-    TProcedureChainOutput,
-    TProcedureAsync
+    TProcedureChainOutput
   > {
     return new ZodSafeFunction({
       ...this.getParams(),
       inputSchema: schema,
+      onStart: this.$onStartFn as any,
+      onSuccess: this.$onSuccessFn as any,
+      onComplete: this.$onCompleteFn as any,
     }) as any
   }
 
@@ -205,12 +295,13 @@ export class ZodSafeFunction<
     TInputSchema,
     T,
     "output" | Exclude<TOmitted, "onOutputParseError">,
-    TProcedureChainOutput,
-    TProcedureAsync
+    TProcedureChainOutput
   > {
     return new ZodSafeFunction({
       ...this.getParams(),
       outputSchema: schema,
+      onSuccess: this.$onSuccessFn as any,
+      onComplete: this.$onCompleteFn as any,
     }) as any
   }
 
@@ -220,8 +311,7 @@ export class ZodSafeFunction<
     TInputSchema,
     TOutputSchema,
     "onInputParseError" | TOmitted,
-    TProcedureChainOutput,
-    TProcedureAsync
+    TProcedureChainOutput
   > {
     return new ZodSafeFunction({
       ...this.getParams(),
@@ -235,8 +325,7 @@ export class ZodSafeFunction<
     TInputSchema,
     TOutputSchema,
     "onOutputParseError" | TOmitted,
-    TProcedureChainOutput,
-    TProcedureAsync
+    TProcedureChainOutput
   > {
     return new ZodSafeFunction({
       ...this.getParams(),
@@ -250,8 +339,7 @@ export class ZodSafeFunction<
     TInputSchema,
     TOutputSchema,
     "onError" | TOmitted,
-    TProcedureChainOutput,
-    TProcedureAsync
+    TProcedureChainOutput
   > {
     return new ZodSafeFunction({
       ...this.getParams(),
@@ -259,43 +347,142 @@ export class ZodSafeFunction<
     }) as any
   }
 
-  public async parseOutputDataAsync(
+  public onStart(
+    fn: TOnStartFn<TInputSchema>
+  ): TZodSafeFunction<
+    TInputSchema,
+    TOutputSchema,
+    TOmitted | "onStart",
+    TProcedureChainOutput
+  > {
+    return new ZodSafeFunction({
+      ...this.getParams(),
+      onStart: fn,
+    }) as any
+  }
+
+  public onSuccess(
+    fn: TOnSuccessFn<TInputSchema, TOutputSchema>
+  ): TZodSafeFunction<
+    TInputSchema,
+    TOutputSchema,
+    TOmitted | "onSuccess",
+    TProcedureChainOutput
+  > {
+    return new ZodSafeFunction({
+      ...this.getParams(),
+      onSuccess: fn,
+    }) as any
+  }
+
+  public onComplete(
+    fn: TOnCompleteFn<TInputSchema, TOutputSchema>
+  ): TZodSafeFunction<
+    TInputSchema,
+    TOutputSchema,
+    TOmitted | "onComplete",
+    TProcedureChainOutput
+  > {
+    return new ZodSafeFunction({
+      ...this.getParams(),
+      onComplete: fn,
+    }) as any
+  }
+
+  public async parseOutputData(
     data: any
   ): Promise<z.output<TOutputSchema extends TZodObject ? TOutputSchema : any>> {
     if (!this.$outputSchema) return data
     const safe = await this.$outputSchema.safeParseAsync(data)
     if (!safe.success) {
       if (this.$onOutputParseError) {
-        this.$onOutputParseError(safe.error)
+        await this.$onOutputParseError(safe.error)
       }
       throw new SAWError("OUTPUT_PARSE_ERROR", safe.error)
     }
     return safe.data
   }
 
-  public parseOutputData(
-    data: any
-  ): z.output<TOutputSchema extends TZodObject ? TOutputSchema : any> {
-    if (!this.$outputSchema) return data
-    const safe = this.$outputSchema.safeParse(data)
-    if (!safe.success) {
-      if (this.$onOutputParseError) {
-        this.$onOutputParseError(safe.error)
-      }
-      throw new SAWError("OUTPUT_PARSE_ERROR", safe.error)
+  public async handleStart(args: any) {
+    if (this.$onStartFromWrapper) {
+      await this.$onStartFromWrapper({
+        args,
+        id: this.$id,
+      })
     }
-    return safe.data
+
+    if (!this.$onStartFn) return
+    await this.$onStartFn({
+      args,
+    })
   }
 
-  public handleError(err: any): [null, TSAWError] {
+  public async handleSuccess(args: any, data: any) {
+    if (this.$onSuccessFromWrapper) {
+      await this.$onSuccessFromWrapper({
+        args,
+        data,
+        id: this.$id,
+      })
+    }
+
+    if (this.$onSuccessFn) {
+      await this.$onSuccessFn({
+        args,
+        data,
+      })
+    }
+
+    if (this.$onCompleteFromWrapper) {
+      await this.$onCompleteFromWrapper({
+        isSuccess: true,
+        isError: false,
+        status: "success",
+        args,
+        data,
+        id: this.$id,
+      })
+    }
+
+    if (this.$onCompleteFn) {
+      await this.$onCompleteFn({
+        isSuccess: true,
+        isError: false,
+        status: "success",
+        args: this.$firstProcedureInput,
+        data,
+      })
+    }
+  }
+
+  public async handleError(err: any): Promise<[null, TSAWError]> {
     const customError =
       err instanceof SAWError ? err : new SAWError("ERROR", err)
     if (this.$onError) {
-      this.$onError(customError)
+      await this.$onError(customError)
     }
     if (this.$onErrorFromWrapper) {
-      this.$onErrorFromWrapper(customError)
+      await this.$onErrorFromWrapper({ err: customError, id: this.$id })
     }
+
+    if (this.$onCompleteFn) {
+      if (this.$onCompleteFromWrapper) {
+        await this.$onCompleteFromWrapper({
+          isSuccess: false,
+          isError: true,
+          status: "error",
+          error: customError,
+          id: this.$id,
+        })
+      }
+      await this.$onCompleteFn({
+        isSuccess: false,
+        isError: true,
+        status: "error",
+        error: customError,
+      })
+    }
+
     return [
       null,
       {
@@ -308,73 +495,39 @@ export class ZodSafeFunction<
     ]
   }
 
-  public parseInputData(
-    data: any
-  ): z.input<TInputSchema extends TZodObject ? TInputSchema : any> {
-    if (!this.$inputSchema) return data
-    const safe = this.$inputSchema.safeParse(data)
-    if (!safe.success) {
-      if (this.$onInputParseError) {
-        this.$onInputParseError(safe.error)
-      }
-      throw new SAWError("INPUT_PARSE_ERROR", safe.error)
-    }
-
-    return safe.data
-  }
-
-  public async parseInputDataAsync(
+  public async parseInputData(
     data: any
   ): Promise<z.input<TInputSchema extends TZodObject ? TInputSchema : any>> {
     if (!this.$inputSchema) return data
     const safe = await this.$inputSchema.safeParseAsync(data)
     if (!safe.success) {
       if (this.$onInputParseError) {
-        this.$onInputParseError(safe.error)
+        await this.$onInputParseError(safe.error)
       }
       throw new SAWError("INPUT_PARSE_ERROR", safe.error)
     }
-
     return safe.data
-  }
-
-  public isAsync = (func: Function): boolean => {
-    return func.constructor.name === "AsyncFunction"
   }
 
   public noInputHandler<
     TRet extends TOutputSchema extends TZodObject
       ? z.output<TOutputSchema> | Promise<z.output<TOutputSchema>>
       : any | Promise<any>,
-  >(
-    fn: (v: { ctx: TProcedureChainOutput }) => TRet
-  ): TNoHandlerFunc<TRet, TProcedureAsync> {
-    const wrapper = () => {
+  >(fn: (v: { ctx: TProcedureChainOutput }) => TRet): TNoHandlerFunc<TRet> {
+    const wrapper = async () => {
       try {
-        const ctx = this.getProcedureChainOutput()
-        const data = fn({ ctx })
-        return [this.parseOutputData(data), null]
-      } catch (err) {
-        return this.handleError(err)
-      }
-    }
+        await this.handleStart(undefined)
 
-    const wrapperAsync = async () => {
-      try {
-        const ctx = await this.getProcedureChainOutputAsync()
+        const ctx = await this.getProcedureChainOutput()
         const data = await fn({ ctx })
-        const parsed = await this.parseOutputDataAsync(data)
+        const parsed = await this.parseOutputData(data)
+
+        await this.handleSuccess(undefined, parsed)
+
         return [parsed, null]
       } catch (err) {
-        return this.handleError(err)
+        return await this.handleError(err)
       }
-    }
-
-    if (
-      this.isAsync(fn) ||
-      this.$procedureChain.some((mFN) => this.isAsync(mFN))
-    ) {
-      return wrapperAsync as any
     }
 
     return wrapper as any
@@ -389,40 +542,27 @@ export class ZodSafeFunction<
       input: z.infer<TInputSchema extends TZodObject ? TInputSchema : z.ZodAny>
       ctx: TProcedureChainOutput
     }) => TRet
-  ): THandlerFunc<TInputSchema, TRet, TProcedureAsync> {
+  ): THandlerFunc<TInputSchema, TRet> {
     type TArgs = TInputSchema extends TZodObject ? z.input<TInputSchema> : {}
 
-    const wrapper = (args: TArgs) => {
+    const wrapper = async (args: TArgs) => {
       try {
-        if (!this.$inputSchema) throw new Error("No input schema")
-        const ctx = this.getProcedureChainOutput()
-        const data = fn({ input: this.parseInputData(args), ctx })
-        return [this.parseOutputData(data), null]
-      } catch (err) {
-        return this.handleError(err)
-      }
-    }
+        await this.handleStart(args)
 
-    const wrapperAsync = async (args: TArgs) => {
-      try {
         if (!this.$inputSchema) throw new Error("No input schema")
-        const ctx = await this.getProcedureChainOutputAsync()
+        const ctx = await this.getProcedureChainOutput()
         const data = await fn({
-          input: await this.parseInputDataAsync(args),
+          input: await this.parseInputData(args),
           ctx,
         })
-        const parsed = await this.parseOutputDataAsync(data)
+        const parsed = await this.parseOutputData(data)
+
+        await this.handleSuccess(args, parsed)
+
         return [parsed, null]
       } catch (err) {
-        return this.handleError(err)
+        return await this.handleError(err)
       }
-    }
-
-    if (
-      this.isAsync(fn) ||
-      this.$procedureChain.some((mFN) => this.isAsync(mFN))
-    ) {
-      return wrapperAsync as any
     }
 
     return wrapper as any
@@ -433,8 +573,7 @@ export function createZodSafeFunction(): TZodSafeFunction<
   undefined,
   undefined,
   TZodSafeFunctionDefaultOmitted,
-  never,
-  false
+  never
 > {
   return new ZodSafeFunction({
     inputSchema: undefined,
