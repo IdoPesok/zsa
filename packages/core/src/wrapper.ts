@@ -7,40 +7,33 @@ import {
   ZodSafeFunction,
 } from "./safe-zod-function"
 
-export interface TCreateAction<
-  TProcedureChainOutput extends any,
-  TProcedureAsync extends boolean,
-> extends TZodSafeFunction<
+export interface TCreateAction<TProcedureChainOutput extends any>
+  extends TZodSafeFunction<
     undefined,
     undefined,
     TZodSafeFunctionDefaultOmitted,
-    TProcedureChainOutput,
-    TProcedureAsync
+    TProcedureChainOutput
   > {}
 
 export interface TServerActionWrapperInner<
   TProcedureChainInput extends any,
   TProcedureChainOutput extends any,
   TOmitted extends string,
-  TProcedureAsync extends boolean,
 > extends ServerActionWrapper<
     TProcedureChainInput,
     TProcedureChainOutput,
-    TOmitted,
-    TProcedureAsync
+    TOmitted
   > {}
 
 type TServerActionWrapper<
   TProcedureChainInput extends any,
   TProcedureChainOutput extends any,
   TOmitted extends string,
-  TProcedureAsync extends boolean,
 > = Omit<
   TServerActionWrapperInner<
     TProcedureChainInput,
     TProcedureChainOutput,
-    TOmitted,
-    TProcedureAsync
+    TOmitted
   >,
   TOmitted
 >
@@ -49,7 +42,6 @@ class ServerActionWrapper<
   TProcedureChainInput extends any,
   TProcedureChainOutput extends any,
   TOmitted extends string,
-  TProcedureAsync extends boolean,
 > {
   $procedureChain: TAnyZodSafeFunctionHandler[]
   $onError: ((err: SAWError) => any) | undefined
@@ -67,8 +59,7 @@ class ServerActionWrapper<
   ): TServerActionWrapper<
     TProcedureChainInput,
     TProcedureChainOutput,
-    TOmitted | "onError",
-    ReturnType<typeof fn> extends Promise<any> ? true : TProcedureAsync
+    TOmitted | "onError"
   > {
     this.$onError = fn
     return this as any
@@ -87,8 +78,7 @@ class ServerActionWrapper<
       >
     | (TInput extends { [key: string]: any }
         ? "createAction" | "procedure"
-        : "procedure"),
-    ReturnType<typeof $procedure> extends Promise<any> ? true : false
+        : "procedure")
   > {
     return new ServerActionWrapper({
       procedureChain: [$procedure],
@@ -100,12 +90,7 @@ class ServerActionWrapper<
     procedure: TProcedureChainOutput extends undefined
       ? () => TDataOrError<T>
       : (input: TProcedureChainOutput) => TDataOrError<T>
-  ): TServerActionWrapper<
-    TProcedureChainInput,
-    Awaited<T>,
-    TOmitted,
-    ReturnType<typeof procedure> extends Promise<any> ? true : TProcedureAsync
-  > {
+  ): TServerActionWrapper<TProcedureChainInput, Awaited<T>, TOmitted> {
     const temp = [...this.$procedureChain]
     temp.push(procedure)
     return new ServerActionWrapper({
@@ -114,7 +99,7 @@ class ServerActionWrapper<
     }) as any
   }
 
-  public createAction(): TCreateAction<TProcedureChainOutput, TProcedureAsync> {
+  public createAction(): TCreateAction<TProcedureChainOutput> {
     return new ZodSafeFunction({
       inputSchema: undefined,
       outputSchema: undefined,
@@ -125,7 +110,7 @@ class ServerActionWrapper<
 
   public createActionWithProcedureInput(
     input: TProcedureChainInput
-  ): TCreateAction<TProcedureChainOutput, TProcedureAsync> {
+  ): TCreateAction<TProcedureChainOutput> {
     return new ZodSafeFunction({
       inputSchema: undefined,
       outputSchema: undefined,
@@ -142,8 +127,7 @@ export function createServerActionWrapper(): TServerActionWrapper<
   | "$procedureChain"
   | "chainProcedure"
   | "$onError"
-  | "createActionWithProcedureInput",
-  false
+  | "createActionWithProcedureInput"
 > {
   return new ServerActionWrapper() as any
 }

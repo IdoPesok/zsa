@@ -13,83 +13,42 @@ const main = async () => {
     )
     .id("one")
     .output(z.object({ greeting: z.string() }))
-    .onError((err) => {
-      console.log("onError", err)
-    })
-    .onStart(({ args }) => {
-      console.log("onStart", args)
-    })
-    .onSuccess(({ args, data }) => {
-      console.log("onSuccess", args, data)
-    })
-    .onComplete((data) => {
-      if (data.isError) {
-        console.log(data.error)
-        return
-      }
-
-      console.log(data.args)
-    })
-    .handler(async ({ input }) => {
-      await new Promise((r) => setTimeout(r, 3000))
+    .handler(({ input }) => {
       return {
         greeting: `Hello ${input.name}`,
       }
     })
 
-  const two = createServerActionProcedure()
-    .input(
-      z.object({
-        greeting: z.string(),
-      })
-    )
-    .handler(async ({ input }) => {
-      return {
-        message: `${input.greeting}. Goodbye!`,
-      }
-    })
+  const wrapper = createServerActionWrapper().procedure(one)
 
-  const wrapper = createServerActionWrapper().procedure(one).chainProcedure(two)
-
-  const action = wrapper
+  const myAction = wrapper
     .createActionWithProcedureInput({
       name: "IDO",
     })
+    .onStart(async ({ args }) => {
+      console.log("onStart", args)
+      await new Promise((r) => setTimeout(r, 3000))
+      console.log("onStart finished", args)
+    })
+    .onSuccess(async ({ args, data }) => {
+      console.log("onSuccess", args, data)
+      await new Promise((r) => setTimeout(r, 3000))
+      console.log("onSuccess finished", args, data)
+    })
+    .onComplete(async (data) => {
+      console.log("onComplete", JSON.stringify(data, null, 2))
+      await new Promise((r) => setTimeout(r, 3000))
+      console.log("onComplete finished", JSON.stringify(data, null, 2))
+    })
     .noInputHandler(({ ctx }) => {
-      console.log(ctx)
+      console.log("noInputHandler", ctx)
+
+      return "YOOHOOO"
     })
 
-  action()
+  const [data, err] = await myAction()
 
-  const three = createServerActionProcedure().noInputHandler(() => {
-    return {
-      user: {
-        name: "IDO",
-        id: 1,
-        email: "dsfdsfdsf",
-      },
-    }
-  })
-
-  const wrapper2 = createServerActionWrapper().procedure(three)
-
-  const action2 = wrapper2
-    .createAction()
-    .input(
-      z.object({
-        test: z.string(),
-      })
-    )
-    .handler(async ({ input, ctx }) => {
-      console.log({
-        input,
-        ctx,
-      })
-    })
-
-  action2({
-    test: "sdfsdfasf",
-  })
+  console.log(data)
 }
 
 main()
