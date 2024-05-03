@@ -11,6 +11,25 @@ const main = async () => {
         name: z.string(),
       })
     )
+    .id("one")
+    .output(z.object({ greeting: z.string() }))
+    .onError((err) => {
+      console.log("onError", err)
+    })
+    .onStart(({ args }) => {
+      console.log("onStart", args)
+    })
+    .onSuccess(({ args, data }) => {
+      console.log("onSuccess", args, data)
+    })
+    .onComplete((data) => {
+      if (data.isError) {
+        console.log(data.error)
+        return
+      }
+
+      console.log(data.args)
+    })
     .handler(async ({ input }) => {
       await new Promise((r) => setTimeout(r, 3000))
       return {

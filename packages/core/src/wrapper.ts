@@ -68,7 +68,7 @@ class ServerActionWrapper<
     TProcedureChainInput,
     TProcedureChainOutput,
     TOmitted | "onError",
-    TProcedureAsync
+    ReturnType<typeof fn> extends Promise<any> ? true : TProcedureAsync
   > {
     this.$onError = fn
     return this as any
