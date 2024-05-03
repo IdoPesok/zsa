@@ -20,6 +20,7 @@ const main = async () => {
     })
 
   const wrapper = createServerActionWrapper()
+    .timeout(200)
     .onStart(({ args }) => {
       console.log("ON START FROM WRAPPER")
     })
@@ -35,29 +36,17 @@ const main = async () => {
     })
     .id("HELLO WORLD")
     .onStart(async ({ args }) => {
-      console.log("onStart", args)
+      console.log("starting action")
       await new Promise((r) => setTimeout(r, 3000))
-      console.log("onStart finished", args)
-    })
-    .onSuccess(async ({ args, data }) => {
-      console.log("onSuccess", args, data)
-      await new Promise((r) => setTimeout(r, 3000))
-      console.log("onSuccess finished", args, data)
-    })
-    .onComplete(async (data) => {
-      console.log("onComplete", JSON.stringify(data, null, 2))
-      await new Promise((r) => setTimeout(r, 3000))
-      console.log("onComplete finished", JSON.stringify(data, null, 2))
     })
     .noInputHandler(({ ctx }) => {
-      console.log("noInputHandler", ctx)
-
       return "YOOHOOO"
     })
 
   const [data, err] = await myAction()
 
-  console.log(data)
+  console.log("got error", err)
+  console.log("got data", data)
 }
 
 main()

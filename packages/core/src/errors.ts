@@ -3,6 +3,7 @@ const ERROR_CODES = {
   OUTPUT_PARSE_ERROR: "OUTPUT_PARSE_ERROR",
   ERROR: "ERROR",
   NOT_AUTHORIZED: "NOT_AUTHORIZED",
+  TIMEOUT: "TIMEOUT",
 } as const
 
 export class SAWError extends Error {

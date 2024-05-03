@@ -14,6 +14,10 @@ type THandlerFunc<
   args: z.input<TInputSchema extends TZodObject ? TInputSchema : z.ZodAny>
 ) => TDataOrError<TRet>
 
+interface TimeoutStatus {
+  isTimeout: boolean
+}
+
 const DefaultOmitted = {
   $inputSchema: 1,
   $outputSchema: 1,
@@ -27,6 +31,7 @@ const DefaultOmitted = {
   $onErrorFromWrapper: 1,
   $onStartFromWrapper: 1,
   $onSuccessFromWrapper: 1,
+  getTimeoutErrorPromise: 1,
   $onCompleteFromWrapper: 1,
   procedureChain: 1,
   getParams: 1,
@@ -40,6 +45,8 @@ const DefaultOmitted = {
   $firstProcedureInput: 1,
   $id: 1,
   $onStartFn: 1,
+  $timeout: 1,
+  checkTimeoutStatus: 1,
   $onSuccessFn: 1,
   $onCompleteFn: 1,
 } as const
@@ -173,6 +180,7 @@ export class ZodSafeFunction<
   public $onOutputParseError: ((err: any) => any) | undefined
   public $firstProcedureInput: any
   public $id: string | undefined
+  public $timeout: number | undefined
 
   public $onError: ((err: SAWError) => any) | undefined
   public $onStartFn: TOnStartFn<TInputSchema> | undefined
@@ -193,6 +201,8 @@ export class ZodSafeFunction<
     firstProcedureInput?: any
     id?: string | undefined
 
+    timeout?: number | undefined
+
     onError?: ((err: SAWError) => any) | undefined
     onStart?: TOnStartFn<TInputSchema> | undefined
     onSuccess?: TOnSuccessFn<TInputSchema, TOutputSchema> | undefined
@@ -210,6 +220,7 @@ export class ZodSafeFunction<
     this.$procedureChain = params.procedureChain || []
     this.$firstProcedureInput = params.firstProcedureInput
     this.$id = params.id
+    this.$timeout = params.timeout
 
     this.$onError = params.onError
     this.$onStartFn = params.onStart
@@ -231,6 +242,7 @@ export class ZodSafeFunction<
       onOutputParseError: this.$onOutputParseError,
       onError: this.$onError,
       firstProcedureInput: this.$firstProcedureInput,
+      timeout: this.$timeout,
       id: this.$id,
       onStart: this.$onStartFn,
       onSuccess: this.$onSuccessFn,
@@ -243,9 +255,19 @@ export class ZodSafeFunction<
     } as const
   }
 
-  public async getProcedureChainOutput(): Promise<TProcedureChainOutput> {
+  public checkTimeoutStatus(timeoutStatus: TimeoutStatus) {
+    if (timeoutStatus.isTimeout) {
+      throw new SAWError("TIMEOUT", `Exceeded timeout of ${this.$timeout} ms`)
+    }
+  }
+
+  public async getProcedureChainOutput(
+    timeoutStatus: TimeoutStatus
+  ): Promise<TProcedureChainOutput> {
     let accData = this.$firstProcedureInput
     for (let i = 0; i < this.$procedureChain.length; i += 1) {
+      this.checkTimeoutStatus(timeoutStatus)
+
       const fn = this.$procedureChain[i]!
       const [data, err] = await fn(accData)
       if (err) {
@@ -254,6 +276,20 @@ export class ZodSafeFunction<
       accData = data as any
     }
     return accData as any
+  }
+
+  public timeout<T extends number>(
+    milliseconds: T
+  ): TZodSafeFunction<
+    TInputSchema,
+    TOutputSchema,
+    TOmitted | "timeout",
+    TProcedureChainOutput
+  > {
+    return new ZodSafeFunction({
+      ...this.getParams(),
+      timeout: milliseconds,
+    }) as any
   }
 
   public id<T extends string>(
@@ -390,8 +426,10 @@ export class ZodSafeFunction<
   }
 
   public async parseOutputData(
-    data: any
+    data: any,
+    timeoutStatus: TimeoutStatus
   ): Promise<z.output<TOutputSchema extends TZodObject ? TOutputSchema : any>> {
+    this.checkTimeoutStatus(timeoutStatus) // checkpoint
     if (!this.$outputSchema) return data
     const safe = await this.$outputSchema.safeParseAsync(data)
     if (!safe.success) {
@@ -403,7 +441,9 @@ export class ZodSafeFunction<
     return safe.data
   }
 
-  public async handleStart(args: any) {
+  public async handleStart(args: any, timeoutStatus: TimeoutStatus) {
+    this.checkTimeoutStatus(timeoutStatus) // checkpoint
+
     if (this.$onStartFromWrapper) {
       await this.$onStartFromWrapper({
         args,
@@ -411,13 +451,21 @@ export class ZodSafeFunction<
       })
     }
 
+    this.checkTimeoutStatus(timeoutStatus) // checkpoint
+
     if (!this.$onStartFn) return
     await this.$onStartFn({
       args,
     })
   }
 
-  public async handleSuccess(args: any, data: any) {
+  public async handleSuccess(
+    args: any,
+    data: any,
+    timeoutStatus: TimeoutStatus
+  ) {
+    this.checkTimeoutStatus(timeoutStatus) // checkpoint
+
     if (this.$onSuccessFromWrapper) {
       await this.$onSuccessFromWrapper({
         args,
@@ -426,12 +474,16 @@ export class ZodSafeFunction<
       })
     }
 
+    this.checkTimeoutStatus(timeoutStatus) // checkpoint
+
     if (this.$onSuccessFn) {
       await this.$onSuccessFn({
         args,
         data,
       })
     }
+
+    this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
     if (this.$onCompleteFromWrapper) {
       await this.$onCompleteFromWrapper({
@@ -444,6 +496,8 @@ export class ZodSafeFunction<
       })
     }
 
+    this.checkTimeoutStatus(timeoutStatus) // checkpoint
+
     if (this.$onCompleteFn) {
       await this.$onCompleteFn({
         isSuccess: true,
@@ -455,26 +509,32 @@ export class ZodSafeFunction<
     }
   }
 
-  public async handleError(err: any): Promise<[null, TSAWError]> {
+  public async handleError(
+    err: any,
+    timeoutStatus: TimeoutStatus
+  ): Promise<[null, TSAWError]> {
     const customError =
       err instanceof SAWError ? err : new SAWError("ERROR", err)
+
     if (this.$onError) {
       await this.$onError(customError)
     }
+
     if (this.$onErrorFromWrapper) {
       await this.$onErrorFromWrapper({ err: customError, id: this.$id })
     }
 
-    if (this.$onCompleteFn) {
-      if (this.$onCompleteFromWrapper) {
-        await this.$onCompleteFromWrapper({
-          isSuccess: false,
-          isError: true,
-          status: "error",
-          error: customError,
-          id: this.$id,
-        })
-      }
+    if (this.$onCompleteFromWrapper && !timeoutStatus.isTimeout) {
+      await this.$onCompleteFromWrapper({
+        isSuccess: false,
+        isError: true,
+        status: "error",
+        error: customError,
+        id: this.$id,
+      })
+    }
+
+    if (this.$onCompleteFn && !timeoutStatus.isTimeout) {
       await this.$onCompleteFn({
         isSuccess: false,
         isError: true,
@@ -496,8 +556,10 @@ export class ZodSafeFunction<
   }
 
   public async parseInputData(
-    data: any
+    data: any,
+    timeoutStatus: TimeoutStatus
   ): Promise<z.input<TInputSchema extends TZodObject ? TInputSchema : any>> {
+    this.checkTimeoutStatus(timeoutStatus) // checkpoint
     if (!this.$inputSchema) return data
     const safe = await this.$inputSchema.safeParseAsync(data)
     if (!safe.success) {
@@ -509,25 +571,58 @@ export class ZodSafeFunction<
     return safe.data
   }
 
+  public getTimeoutErrorPromise = (timeoutMs: number) =>
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new SAWError("TIMEOUT", `Exceeded timeout of ${timeoutMs} ms`))
+      }, timeoutMs)
+    })
+
   public noInputHandler<
     TRet extends TOutputSchema extends TZodObject
       ? z.output<TOutputSchema> | Promise<z.output<TOutputSchema>>
       : any | Promise<any>,
   >(fn: (v: { ctx: TProcedureChainOutput }) => TRet): TNoHandlerFunc<TRet> {
+    const timeoutStatus: TimeoutStatus = {
+      isTimeout: false,
+    }
+
     const wrapper = async () => {
       try {
-        await this.handleStart(undefined)
+        await this.handleStart(undefined, timeoutStatus)
 
-        const ctx = await this.getProcedureChainOutput()
+        const ctx = await this.getProcedureChainOutput(timeoutStatus)
+
+        this.checkTimeoutStatus(timeoutStatus) // checkpoint
+
         const data = await fn({ ctx })
-        const parsed = await this.parseOutputData(data)
 
-        await this.handleSuccess(undefined, parsed)
+        const parsed = await this.parseOutputData(data, timeoutStatus)
+
+        await this.handleSuccess(undefined, parsed, timeoutStatus)
 
         return [parsed, null]
       } catch (err) {
-        return await this.handleError(err)
+        return await this.handleError(err, timeoutStatus)
       }
+    }
+
+    const withTimeout = async () => {
+      const timeoutMs = this.$timeout
+      if (!timeoutMs) return await wrapper()
+      return await Promise.race([
+        wrapper(),
+        this.getTimeoutErrorPromise(timeoutMs),
+      ])
+        .then((r) => r)
+        .catch(async (err) => {
+          timeoutStatus.isTimeout = true
+          return await this.handleError(err, timeoutStatus)
+        })
+    }
+
+    if (this.$timeout) {
+      return withTimeout as any
     }
 
     return wrapper as any
@@ -545,24 +640,56 @@ export class ZodSafeFunction<
   ): THandlerFunc<TInputSchema, TRet> {
     type TArgs = TInputSchema extends TZodObject ? z.input<TInputSchema> : {}
 
+    const timeoutStatus: TimeoutStatus = {
+      isTimeout: false,
+    }
+
     const wrapper = async (args: TArgs) => {
       try {
-        await this.handleStart(args)
+        await this.handleStart(args, timeoutStatus)
 
         if (!this.$inputSchema) throw new Error("No input schema")
-        const ctx = await this.getProcedureChainOutput()
+
+        // parse the input data
+        const input = await this.parseInputData(args, timeoutStatus)
+
+        // run the procedure chain to get the context
+        const ctx = await this.getProcedureChainOutput(timeoutStatus)
+
+        // timeout checkpoint
+        this.checkTimeoutStatus(timeoutStatus) // checkpoint
+
         const data = await fn({
-          input: await this.parseInputData(args),
+          input,
           ctx,
         })
-        const parsed = await this.parseOutputData(data)
 
-        await this.handleSuccess(args, parsed)
+        const parsed = await this.parseOutputData(data, timeoutStatus)
+
+        await this.handleSuccess(args, parsed, timeoutStatus)
 
         return [parsed, null]
       } catch (err) {
-        return await this.handleError(err)
+        return await this.handleError(err, timeoutStatus)
       }
+    }
+
+    const withTimeout = async (args: TArgs) => {
+      const timeoutMs = this.$timeout
+      if (!timeoutMs) return await wrapper(args)
+      return await Promise.race([
+        wrapper(args),
+        this.getTimeoutErrorPromise(timeoutMs),
+      ])
+        .then((r) => r)
+        .catch((err) => {
+          timeoutStatus.isTimeout = true
+          return this.handleError(err, timeoutStatus)
+        })
+    }
+
+    if (this.$timeout) {
+      return withTimeout as any
     }
 
     return wrapper as any

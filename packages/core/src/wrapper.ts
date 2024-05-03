@@ -41,8 +41,6 @@ type TServerActionWrapper<
   TOmitted
 >
 
-type TId = string | undefined
-
 class ServerActionWrapper<
   TProcedureChainInput extends any,
   TProcedureChainOutput extends any,
@@ -53,6 +51,7 @@ class ServerActionWrapper<
   $onStart: TOnStartFnFromWrapper | undefined
   $onSuccess: TOnSuccessFnFromWrapper | undefined
   $onComplete: TOnCompleteFnFromWrapper | undefined
+  $timeout: number | undefined
 
   constructor(params?: {
     procedureChain: TAnyZodSafeFunctionHandler[]
@@ -60,12 +59,35 @@ class ServerActionWrapper<
     onStart?: TOnStartFnFromWrapper | undefined
     onSuccess?: TOnSuccessFnFromWrapper | undefined
     onComplete?: TOnCompleteFnFromWrapper | undefined
+    timeout?: number | undefined
   }) {
     this.$procedureChain = params?.procedureChain || []
     this.$onError = params?.onError
     this.$onStart = params?.onStart
     this.$onSuccess = params?.onSuccess
     this.$onComplete = params?.onComplete
+    this.$timeout = params?.timeout
+  }
+
+  public getParams() {
+    return {
+      onError: this.$onError,
+      onStart: this.$onStart,
+      onSuccess: this.$onSuccess,
+      onComplete: this.$onComplete,
+      timeout: this.$timeout,
+    } as const
+  }
+
+  public timeout<T extends number>(
+    milliseconds: T
+  ): TServerActionWrapper<
+    TProcedureChainInput,
+    TProcedureChainOutput,
+    TOmitted | "timeout"
+  > {
+    this.$timeout = milliseconds
+    return this as any
   }
 
   public onError(
@@ -128,11 +150,8 @@ class ServerActionWrapper<
         : "procedure")
   > {
     return new ServerActionWrapper({
+      ...this.getParams(),
       procedureChain: [$procedure],
-      onError: this.$onError,
-      onStart: this.$onStart,
-      onSuccess: this.$onSuccess,
-      onComplete: this.$onComplete,
     }) as any
   }
 
@@ -144,11 +163,8 @@ class ServerActionWrapper<
     const temp = [...this.$procedureChain]
     temp.push(procedure)
     return new ServerActionWrapper({
+      ...this.getParams(),
       procedureChain: temp,
-      onError: this.$onError,
-      onStart: this.$onStart,
-      onSuccess: this.$onSuccess,
-      onComplete: this.$onComplete,
     }) as any
   }
 
@@ -161,6 +177,7 @@ class ServerActionWrapper<
       onStartFromWrapper: this.$onStart,
       onSuccessFromWrapper: this.$onSuccess,
       onCompleteFromWrapper: this.$onComplete,
+      timeout: this.$timeout,
     }) as any
   }
 
@@ -176,6 +193,7 @@ class ServerActionWrapper<
       onSuccessFromWrapper: this.$onSuccess,
       onCompleteFromWrapper: this.$onComplete,
       onStartFromWrapper: this.$onStart,
+      timeout: this.$timeout,
     }) as any
   }
 }
@@ -186,10 +204,15 @@ export function createServerActionWrapper(): TServerActionWrapper<
   | "$procedureChain"
   | "chainProcedure"
   | "$onError"
+  | "$timeout"
   | "$onSuccess"
   | "$onComplete"
   | "$onStart"
   | "createActionWithProcedureInput"
 > {
   return new ServerActionWrapper() as any
+}
+
+export function createServerAction() {
+  return createServerActionWrapper().createAction()
 }
