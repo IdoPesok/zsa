@@ -1,9 +1,7 @@
 {
   "name": "server-actions-wrapper",
   "version": "0.0.1",
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "files": [
     "dist/**"
   ],

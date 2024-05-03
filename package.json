@@ -1,5 +1,5 @@
 {
-  "name": "server-actions-wrapper",
+  "name": "server-actions-wrapper-root",
   "private": true,
   "scripts": {
     "build": "turbo build",
