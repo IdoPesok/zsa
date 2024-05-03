@@ -1,7 +1,10 @@
-import { SAWError } from "./errors"
 import {
   TAnyZodSafeFunctionHandler,
   TDataOrError,
+  TOnCompleteFnFromWrapper,
+  TOnErrorFnFromWrapper,
+  TOnStartFnFromWrapper,
+  TOnSuccessFnFromWrapper,
   TZodSafeFunction,
   TZodSafeFunctionDefaultOmitted,
   ZodSafeFunction,
@@ -38,30 +41,74 @@ type TServerActionWrapper<
   TOmitted
 >
 
+type TId = string | undefined
+
 class ServerActionWrapper<
   TProcedureChainInput extends any,
   TProcedureChainOutput extends any,
   TOmitted extends string,
 > {
   $procedureChain: TAnyZodSafeFunctionHandler[]
-  $onError: ((err: SAWError) => any) | undefined
+  $onError: TOnErrorFnFromWrapper | undefined
+  $onStart: TOnStartFnFromWrapper | undefined
+  $onSuccess: TOnSuccessFnFromWrapper | undefined
+  $onComplete: TOnCompleteFnFromWrapper | undefined
 
   constructor(params?: {
     procedureChain: TAnyZodSafeFunctionHandler[]
-    onError?: ((err: SAWError) => any) | undefined
+    onError?: TOnErrorFnFromWrapper | undefined
+    onStart?: TOnStartFnFromWrapper | undefined
+    onSuccess?: TOnSuccessFnFromWrapper | undefined
+    onComplete?: TOnCompleteFnFromWrapper | undefined
   }) {
     this.$procedureChain = params?.procedureChain || []
     this.$onError = params?.onError
+    this.$onStart = params?.onStart
+    this.$onSuccess = params?.onSuccess
+    this.$onComplete = params?.onComplete
   }
 
   public onError(
-    fn: (err: SAWError) => any
+    fn: TOnErrorFnFromWrapper
   ): TServerActionWrapper<
     TProcedureChainInput,
     TProcedureChainOutput,
     TOmitted | "onError"
   > {
     this.$onError = fn
+    return this as any
+  }
+
+  public onStart(
+    fn: TOnStartFnFromWrapper
+  ): TServerActionWrapper<
+    TProcedureChainInput,
+    TProcedureChainOutput,
+    TOmitted | "onStart"
+  > {
+    this.$onStart = fn
+    return this as any
+  }
+
+  public onSuccess(
+    fn: TOnSuccessFnFromWrapper
+  ): TServerActionWrapper<
+    TProcedureChainInput,
+    TProcedureChainOutput,
+    TOmitted | "onSuccess"
+  > {
+    this.$onSuccess = fn
+    return this as any
+  }
+
+  public onComplete(
+    fn: TOnCompleteFnFromWrapper
+  ): TServerActionWrapper<
+    TProcedureChainInput,
+    TProcedureChainOutput,
+    TOmitted | "onComplete"
+  > {
+    this.$onComplete = fn
     return this as any
   }
 
@@ -83,6 +130,9 @@ class ServerActionWrapper<
     return new ServerActionWrapper({
       procedureChain: [$procedure],
       onError: this.$onError,
+      onStart: this.$onStart,
+      onSuccess: this.$onSuccess,
+      onComplete: this.$onComplete,
     }) as any
   }
 
@@ -96,6 +146,9 @@ class ServerActionWrapper<
     return new ServerActionWrapper({
       procedureChain: temp,
       onError: this.$onError,
+      onStart: this.$onStart,
+      onSuccess: this.$onSuccess,
+      onComplete: this.$onComplete,
     }) as any
   }
 
@@ -105,6 +158,9 @@ class ServerActionWrapper<
       outputSchema: undefined,
       procedureChain: this.$procedureChain,
       onErrorFromWrapper: this.$onError,
+      onStartFromWrapper: this.$onStart,
+      onSuccessFromWrapper: this.$onSuccess,
+      onCompleteFromWrapper: this.$onComplete,
     }) as any
   }
 
@@ -115,8 +171,11 @@ class ServerActionWrapper<
       inputSchema: undefined,
       outputSchema: undefined,
       procedureChain: this.$procedureChain,
-      onErrorFromWrapper: this.$onError,
       firstProcedureInput: input,
+      onErrorFromWrapper: this.$onError,
+      onSuccessFromWrapper: this.$onSuccess,
+      onCompleteFromWrapper: this.$onComplete,
+      onStartFromWrapper: this.$onStart,
     }) as any
   }
 }
@@ -127,6 +186,9 @@ export function createServerActionWrapper(): TServerActionWrapper<
   | "$procedureChain"
   | "chainProcedure"
   | "$onError"
+  | "$onSuccess"
+  | "$onComplete"
+  | "$onStart"
   | "createActionWithProcedureInput"
 > {
   return new ServerActionWrapper() as any

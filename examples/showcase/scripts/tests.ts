@@ -19,12 +19,21 @@ const main = async () => {
       }
     })
 
-  const wrapper = createServerActionWrapper().procedure(one)
+  const wrapper = createServerActionWrapper()
+    .onStart(({ args }) => {
+      console.log("ON START FROM WRAPPER")
+    })
+    .onSuccess(async ({ data, id }) => {
+      await new Promise((r) => setTimeout(r, 3000))
+      console.log("ON SUCCESS FROM WRAPPER", data, id)
+    })
+    .procedure(one)
 
   const myAction = wrapper
     .createActionWithProcedureInput({
       name: "IDO",
     })
+    .id("HELLO WORLD")
     .onStart(async ({ args }) => {
       console.log("onStart", args)
       await new Promise((r) => setTimeout(r, 3000))

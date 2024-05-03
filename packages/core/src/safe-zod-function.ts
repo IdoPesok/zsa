@@ -25,6 +25,9 @@ const DefaultOmitted = {
   $onError: 1,
   onInputParseError: 1,
   $onErrorFromWrapper: 1,
+  $onStartFromWrapper: 1,
+  $onSuccessFromWrapper: 1,
+  $onCompleteFromWrapper: 1,
   procedureChain: 1,
   getParams: 1,
   getProcedureChainOutput: 1,
@@ -122,6 +125,41 @@ interface TOnCompleteFn<
   ): any
 }
 
+type TId = string | undefined
+
+export interface TOnStartFnFromWrapper {
+  (value: { args: unknown; id: TId }): any
+}
+
+export interface TOnSuccessFnFromWrapper {
+  (value: { args: unknown; data: unknown; id: TId }): any
+}
+
+export interface TOnCompleteFnFromWrapper {
+  (
+    value:
+      | {
+          isSuccess: true
+          isError: false
+          status: "success"
+          args: unknown
+          data: unknown
+          id: TId
+        }
+      | {
+          isSuccess: false
+          isError: true
+          status: "error"
+          error: SAWError
+          id: TId
+        }
+  ): any
+}
+
+export interface TOnErrorFnFromWrapper {
+  (value: { err: SAWError; id: TId }): any
+}
+
 export class ZodSafeFunction<
   TInputSchema extends TZodObject | undefined,
   TOutputSchema extends TZodObject | undefined,
@@ -133,41 +171,55 @@ export class ZodSafeFunction<
   public $outputSchema: TOutputSchema
   public $onInputParseError: ((err: any) => any) | undefined
   public $onOutputParseError: ((err: any) => any) | undefined
-  public $onError: ((err: SAWError) => any) | undefined
-  public $onErrorFromWrapper: ((err: SAWError) => any) | undefined
   public $firstProcedureInput: any
   public $id: string | undefined
 
+  public $onError: ((err: SAWError) => any) | undefined
   public $onStartFn: TOnStartFn<TInputSchema> | undefined
   public $onSuccessFn: TOnSuccessFn<TInputSchema, TOutputSchema> | undefined
   public $onCompleteFn: TOnCompleteFn<TInputSchema, TOutputSchema> | undefined
+
+  public $onErrorFromWrapper: TOnErrorFnFromWrapper | undefined
+  public $onStartFromWrapper: TOnStartFnFromWrapper | undefined
+  public $onSuccessFromWrapper: TOnSuccessFnFromWrapper | undefined
+  public $onCompleteFromWrapper: TOnCompleteFnFromWrapper | undefined
 
   constructor(params: {
     inputSchema: TInputSchema
     outputSchema: TOutputSchema
     onInputParseError?: ((err: z.ZodError<TInputSchema>) => any) | undefined
     onOutputParseError?: ((err: z.ZodError<TOutputSchema>) => any) | undefined
-    onError?: ((err: SAWError) => any) | undefined
     procedureChain?: TAnyZodSafeFunctionHandler[]
-    onErrorFromWrapper?: ((err: SAWError) => any) | undefined
     firstProcedureInput?: any
+    id?: string | undefined
+
+    onError?: ((err: SAWError) => any) | undefined
     onStart?: TOnStartFn<TInputSchema> | undefined
     onSuccess?: TOnSuccessFn<TInputSchema, TOutputSchema> | undefined
     onComplete?: TOnCompleteFn<TInputSchema, TOutputSchema> | undefined
-    id?: string | undefined
+
+    onErrorFromWrapper?: TOnErrorFnFromWrapper | undefined
+    onStartFromWrapper?: TOnStartFnFromWrapper | undefined
+    onSuccessFromWrapper?: TOnSuccessFnFromWrapper | undefined
+    onCompleteFromWrapper?: TOnCompleteFnFromWrapper | undefined
   }) {
     this.$inputSchema = params.inputSchema
     this.$outputSchema = params.outputSchema
     this.$onInputParseError = params.onInputParseError
     this.$onOutputParseError = params.onOutputParseError
-    this.$onError = params.onError
     this.$procedureChain = params.procedureChain || []
-    this.$onErrorFromWrapper = params.onErrorFromWrapper
     this.$firstProcedureInput = params.firstProcedureInput
-    this.$onStartFn = params.onStart
     this.$id = params.id
+
+    this.$onError = params.onError
+    this.$onStartFn = params.onStart
     this.$onSuccessFn = params.onSuccess
     this.$onCompleteFn = params.onComplete
+
+    this.$onErrorFromWrapper = params.onErrorFromWrapper
+    this.$onStartFromWrapper = params.onStartFromWrapper
+    this.$onSuccessFromWrapper = params.onSuccessFromWrapper
+    this.$onCompleteFromWrapper = params.onCompleteFromWrapper
   }
 
   public getParams() {
@@ -178,12 +230,16 @@ export class ZodSafeFunction<
       onInputParseError: this.$onInputParseError,
       onOutputParseError: this.$onOutputParseError,
       onError: this.$onError,
-      onErrorFromWrapper: this.$onErrorFromWrapper,
       firstProcedureInput: this.$firstProcedureInput,
       id: this.$id,
       onStart: this.$onStartFn,
       onSuccess: this.$onSuccessFn,
       onComplete: this.$onCompleteFn,
+
+      onErrorFromWrapper: this.$onErrorFromWrapper,
+      onStartFromWrapper: this.$onStartFromWrapper,
+      onSuccessFromWrapper: this.$onSuccessFromWrapper,
+      onCompleteFromWrapper: this.$onCompleteFromWrapper,
     } as const
   }
 
@@ -348,6 +404,13 @@ export class ZodSafeFunction<
   }
 
   public async handleStart(args: any) {
+    if (this.$onStartFromWrapper) {
+      await this.$onStartFromWrapper({
+        args,
+        id: this.$id,
+      })
+    }
+
     if (!this.$onStartFn) return
     await this.$onStartFn({
       args,
@@ -355,10 +418,29 @@ export class ZodSafeFunction<
   }
 
   public async handleSuccess(args: any, data: any) {
+    if (this.$onSuccessFromWrapper) {
+      await this.$onSuccessFromWrapper({
+        args,
+        data,
+        id: this.$id,
+      })
+    }
+
     if (this.$onSuccessFn) {
       await this.$onSuccessFn({
         args,
         data,
+      })
+    }
+
+    if (this.$onCompleteFromWrapper) {
+      await this.$onCompleteFromWrapper({
+        isSuccess: true,
+        isError: false,
+        status: "success",
+        args,
+        data,
+        id: this.$id,
       })
     }
 
@@ -380,10 +462,19 @@ export class ZodSafeFunction<
       await this.$onError(customError)
     }
     if (this.$onErrorFromWrapper) {
-      await this.$onErrorFromWrapper(customError)
+      await this.$onErrorFromWrapper({ err: customError, id: this.$id })
     }
 
     if (this.$onCompleteFn) {
+      if (this.$onCompleteFromWrapper) {
+        await this.$onCompleteFromWrapper({
+          isSuccess: false,
+          isError: true,
+          status: "error",
+          error: customError,
+          id: this.$id,
+        })
+      }
       await this.$onCompleteFn({
         isSuccess: false,
         isError: true,
