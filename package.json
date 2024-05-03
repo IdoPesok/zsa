@@ -11,14 +11,6 @@
     "publish-packages": "turbo run build lint && changeset version && changeset publish",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
-  "devDependencies": {
-    "@ianvs/prettier-plugin-sort-imports": "^4.2.1",
-    "@repo/eslint-config": "*",
-    "@repo/typescript-config": "*",
-    "prettier": "^3.2.5",
-    "prettier-plugin-organize-imports": "^3.2.4",
-    "turbo": "latest"
-  },
   "engines": {
     "node": ">=18"
   },
@@ -29,7 +21,13 @@
   ],
   "dependencies": {
     "@changesets/cli": "^2.27.1",
+    "@ianvs/prettier-plugin-sort-imports": "^4.2.1",
     "@manypkg/cli": "^0.21.4",
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "prettier": "^3.2.5",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "turbo": "latest",
     "zod": "^3.23.5"
   }
 }
