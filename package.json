@@ -7,6 +7,8 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "format:write": "turbo run format:write",
+    "format:check": "turbo run format:check",
     "postinstall": "manypkg check",
     "publish-packages": "turbo run build lint && changeset version && changeset publish",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"

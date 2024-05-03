@@ -314,7 +314,6 @@ export class ZodSafeFunction<
     if (!this.$inputSchema) return data
     const safe = this.$inputSchema.safeParse(data)
     if (!safe.success) {
-      console.log("no success")
       if (this.$onInputParseError) {
         this.$onInputParseError(safe.error)
       }

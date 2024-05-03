@@ -1,5 +1,5 @@
-import { createZodSafeFunction } from "./safe-zod-function";
+import { createZodSafeFunction } from "./safe-zod-function"
 
 export const createServerActionProcedure = () => {
-  return createZodSafeFunction();
-};
+  return createZodSafeFunction()
+}

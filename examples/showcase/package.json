@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "npx tsx scripts/tests.ts"
+    "test": "npx tsx scripts/tests.ts",
+    "format:write": "prettier --write \"**/*.{ts,tsx,mdx}\" --cache",
+    "format:check": "prettier --check \"**/*.{ts,tsx,mdx}\" --cache"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
