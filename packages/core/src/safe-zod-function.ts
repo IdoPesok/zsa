@@ -524,7 +524,7 @@ export class ZodSafeFunction<
       await this.$onErrorFromWrapper({ err: customError, id: this.$id })
     }
 
-    if (this.$onCompleteFromWrapper && !timeoutStatus.isTimeout) {
+    if (this.$onCompleteFromWrapper) {
       await this.$onCompleteFromWrapper({
         isSuccess: false,
         isError: true,
@@ -534,7 +534,7 @@ export class ZodSafeFunction<
       })
     }
 
-    if (this.$onCompleteFn && !timeoutStatus.isTimeout) {
+    if (this.$onCompleteFn) {
       await this.$onCompleteFn({
         isSuccess: false,
         isError: true,
