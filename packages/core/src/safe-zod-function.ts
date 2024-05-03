@@ -151,6 +151,7 @@ export class ZodSafeFunction<
       onOutputParseError: this.$onOutputParseError,
       onError: this.$onError,
       onErrorFromWrapper: this.$onErrorFromWrapper,
+      $firstProcedureInput: this.$firstProcedureInput,
     } as const
   }
 
