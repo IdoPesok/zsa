@@ -103,7 +103,7 @@ interface TOnSuccessFn<
   TOutputSchema extends TZodObject | undefined,
 > {
   (value: {
-    args: TInputSchema extends TZodObject ? z.input<TInputSchema> : undefined
+    args: TInputSchema extends TZodObject ? z.infer<TInputSchema> : undefined
     data: TOutputSchema extends TZodObject ? z.output<TOutputSchema> : any
   }): any
 }
@@ -119,7 +119,7 @@ interface TOnCompleteFn<
           isError: false
           status: "success"
           args: TInputSchema extends TZodObject
-            ? z.input<TInputSchema>
+            ? z.infer<TInputSchema>
             : undefined
           data: TOutputSchema extends TZodObject ? z.output<TOutputSchema> : any
         }
@@ -663,7 +663,7 @@ export class ZodSafeFunction<
 
         const parsed = await this.parseOutputData(data, timeoutStatus)
 
-        await this.handleSuccess(args, parsed, timeoutStatus)
+        await this.handleSuccess(input, parsed, timeoutStatus)
 
         return [parsed, null]
       } catch (err) {
