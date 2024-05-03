@@ -1,14 +1,14 @@
-import { ServerActionUtilsProvider } from "@/lib/use-server-action"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "next-themes"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import TopNav from "./_components/top-nav"
 import { getDocPosts } from "@/lib/docs"
-import SideNav from "./_components/side-nav"
+import { ServerActionUtilsProvider } from "@/lib/use-server-action"
 import { cn } from "@/lib/utils"
+import type { Metadata } from "next"
+import { ThemeProvider } from "next-themes"
+import { Inter } from "next/font/google"
+import SideNav from "./_components/side-nav"
+import TopNav from "./_components/top-nav"
+import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -28,7 +28,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          "min-h-screen bg-background font-sans antialiased overflow-y-scroll overflow-x-hidden  overscroll-none",
+          "min-h-screen bg-background font-sans antialiased overflow-y-scroll overflow-x-hidden  overscroll-none"
         )}
       >
         <ServerActionUtilsProvider>
@@ -55,4 +55,3 @@ export default function RootLayout({
     </html>
   )
 }
-
