@@ -1,5 +1,6 @@
 "use server"
 
+import { CONTACTS_DATA } from "@/contacts/contacts-data"
 import { z } from "zod"
 import { adminAction, protectedAction } from "./wrappers"
 
@@ -13,12 +14,27 @@ export const generateRandomNumber = protectedAction
       })
       .refine((input) => input.min < input.max)
   )
-  .handler(({ input, ctx }) => {
-    console.log(ctx.user.name)
-
+  .handler(async ({ input, ctx }) => {
+    await new Promise((r) => setTimeout(r, 3000))
     return {
       number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
     }
+  })
+
+export const searchContacts = protectedAction
+  .createAction()
+  .input(
+    z.object({
+      query: z.string().min(1),
+    })
+  )
+  .handler(async ({ input }) => {
+    // fake loading state
+    await new Promise((r) => setTimeout(r, 2000))
+
+    return CONTACTS_DATA.filter((c) =>
+      c.name.toLowerCase().includes(input.query.toLowerCase())
+    ).slice(0, 10)
   })
 
 export const getFakeData = protectedAction

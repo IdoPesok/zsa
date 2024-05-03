@@ -1,58 +1,69 @@
 "use client"
 
-import { Input } from "@/components/ui/input"
 import { useServerAction } from "@/lib/use-server-action"
-import { generateRandomNumber, getFakeData } from "@/server/actions"
+import { generateRandomNumber, searchContacts } from "@/server/actions"
+import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
-import ClientPlaygroundTwo from "./client-playground-two"
-import { Button } from "./ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card"
+import { Input } from "./ui/input"
+import { Skeleton } from "./ui/skeleton"
 
 export default function ClientPlayground() {
   const [input, setInput] = useState("")
+  const debouncedInput = useDebounce(input, 300)
 
-  const queryAction = useServerAction(getFakeData, {
+  const queryAction = useServerAction(searchContacts, {
     input: {
-      length: 100,
+      query: debouncedInput,
     },
-    enabled: Boolean(input),
-    refetchKey: "getFakeData",
+    enabled: Boolean(debouncedInput),
+    refetchKey: "searchContacts",
   })
   const fakeAction = useServerAction(generateRandomNumber)
 
+  let contactsView
+
+  if (queryAction.data) {
+    contactsView = (
+      <div>
+        {queryAction.data.map((c) => (
+          <div key={c.id}>{c.name}</div>
+        ))}
+      </div>
+    )
+  } else if (queryAction.isLoading) {
+    contactsView = <Skeleton />
+  } else if (queryAction.isError) {
+    contactsView = (
+      <div className="text-red-500">
+        Error: {JSON.stringify(queryAction.error)}
+      </div>
+    )
+  }
+
   return (
-    <div>
-      <h1>Send greeting</h1>
-      <ClientPlaygroundTwo />
-      {!queryAction.data
-        ? queryAction.status
-        : JSON.stringify(queryAction.data, null, 2)}
-      <Input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Enter your name..."
-      />
-      <div>{fakeAction.isLoading}</div>
-      {fakeAction.data && <div>{JSON.stringify(fakeAction.data.number)}</div>}
-      <Button
-        onClick={async () => {
-          if (fakeAction.isLoading) {
-            alert("Action is already executing")
-            return
-          }
-
-          const [data, err] = await fakeAction.execute({
-            min: 100,
-            max: 1000,
-          })
-
-          if (err) {
-            alert("Action failed: " + err.code)
-            return
-          }
-        }}
-      >
-        Execute
-      </Button>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Call From Client Component</CardTitle>
+        <CardDescription>
+          This card fetches data from a client component
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <Input
+          placeholder="Search contacts..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <h1>Search Results</h1>
+        {contactsView}
+      </CardContent>
+    </Card>
   )
 }
