@@ -2,6 +2,13 @@ import { ServerActionUtilsProvider } from "@/lib/use-server-action"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "next-themes"
+import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import TopNav from "./_components/top-nav"
+import { getDocPosts } from "@/lib/docs"
+import SideNav from "./_components/side-nav"
+import { cn } from "@/lib/utils"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -15,11 +22,37 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }): JSX.Element {
+  const docPosts = getDocPosts()
+
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <ServerActionUtilsProvider>{children}</ServerActionUtilsProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased overflow-y-scroll overflow-x-hidden  overscroll-none",
+        )}
+      >
+        <ServerActionUtilsProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            disableTransitionOnChange
+          >
+            <TooltipProvider delayDuration={0}>
+              <div className="flex flex-col gap-6">
+                <TopNav docPosts={docPosts} />
+                <div className="flex flex-row gap-10 mx-10 px-4 max-w-screen-xl w-full pt-2 pb-4">
+                  <SideNav docPosts={docPosts} />
+                  <div className="flex-1 overflow-hidden max-w-full lg:pl-[270px] md:pl-[270px] xl:flex flex-row gap-10 justify-end">
+                    {children}
+                  </div>
+                </div>
+              </div>
+            </TooltipProvider>
+            <Toaster duration={3000} />
+          </ThemeProvider>
+        </ServerActionUtilsProvider>
       </body>
     </html>
   )
 }
+

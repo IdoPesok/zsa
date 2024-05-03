@@ -43,7 +43,7 @@ export default async function PlaygroundPage() {
         <Suspense fallback={<Skeleton className="h-96" />}>
           <RandomNumbers />
         </Suspense>
-        <ClientPlayground />
+        {/* <ClientPlayground /> */}
       </div>
     </div>
   )
