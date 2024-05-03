@@ -296,7 +296,6 @@ export class ZodSafeFunction<
     if (this.$onErrorFromWrapper) {
       this.$onErrorFromWrapper(customError)
     }
-    console.log(JSON.stringify(customError))
     return [
       null,
       {
