@@ -5,11 +5,19 @@ import {
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "./safe-zod-function"
-import { TCreateAction, createServerActionWrapper } from "./wrapper"
+import {
+  TCreateAction,
+  createServerAction,
+  createServerActionWrapper,
+} from "./wrapper"
 
 export * from "./errors"
 
-export { createServerActionProcedure, createServerActionWrapper }
+export {
+  createServerAction,
+  createServerActionProcedure,
+  createServerActionWrapper,
+}
 
 export {
   type TAnyZodSafeFunctionHandler,

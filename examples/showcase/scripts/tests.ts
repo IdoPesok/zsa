@@ -11,66 +11,47 @@ const main = async () => {
         name: z.string(),
       })
     )
-    .handler(async ({ input }) => {
-      await new Promise((r) => setTimeout(r, 3000))
+    .handler(({ input }) => {
+      console.log("one handler", input)
       return {
         greeting: `Hello ${input.name}`,
       }
     })
 
-  const two = createServerActionProcedure()
-    .input(
-      z.object({
-        greeting: z.string(),
-      })
-    )
-    .handler(async ({ input }) => {
-      return {
-        message: `${input.greeting}. Goodbye!`,
-      }
-    })
-
-  const wrapper = createServerActionWrapper().procedure(one).chainProcedure(two)
-
-  const action = wrapper
-    .createActionWithProcedureInput({
-      name: "IDO",
-    })
-    .noInputHandler(({ ctx }) => {
-      console.log(ctx)
-    })
-
-  action()
-
-  const three = createServerActionProcedure().noInputHandler(() => {
+  const two = createServerActionProcedure(one).handler(({ input }) => {
+    console.log("two handler", input)
     return {
-      user: {
-        name: "IDO",
-        id: 1,
-        email: "dsfdsfdsf",
-      },
+      other: `Hello ${input.greeting}`,
     }
   })
 
-  const wrapper2 = createServerActionWrapper().procedure(three)
-
-  const action2 = wrapper2
-    .createAction()
-    .input(
-      z.object({
-        test: z.string(),
-      })
-    )
-    .handler(async ({ input, ctx }) => {
-      console.log({
-        input,
-        ctx,
-      })
+  const three = createServerActionProcedure()
+    .input(z.object({ other: z.string() }))
+    .handler(({ input }) => {
+      console.log("three handler", input)
+      return {
+        greeting: `Hello ${input.other}`,
+      }
     })
 
-  action2({
-    test: "sdfsdfasf",
-  })
+  const wrapper = createServerActionWrapper().procedure(one)
+
+  const admin = wrapper.chainProcedure(two).chainProcedure(three)
+
+  const myAction = admin
+    .createActionWithProcedureInput({
+      name: "IDO",
+    })
+    .id("HELLO WORLD")
+    .input(z.object({ name: z.string() }).default({ name: "IDO" }))
+    .handler(({ ctx, input }) => {
+      return "YOOHOOO" + input.name
+    })
+
+  const [data, err] = await myAction(undefined)
+
+  console.log("got error", err)
+  console.log("got data", data)
 }
 
 main()
