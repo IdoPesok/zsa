@@ -14,6 +14,7 @@ export interface TCreateAction<TProcedureChainOutput extends any>
   extends TZodSafeFunction<
     undefined,
     undefined,
+    undefined,
     TZodSafeFunctionDefaultOmitted,
     TProcedureChainOutput
   > {}
