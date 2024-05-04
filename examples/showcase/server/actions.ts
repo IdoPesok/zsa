@@ -64,4 +64,4 @@ const testAction = adminAction
   .createActionWithProcedureInput({
     test: "sdfdsfsafafsd",
   })
-  .noInputHandler(({ ctx }) => {})
+  .noInputHandler(({ ctx }) => { })

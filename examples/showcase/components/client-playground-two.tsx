@@ -9,7 +9,7 @@ export default function ClientPlaygroundTwo() {
     <div>
       <button
         onClick={async () => {
-          refetch("getFakeData")
+          refetch("")
         }}
       >
         refetch

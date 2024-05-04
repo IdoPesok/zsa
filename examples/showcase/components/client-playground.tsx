@@ -1,7 +1,7 @@
 "use client"
 
 import { useServerAction } from "@/lib/use-server-action"
-import { generateRandomNumber, searchContacts } from "@/server/actions"
+import { searchContacts } from "@/server/actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
 import {
@@ -25,7 +25,6 @@ export default function ClientPlayground() {
     enabled: Boolean(debouncedInput),
     refetchKey: "searchContacts",
   })
-  const fakeAction = useServerAction(generateRandomNumber)
 
   let contactsView
 

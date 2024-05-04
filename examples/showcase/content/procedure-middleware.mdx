@@ -1,0 +1,116 @@
+---
+title: 'Procedure middleware'
+group: 'Getting Started'
+groupOrder: 2
+---
+
+# Procedures
+
+Let's say you need to feed additional "context" to a set of server actions (ie the `userId` of the caller). This is when `procedures` come in handy.
+
+To make your first procedure, you can do the following:
+
+```typescript:actions.ts
+"use server"
+
+const protectedProcedure = createServerActionProcedure()
+  .noInputHandler(async () => {
+    try {
+        const {email, userId} = await getUserId();
+
+        return {
+            user: {
+                email,
+                userId,
+            }
+        }
+    } catch {
+        throw new Error()
+    }
+    
+  })
+
+const protectedActionMiddleware = createServerActionWrapper(protectedProcedure)
+
+export const updateEmailAction = protectedActionMiddleware
+  .createAction()
+  .input(z.object({
+    newEmail: z.string()
+  })).handler(async ({input, ctx}) => {
+    const {user} = ctx
+
+    await db.update(users).set({
+      email: newEmail,
+    }).where(eq(users.id, user.userId))
+
+    return newEmail
+  })
+```
+
+As you can see from the code above, by creating a procedure, we are able to build actions that *ALWAYS* require a user to be logged in and is able to feed forward that users context into the `input` of `updateEmailAction`.
+
+This is useful for ensuring certain server actions can only be called if a user is logged in, but what if we now need to restrict a server action based on a user's permissions.
+
+To do this, we need to validate 
+    1. that the user is logged in 
+    2. and that the user is an admin
+
+Since the above example already verifies that the user exists, we can create a procedure that essentially inherets this one's functionality:
+
+```typescript:actions.ts
+...
+
+const adminProcedure = createServerActionProcedure()
+  .input(z.object({ user: z.object({ userId: z.number() }) }))
+  .handler(async ({ input }) => {
+    if (input.user.userId !== 1) throw new Error("You are not authorized")
+    
+    return {
+      user: input.user,
+      isAdmin: true,
+      message: `hello ${input.user}`,
+    } as const
+  })
+
+
+const adminActionMiddleware = protectedAction.chainProcedure(adminProcedure)
+```
+
+Now, we can use `adminActionMiddleware` to create actions that run the `protectedProcedure`, then `adminProcedure`, and feed forward that context into whatever action you create from the `adminActionMiddleware`
+
+
+
+```typescript:actions.ts
+...
+
+export const deleteUserAction = adminActionMiddleware
+  .createAction()
+  .input(z.object({
+    userIdToDelete: z.string()
+  })).handler(async ({input, ctx}) => {
+    // get the context from adminProcedure
+    const {user, isAdmin, message} = ctx 
+
+    await db.delete(users).where(eq(users.id, userIdToDelete))
+  })
+```
+
+
+Boom! We just built a server action that can only be invoked by admins.
+
+
+## Actions using procedure input
+
+What if we need to always feed some sort of input into a procedure? ie a "`postId`". We can do the following here:
+```typescript:actions.ts
+//TODO
+```
+
+By building individual `procedures` and chaining them together via `chainProcedure`, 
+this allows us to user individual procedures as "building blocks". Instead of using full-on inheretence, we build individual procedures and chain them together as needed.
+
+For example, if we had `procedure1` and `procedure2`, we could create a new chained procedure, (lets call it `procedure12`), containing the logic of both the handlers.
+
+But, lets say we want some functionality from `procedure2` and `procedure3`, but we don't want to include the functionality from `procedure1`. Then we could just chain `procedure3` directly off of `procedure2`, to make `procedure23`
+
+

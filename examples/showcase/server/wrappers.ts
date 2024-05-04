@@ -4,21 +4,6 @@ import {
 } from "server-actions-wrapper"
 import { z } from "zod"
 
-const protectedProcedure = createServerActionProcedure()
-  .input(
-    z.object({
-      test: z.string(),
-    })
-  )
-  .handler(() => {
-    return {
-      user: {
-        name: "IDO",
-        id: 1,
-        email: "dsfdsfdsf",
-      },
-    }
-  })
 
 const admin = createServerActionProcedure()
   .input(z.object({ user: z.object({ id: z.number(), name: z.string() }) }))
@@ -31,10 +16,56 @@ const admin = createServerActionProcedure()
     } as const
   })
 
-const baseAction = createServerActionWrapper().onError((err) => {
-  console.log("BASE ACTION ERROR", err)
+const getPost = (id: string) => true
+const getUserOwnsPost = (str: string, str1: number) => true
+
+
+const protectedProcedure = createServerActionProcedure()
+  .noInputHandler(async () => {
+    return {
+      user: {
+        name: "IDO",
+        id: 1,
+        email: "dsfdsfdsf",
+      },
+    }
+  })
+
+
+
+const postExistsProcedure = createServerActionProcedure()
+  .input(z.object({ postId: z.string() }))
+  .handler(async ({ input }) => {
+    const valid = await getPost(input.postId)
+
+    if (!valid) throw Error()
+
+    return valid
+  })
+
+
+const baseAction = createServerActionWrapper()
+
+export const postAction = baseAction.procedure(postExistsProcedure)
+
+postAction.createActionWithProcedureInput().input(z.object({
+  postId: z.string(),
+  newPostName: z.string(),
+})).handler(async ({ input, ctx }) => {
+  //we are now sure that at this point the user owns the procedure
 })
 
-export const protectedAction = baseAction.procedure(protectedProcedure)
+export const updateEmailAction = protectedAction
+  .createAction()
+  .input(z.object({
+    newEmail: z.string()
+  }))
+  .handler(async ({ input, ctx }) => {
+    const { userId } = ctx
+
+    await db.update(users).set({
+      email: newEmail,
+    }).where(eq(users.id, userId))
+  })
 
 export const adminAction = protectedAction.chainProcedure(admin)

@@ -14,40 +14,40 @@ export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
 > =
   | {
-      // loading state
-      isLoading: true
-      data: undefined | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-      isError: false
-      error: undefined
-      isSuccess: false
-      status: "loading"
-    }
+    // loading state
+    isLoading: true
+    data: undefined | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+    isError: false
+    error: undefined
+    isSuccess: false
+    status: "loading"
+  }
   | {
-      // idle state
-      isLoading: false
-      data: undefined
-      isError: false
-      error: undefined
-      isSuccess: false
-      status: "idle"
-    }
+    // idle state
+    isLoading: false
+    data: undefined
+    isError: false
+    error: undefined
+    isSuccess: false
+    status: "idle"
+  }
   | {
-      // error state
-      isLoading: false
-      data: undefined
-      isError: true
-      error: unknown
-      isSuccess: false
-      status: "error"
-    }
+    // error state
+    isLoading: false
+    data: undefined
+    isError: true
+    error: unknown
+    isSuccess: false
+    status: "error"
+  }
   | {
-      isLoading: false
-      data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-      isError: false
-      error: undefined
-      isSuccess: true
-      status: "success"
-    }
+    isLoading: false
+    data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+    isError: false
+    error: undefined
+    isSuccess: true
+    status: "success"
+  }
 
 type TServerActionUtilsContext = {
   $$refetch: Record<string, number | undefined>
@@ -56,7 +56,7 @@ type TServerActionUtilsContext = {
 
 const ServerActionUtilsContext = createContext<TServerActionUtilsContext>({
   $$refetch: {},
-  refetch: () => {},
+  refetch: () => { },
 })
 
 export function ServerActionUtilsProvider({
@@ -87,7 +87,7 @@ export const useServerActionsUtils = () => {
   if (context === undefined) {
     const defaultState: TServerActionUtilsContext = {
       $$refetch: {},
-      refetch: () => {},
+      refetch: () => { },
     }
 
     return defaultState
