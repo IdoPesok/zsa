@@ -31,9 +31,7 @@ export default function ClientPlayground() {
   if (queryAction.data) {
     contactsView = (
       <div>
-        {queryAction.data.map((c) => (
-          <div key={c.id}>{c.name}</div>
-        ))}
+        {queryAction.data}
       </div>
     )
   } else if (queryAction.isLoading) {

@@ -1,3 +1,4 @@
+import ClientPlaygroundTwo from "@/components/client-playground-two"
 import {
   Card,
   CardContent,
@@ -42,7 +43,7 @@ export default async function PlaygroundPage() {
         <Suspense fallback={<Skeleton className="h-96" />}>
           <RandomNumbers />
         </Suspense>
-        {/* <ClientPlayground /> */}
+        <ClientPlaygroundTwo />
       </div>
     </div>
   )

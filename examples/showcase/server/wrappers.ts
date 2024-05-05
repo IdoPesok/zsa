@@ -44,28 +44,37 @@ const postExistsProcedure = createServerActionProcedure()
   })
 
 
-const baseAction = createServerActionWrapper()
 
-export const postAction = baseAction.procedure(postExistsProcedure)
-
-postAction.createActionWithProcedureInput().input(z.object({
-  postId: z.string(),
-  newPostName: z.string(),
-})).handler(async ({ input, ctx }) => {
-  //we are now sure that at this point the user owns the procedure
-})
-
-export const updateEmailAction = protectedAction
+export const protectedAction = createServerActionWrapper()
+  .procedure(protectedProcedure)
   .createAction()
-  .input(z.object({
-    newEmail: z.string()
-  }))
+  .input(z.object({ hello: z.string() }))
+  .onComplete(async (onCompleteCallback) => {
+    if (onCompleteCallback.isSuccess) {
+      console.log('on complete')
+      onCompleteCallback.args.hello
+    }
+  })
+  .onError(async (onErrorCallback) => {
+    if (onErrorCallback.message) {
+      console.log('on error')
+    }
+  })
+  .onStart(async (onStartCallback) => {
+    if (onStartCallback.args) {
+      console.log('on start')
+    }
+  })
+  .onInputParseError(async (onInputParseErrorCallback) => {
+    console.log('zod error')
+  })
+  .onSuccess(async (onSuccessCallback) => {
+    console.log('on success')
+  })
+  .output(z.object({ hello: z.string() }))
+  .timeout(1000)
   .handler(async ({ input, ctx }) => {
-    const { userId } = ctx
-
-    await db.update(users).set({
-      email: newEmail,
-    }).where(eq(users.id, userId))
+    return input
   })
 
-export const adminAction = protectedAction.chainProcedure(admin)
+
