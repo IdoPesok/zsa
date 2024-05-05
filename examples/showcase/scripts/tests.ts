@@ -16,7 +16,11 @@ const main = async () => {
   })
 
   const postIdOwner = createServerActionProcedure(isAuthed)
-    .input(z.object({ postId: z.string() }).default({ postId: "" }))
+    .input(
+      z.object({ postId: z.string() }).transform((v) => ({
+        postId: `transformed to ` + v.postId.toUpperCase(),
+      }))
+    )
     .handler(async ({ input, ctx }) => {
       console.log("RUNNING POST HANDLER", input, ctx)
       await new Promise((r) => setTimeout(r, 1000))
@@ -30,7 +34,11 @@ const main = async () => {
     })
 
   const other = createServerActionProcedure(postIdOwner)
-    .input(z.object({ otherId: z.string() }))
+    .input(
+      z
+        .object({ otherId: z.string() })
+        .default({ otherId: "got other default" })
+    )
     .handler(async ({ input, ctx }) => {
       console.log("RUNNING OTHER HANDLER", input, ctx)
       await new Promise((r) => setTimeout(r, 1000))
@@ -52,12 +60,12 @@ const main = async () => {
 
   const a = wrapper
     .createAction()
-    .input(z.object({ hmmmm: z.string() }).default({ hmmmm: "" }))
+    .input(z.object({ hello: z.string().default("world") }))
     .handler(async ({ input, ctx }) => {
       console.log("RUNNING MAIN HANDLER")
       await new Promise((r) => setTimeout(r, 1000))
       console.log({
-        hmmmm: input.hmmmm,
+        hmmmm: input.hello,
         otherId: input.otherId,
         postId: input.postId,
 
@@ -73,7 +81,9 @@ const main = async () => {
       return "GREAT SUCCESS"
     })
 
-  const [data, err] = await a(undefined)
+  const [data, err] = await a({
+    postId: "hello world",
+  })
 
   console.log("data", data)
   console.log("err", err)
