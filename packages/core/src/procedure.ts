@@ -1,5 +1,8 @@
 import {
+  TAnyObject,
   TAnyZodSafeFunctionHandler,
+  TGetInputFromHandlerFunc,
+  TGetParsedInputFromHandlerFunc,
   TZodSafeFunction,
   TZodSafeFunctionDefaultOmitted,
   createZodSafeFunction,
@@ -12,13 +15,14 @@ export const createServerActionProcedure = <
   parent?: T
 ): T extends TAnyZodSafeFunctionHandler
   ? TZodSafeFunction<
-      inferServerActionReturnData<T>,
-      inferServerActionReturnData<T>,
+      TGetInputFromHandlerFunc<T>,
+      TGetParsedInputFromHandlerFunc<T>,
       undefined,
-      | Exclude<TZodSafeFunctionDefaultOmitted, "handler">
-      | "noInputHandler"
-      | "input",
-      never
+      TGetParsedInputFromHandlerFunc<T> extends TAnyObject
+        ? Exclude<TZodSafeFunctionDefaultOmitted, "handler"> | "noInputHandler"
+        : TZodSafeFunctionDefaultOmitted,
+      inferServerActionReturnData<T>,
+      true
     >
   : ReturnType<typeof createZodSafeFunction> => {
   return createZodSafeFunction(parent !== undefined) as any
