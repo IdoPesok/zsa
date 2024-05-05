@@ -5,53 +5,78 @@ import {
 import { z } from "zod"
 
 const main = async () => {
-  const one = createServerActionProcedure()
-    .input(
-      z.object({
-        name: z.string(),
-      })
-    )
-    .handler(({ input }) => {
-      console.log("one handler", input)
-      return {
-        greeting: `Hello ${input.name}`,
-      }
-    })
-
-  const two = createServerActionProcedure(one).handler(({ input }) => {
-    console.log("two handler", input)
+  const isAuthed = createServerActionProcedure().noInputHandler(async () => {
+    console.log("RUNNING IS AUTHED HANDLER")
+    await new Promise((r) => setTimeout(r, 1000))
     return {
-      other: `Hello ${input.greeting}`,
+      user: {
+        name: "IDO",
+      },
     }
   })
 
-  const three = createServerActionProcedure()
-    .input(z.object({ other: z.string() }))
-    .handler(({ input }) => {
-      console.log("three handler", input)
+  const postIdOwner = createServerActionProcedure(isAuthed)
+    .input(z.object({ postId: z.string() }).default({ postId: "" }))
+    .handler(async ({ input, ctx }) => {
+      console.log("RUNNING POST HANDLER", input, ctx)
+      await new Promise((r) => setTimeout(r, 1000))
+      // validate post id owner here
       return {
-        greeting: `Hello ${input.other}`,
+        user: ctx.user,
+        post: {
+          id: input.postId,
+        },
       }
     })
 
-  const wrapper = createServerActionWrapper().procedure(one)
-
-  const admin = wrapper.chainProcedure(two).chainProcedure(three)
-
-  const myAction = admin
-    .createActionWithProcedureInput({
-      name: "IDO",
+  const other = createServerActionProcedure(postIdOwner)
+    .input(z.object({ otherId: z.string() }))
+    .handler(async ({ input, ctx }) => {
+      console.log("RUNNING OTHER HANDLER", input, ctx)
+      await new Promise((r) => setTimeout(r, 1000))
+      // validate other id owner here
+      return {
+        user: ctx.user,
+        post: ctx.post,
+        test: {
+          other: input.otherId,
+          hello: "world",
+        } as const,
+      }
     })
-    .id("HELLO WORLD")
-    .input(z.object({ name: z.string() }).default({ name: "IDO" }))
-    .handler(({ ctx, input }) => {
-      return "YOOHOOO" + input.name
+
+  const wrapper = createServerActionWrapper()
+    .procedure(isAuthed)
+    .chainProcedure(postIdOwner)
+    .chainProcedure(other)
+
+  const a = wrapper
+    .createAction()
+    .input(z.object({ hmmmm: z.string() }).default({ hmmmm: "" }))
+    .handler(async ({ input, ctx }) => {
+      console.log("RUNNING MAIN HANDLER")
+      await new Promise((r) => setTimeout(r, 1000))
+      console.log({
+        hmmmm: input.hmmmm,
+        otherId: input.otherId,
+        postId: input.postId,
+
+        user: ctx.user,
+        post: {
+          id: ctx.post.id,
+        },
+        test: {
+          hello: ctx.test.hello,
+        },
+      })
+
+      return "GREAT SUCCESS"
     })
 
-  const [data, err] = await myAction(undefined)
+  const [data, err] = await a(undefined)
 
-  console.log("got error", err)
-  console.log("got data", data)
+  console.log("data", data)
+  console.log("err", err)
 }
 
 main()

@@ -1,6 +1,8 @@
 import {
+  TAnyObject,
   TAnyZodSafeFunctionHandler,
   TDataOrError,
+  TFinalInput,
   TOnCompleteFnFromWrapper,
   TOnErrorFnFromWrapper,
   TOnStartFnFromWrapper,
@@ -10,32 +12,42 @@ import {
   ZodSafeFunction,
 } from "./safe-zod-function"
 
-export interface TCreateAction<TProcedureChainOutput extends any>
-  extends TZodSafeFunction<
-    undefined,
-    undefined,
-    undefined,
-    TZodSafeFunctionDefaultOmitted,
-    TProcedureChainOutput
-  > {}
+export type TCreateAction<
+  TInput extends TAnyObject | undefined,
+  TParsedInput extends TAnyObject | undefined,
+  TProcedureChainOutput extends any,
+> = TZodSafeFunction<
+  TInput,
+  TParsedInput,
+  undefined,
+  TInput extends TAnyObject
+    ? Exclude<TZodSafeFunctionDefaultOmitted, "handler"> | "noInputHandler"
+    : TZodSafeFunctionDefaultOmitted,
+  TProcedureChainOutput,
+  false
+>
 
 export interface TServerActionWrapperInner<
-  TProcedureChainInput extends any,
+  TProcedureChainInput extends TAnyObject | undefined,
+  TProcedureChainParsedInput extends TAnyObject | undefined,
   TProcedureChainOutput extends any,
   TOmitted extends string,
 > extends ServerActionWrapper<
     TProcedureChainInput,
+    TProcedureChainParsedInput,
     TProcedureChainOutput,
     TOmitted
   > {}
 
 type TServerActionWrapper<
-  TProcedureChainInput extends any,
+  TProcedureChainInput extends TAnyObject | undefined,
+  TProcedureChainParsedInput extends TAnyObject | undefined,
   TProcedureChainOutput extends any,
   TOmitted extends string,
 > = Omit<
   TServerActionWrapperInner<
     TProcedureChainInput,
+    TProcedureChainParsedInput,
     TProcedureChainOutput,
     TOmitted
   >,
@@ -43,7 +55,8 @@ type TServerActionWrapper<
 >
 
 class ServerActionWrapper<
-  TProcedureChainInput extends any,
+  TProcedureChainInput extends TAnyObject | undefined,
+  TProcedureChainParsedInput extends TAnyObject | undefined,
   TProcedureChainOutput extends any,
   TOmitted extends string,
 > {
@@ -84,6 +97,7 @@ class ServerActionWrapper<
     milliseconds: T
   ): TServerActionWrapper<
     TProcedureChainInput,
+    TProcedureChainParsedInput,
     TProcedureChainOutput,
     TOmitted | "timeout"
   > {
@@ -95,6 +109,7 @@ class ServerActionWrapper<
     fn: TOnErrorFnFromWrapper
   ): TServerActionWrapper<
     TProcedureChainInput,
+    TProcedureChainParsedInput,
     TProcedureChainOutput,
     TOmitted | "onError"
   > {
@@ -106,6 +121,7 @@ class ServerActionWrapper<
     fn: TOnStartFnFromWrapper
   ): TServerActionWrapper<
     TProcedureChainInput,
+    TProcedureChainParsedInput,
     TProcedureChainOutput,
     TOmitted | "onStart"
   > {
@@ -117,6 +133,7 @@ class ServerActionWrapper<
     fn: TOnSuccessFnFromWrapper
   ): TServerActionWrapper<
     TProcedureChainInput,
+    TProcedureChainParsedInput,
     TProcedureChainOutput,
     TOmitted | "onSuccess"
   > {
@@ -128,6 +145,7 @@ class ServerActionWrapper<
     fn: TOnCompleteFnFromWrapper
   ): TServerActionWrapper<
     TProcedureChainInput,
+    TProcedureChainParsedInput,
     TProcedureChainOutput,
     TOmitted | "onComplete"
   > {
@@ -135,20 +153,23 @@ class ServerActionWrapper<
     return this as any
   }
 
-  public procedure<T extends any, TInput extends any>(
-    $procedure: (() => TDataOrError<T>) | ((input: TInput) => TDataOrError<T>)
+  public procedure<
+    T extends any,
+    TInput extends TAnyObject | undefined = undefined,
+    TParsedInput extends TAnyObject | undefined = undefined,
+  >(
+    $procedure:
+      | (() => TDataOrError<T>)
+      | ((
+          input: TInput,
+          ctx: any,
+          parsedInput: TParsedInput
+        ) => TDataOrError<T>)
   ): TServerActionWrapper<
     TInput,
+    TParsedInput,
     Awaited<T>,
-    | Exclude<
-        TOmitted,
-        TInput extends { [key: string]: any }
-          ? "createActionWithProcedureInput" | "chainProcedure"
-          : "chainProcedure"
-      >
-    | (TInput extends { [key: string]: any }
-        ? "createAction" | "procedure"
-        : "procedure")
+    Exclude<TOmitted, "chainProcedure"> | "procedure"
   > {
     return new ServerActionWrapper({
       ...this.getParams(),
@@ -156,11 +177,29 @@ class ServerActionWrapper<
     }) as any
   }
 
-  public chainProcedure<T extends any>(
+  public chainProcedure<
+    T extends any,
+    TInput extends TAnyObject | undefined = undefined,
+    TParsedInput extends TAnyObject | undefined = undefined,
+  >(
     procedure: TProcedureChainOutput extends undefined
       ? () => TDataOrError<T>
-      : (input: TProcedureChainOutput) => TDataOrError<T>
-  ): TServerActionWrapper<TProcedureChainInput, Awaited<T>, TOmitted> {
+      : (
+          input: TInput,
+          ctx: TProcedureChainOutput,
+          parsedInput: TParsedInput
+        ) => TDataOrError<T>
+  ): TServerActionWrapper<
+    TFinalInput<TProcedureChainInput, TInput>,
+    TFinalInput<
+      TProcedureChainParsedInput,
+      Exclude<TParsedInput, undefined> extends never
+        ? undefined
+        : Exclude<TParsedInput, undefined>
+    >,
+    Awaited<T>,
+    TOmitted
+  > {
     const temp = [...this.$procedureChain]
     temp.push(procedure)
     return new ServerActionWrapper({
@@ -169,7 +208,11 @@ class ServerActionWrapper<
     }) as any
   }
 
-  public createAction(): TCreateAction<TProcedureChainOutput> {
+  public createAction(): TCreateAction<
+    TProcedureChainInput,
+    TProcedureChainParsedInput,
+    TProcedureChainOutput
+  > {
     return new ZodSafeFunction({
       inputSchema: undefined,
       outputSchema: undefined,
@@ -178,28 +221,13 @@ class ServerActionWrapper<
       onStartFromWrapper: this.$onStart,
       onSuccessFromWrapper: this.$onSuccess,
       onCompleteFromWrapper: this.$onComplete,
-      timeout: this.$timeout,
-    }) as any
-  }
-
-  public createActionWithProcedureInput(
-    input: TProcedureChainInput
-  ): TCreateAction<TProcedureChainOutput> {
-    return new ZodSafeFunction({
-      inputSchema: undefined,
-      outputSchema: undefined,
-      procedureChain: this.$procedureChain,
-      firstProcedureInput: input,
-      onErrorFromWrapper: this.$onError,
-      onSuccessFromWrapper: this.$onSuccess,
-      onCompleteFromWrapper: this.$onComplete,
-      onStartFromWrapper: this.$onStart,
       timeout: this.$timeout,
     }) as any
   }
 }
 
 export function createServerActionWrapper(): TServerActionWrapper<
+  undefined,
   undefined,
   undefined,
   | "$procedureChain"
@@ -209,7 +237,6 @@ export function createServerActionWrapper(): TServerActionWrapper<
   | "$onSuccess"
   | "$onComplete"
   | "$onStart"
-  | "createActionWithProcedureInput"
 > {
   return new ServerActionWrapper() as any
 }
