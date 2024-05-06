@@ -3,7 +3,6 @@
 import { createServerActionWrapper } from "server-actions-wrapper"
 import { z } from "zod"
 
-
 export const getFakeData = createServerActionWrapper()
   .createAction()
   .input(

@@ -1,12 +1,16 @@
 ---
-title: 'Callbacks'
-group: 'Getting Started'
+title: "Callbacks"
+group: "Getting Started"
 groupOrder: 3
 ---
 
 # Callbacks
 
-Sometimes, we may want to run some logic based on if a server action completes, errors, or other conditions. To do this, we can use the following callbacks on our server actions.
+Callbacks allow you to run additional logic based on the lifecycle of a server action, such as when it starts, completes successfully, errors out, or encounters an input parsing error.
+
+## Available callbacks
+
+The following callbacks can be configured when defining your server action or at the `procedure` level to be shared among a set of actions:
 
 - `onStart`
 - `onSuccess`
@@ -14,9 +18,20 @@ Sometimes, we may want to run some logic based on if a server action completes, 
 - `onError`
 - `onInputParseError`
 
-Any of these callbacks can be configured when defining your server action, or at the `procedure` level if we want these callbacks to be shared among a set of actions.
+The lifecycle of these callbacks when an action is invoked is as follows:
 
-For example:
+1. Action gets invoked
+2. `onStart` runs
+3. `onInputParseError` runs if the input fails parsing (execution stops here if this occurs)
+4. The main logic for the action runs
+5. `onSuccess` runs if the handler completes successfully, or `onError` runs if the handler throws an error
+6. `onComplete` runs under all exit conditions
+7. The action's response is `return`ed
+
+## Callbacks on actions
+
+Here's an example of configuring callbacks on an individual action:
+
 ```typescript:actions.ts
 const wrapper = createServerActionWrapper()
 
@@ -43,7 +58,9 @@ const exampleAction = wrapper
   })
 ```
 
-Additionally, the same can be done at the procedure level. By configuring callbacks at the procedure level, they will be run for all actions that utilize that procedure.
+## Callbacks on procedures
+
+You can also configure callbacks at the procedure level. Callbacks defined on a procedure will run for all actions that utilize that procedure:
 
 ```typescript:actions.ts
 const isAuthed = createServerActionProcedure()
@@ -61,15 +78,11 @@ const isAuthed = createServerActionProcedure()
   })
   .noInputHandler(async () => {
     const { id } = await getUser()
-
     if (!id) {
       throw new Error('UNAUTHORIZED')
     }
-
     return {
-      user: {
-        id,
-      },
+      user: { id },
     }
   })
 
@@ -78,4 +91,24 @@ const authedAction = createServerActionWrapper().procedure(isAuthed)
 const someFunction = authedAction.createAction()...
 ```
 
-It is important to note that if a callback is added to BOTH the action and the procedure that the action is utilizing, then both of those callbacks will be individually executed. A callback on the action with NOT override the procedure - both will run.
+Note that if a callback is added to both the action and the procedure it utilizes, both callbacks will run individually. The procedure callbacks will execute before their corresponding action callbacks.
+
+## Callback arguments
+
+Each callback receives different arguments:
+
+- `onStart`
+  - `args`: the original input to the action (same as `input` in the handler)
+- `onSuccess`
+  - `args`: the original input to the action
+- `onComplete`
+  - `isSuccess`: boolean indicating if the action succeeded
+  - `isError`: boolean indicating if the action errored
+  - `status`: string of either `'success'` or `'error'`
+  - `args`: the original input to the action (only exists if `isSuccess === true`)
+- `onError`
+  - The error that occurred
+- `onInputParseError`
+  - The zod error that occurred during input parsing
+
+By leveraging these callbacks, you can add logging, error handling, or other side effects to your server actions.

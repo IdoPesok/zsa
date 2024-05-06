@@ -1,56 +1,63 @@
 ---
-title: 'Hello world action'
-group: 'Getting Started'
+title: "Hello world action"
+group: "Getting Started"
 groupOrder: 1
 ---
 
-# Hello world action
+# Hello World Action
+
+In this guide, we'll walk you through creating your first server action using `server-actions-wrapper`. We'll cover the basic features needed to set up a server action and demonstrate how to use it as a `mutation` and a `query` in your client components.
 
 ## Building the action
 
-To make your first action, you can do the following. For this example, we will include the minimum amount of features to create a server action:
+To create your first action, follow these steps:
 
+1. Import the necessary dependencies:
 
-```typescript:actions.ts
-"use server"
+   ```typescript
+   import { createServerActionWrapper } from "server-actions-wrapper"
+   import z from "zod"
+   ```
 
-export const incrementNumberAction = createServerActionWrapper()
-    .createAction()
-    .input(z.object({
-        number: z.number()
-    }))
-    .handler(async ({ input }) => {
-        return input.number + 1
-    })
-```
+2. Create a new server action using `createServerActionWrapper`:
 
+   ```typescript:actions.ts
+   "use server"
 
-A quick explanation of the above code:
+   export const incrementNumberAction = createServerActionWrapper()
+       .createAction()
+       .input(z.object({
+           number: z.number()
+       }))
+       .handler(async ({ input }) => {
+           // Increment the input number by 1
+           return input.number + 1;
+       });
+   ```
 
-- `createServerActionWrapper` creates a new server action wrapper. Wrappers can be combined with procedures used to integrate context into a server action, but we will cover more on this later.
-- `createAction` initializes a server action, inhereting the functionality from the server action wrapper.
-- `input` sets the input schema for the action. In this case, the input schema is a Zod schema that describes the `number` to increment. This ensures the input is validated at runtime.
-- `handler` sets the handler function for the action. The handler function is called when the action is invoked, and ensures the input is typesafe with respect to the input schema.
+   Let's break down the code:
 
-
+   - `createServerActionWrapper` creates a new server action wrapper. Wrappers can be combined with procedures to integrate context into a server action, which we'll cover later.
+   - `createAction` initializes a server action, inheriting the functionality from the server action wrapper.
+   - `input` sets the input schema for the action using a Zod schema. In this case, it expects an object with a `number` property. This ensures the input is validated at runtime.
+   - `handler` sets the handler function for the action. The handler is called when the action is invoked and receives the validated input based on the input schema.
 
 ## Using action as mutation
 
-From the example below, you can see how the server action comes built in with loading states.
+Server actions come with built-in loading states, making it easy to handle asynchronous operations. Here's an example of using the `incrementNumberAction` as a mutation:
 
-<ExampleComponent id="increment-example"/>
+<ExampleComponent id="increment-example" />
 
 ```typescript:increment-example.tsx
 "use client"
 
-//Import the server action and useServerAction hook in the client component.
-import { incrementNumberAction } from "./actions"
-import { useServerAction } from "@/lib/use-server-action"
-...
+import { incrementNumberAction } from "./actions";
+import { useServerAction } from "@/lib/use-server-action";
+import { useState } from "react";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "ui";
 
 export default function IncrementExample() {
     const [counter, setCounter] = useState(0);
-
     const incrementAction = useServerAction(incrementNumberAction);
 
     return (
@@ -63,9 +70,9 @@ export default function IncrementExample() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
                 <Button onClick={async () => {
-                    const [data, err] = await incrementAction.execute({ number: counter })
+                    const [data, err] = await incrementAction.execute({ number: counter });
                     if (!err) {
-                        setCounter(data)
+                        setCounter(data);
                     }
                 }}>
                     Invoke action
@@ -74,86 +81,83 @@ export default function IncrementExample() {
                 <div>{incrementAction.isLoading ? 'loading...' : counter}</div>
             </CardContent>
         </Card>
-    )
+    );
 }
 ```
 
+In the client component:
+
+1. Import the `incrementNumberAction` and `useServerAction` hook.
+2. Call `useServerAction` with the imported action to create an instance of the action.
+3. Use the `execute` method of the action instance to invoke the action with the necessary input.
+4. Handle the response by updating the state if there are no errors.
+5. Render the loading state or the updated counter value based on the action's loading state.
+
 ## Calling from the server
 
-Additionally, all server actions can be called from the server to recieve `[data, null]` or `[null, err]`. No need to try/catch. 
+Server actions can also be called directly from the server without the need for a try/catch block. The action will return either `[data, null]` on success or `[null, err]` on error.
 
 ```typescript:actions.ts
 "use server"
 
-const [data, err] = helloWorldAction({message: "Hello"})
+const [data, err] = helloWorldAction({ message: "Hello" });
 
-if(err) {
+if (err) {
     return;
 } else {
-    console.log(data)
+    console.log(data);
 }
 ```
 
-
-
-
 ## Using action as a query
 
-Next, we will query this server action from a client component whenever a piece of state changes. 
+Server actions can also be used as queries to fetch data from the server whenever a piece of state changes. Here's an example:
 
-To do this, we simply have to provide an "input" as a second option in `useServerAction`, and the data will be automattcally fetched.
-
-Here is the example below:
-<ExampleComponent id="hello-world-action"/>
+<ExampleComponent id="hello-world-action" />
 
 ```typescript:hello-world.tsx
 "use server"
 
-import { createServerActionWrapper } from "server-actions-wrapper"
-import z from "zod"
+import { createServerActionWrapper } from "server-actions-wrapper";
+import z from "zod";
 
 export const helloWorldAction = createServerActionWrapper()
-  .createAction()
-  .input(z.object({
-      message: z.string()
-  }))
-  .handler(async ({ input }) => {
-    console.log(input.message)
-    return input.message + " How is your day?"
-  }
-)
+    .createAction()
+    .input(z.object({
+        message: z.string()
+    }))
+    .handler(async ({ input }) => {
+        // Log the input message
+        console.log(input.message);
+        // Return a response message
+        return input.message + " How is your day?";
+    });
 ```
 
 ```typescript:index.ts
 "use client"
 
-//Import the server action and useServerAction hook in the client component.
-import { helloWorldAction } from "./actions"
-import { useServerAction } from "@/lib/use-server-action"
-...
+import { helloWorldAction } from "./actions";
+import { useServerAction } from "@/lib/use-server-action";
 
 export default function HelloWorld() {
-    const [input, setInput] = useState("")
-    const debouncedInput = useDebounce(input, 300)
+    const [input, setInput] = useState("");
+    const debouncedInput = useDebounce(input, 300);
 
-    //Call useServerAction with the imported server action and provide the necessary input.
+    // Call useServerAction with the imported server action and provide the necessary input
     const queryAction = useServerAction(helloWorldAction, {
         input: {
             message: debouncedInput,
         },
-        //Bind user input to the server action's input using state
+        // Bind user input to the server action's input using state
         enabled: Boolean(debouncedInput),
-    })
+    });
 
     let messageView;
 
-    //Render different views based on the server action's state
+    // Render different views based on the server action's state
     if (queryAction.isSuccess) {
-        messageView = (
-            <div>
-                {queryAction.data}
-            </div>
-        )
+        messageView = <div>{queryAction.data}</div>;
     } else if (queryAction.isLoading) {
         messageView = <Skeleton />;
     } else if (queryAction.isError) {
@@ -161,7 +165,7 @@ export default function HelloWorld() {
             <div className="text-red-500">
                 Error: {JSON.stringify(queryAction.error)}
             </div>
-        )
+        );
     }
 
     return (
@@ -182,12 +186,17 @@ export default function HelloWorld() {
                 {messageView}
             </CardContent>
         </Card>
-    )
+    );
 }
 ```
 
-In the example above, the data is automatically refetched when `debouncedInput` changes and when `debouncedInput` is not empty.
+In the client component:
 
-Already, we can see `server-actions-wrapper` not only provides built-in error and loading states but also allows seamless integration of server actions into our client components.
+1. Import the `helloWorldAction` and `useServerAction` hook.
+2. Call `useServerAction` with the imported action and provide the necessary input and options.
+3. Bind the user input to the server action's input using state and debounce it to avoid excessive requests.
+4. Render different views based on the server action's state (success, loading, error).
 
-Continue to see what else can it do...
+As you can see, `server-actions-wrapper` provides built-in error and loading states and allows seamless integration of server actions into your client components.
+
+Continue exploring to discover more features and capabilities of `server-actions-wrapper`!

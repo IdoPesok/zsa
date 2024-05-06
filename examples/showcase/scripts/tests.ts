@@ -1,7 +1,4 @@
-import {
-  createServerActionProcedure,
-  createServerActionWrapper,
-} from "server-actions-wrapper"
+import { createServerActionProcedure } from "server-actions-wrapper"
 import { z } from "zod"
 
 const main = async () => {
@@ -33,61 +30,30 @@ const main = async () => {
       }
     })
 
-  const other = createServerActionProcedure(postIdOwner)
-    .input(
-      z
-        .object({ otherId: z.string() })
-        .default({ otherId: "got other default" })
-    )
-    .handler(async ({ input, ctx }) => {
-      console.log("RUNNING OTHER HANDLER", input, ctx)
-      await new Promise((r) => setTimeout(r, 1000))
-      // validate other id owner here
-      return {
-        user: ctx.user,
-        post: ctx.post,
-        test: {
-          other: input.otherId,
-          hello: "world",
-        } as const,
-      }
-    })
+  // const updatePostName = wrapper
+  //   .createAction()
+  //   .input(z.object({ newPostName: z.string() }))
+  //   .handler(async ({ input, ctx }) => {
+  //     console.log({
+  //       newPostName: input.newPostName,
+  //       postId: input.postId,
 
-  const wrapper = createServerActionWrapper()
-    .procedure(isAuthed)
-    .chainProcedure(postIdOwner)
-    .chainProcedure(other)
+  //       user: ctx.user,
+  //       post: {
+  //         id: ctx.post.id,
+  //       },
+  //     })
 
-  const a = wrapper
-    .createAction()
-    .input(z.object({ hello: z.string().default("world") }))
-    .handler(async ({ input, ctx }) => {
-      console.log("RUNNING MAIN HANDLER")
-      await new Promise((r) => setTimeout(r, 1000))
-      console.log({
-        hmmmm: input.hello,
-        otherId: input.otherId,
-        postId: input.postId,
+  //     return "GREAT SUCCESS"
+  //   })
 
-        user: ctx.user,
-        post: {
-          id: ctx.post.id,
-        },
-        test: {
-          hello: ctx.test.hello,
-        },
-      })
+  // const [data, err] = await updatePostName({
+  //   postId: "randomID",
+  //   newPostName: 'testing'
+  // })
 
-      return "GREAT SUCCESS"
-    })
-
-  const [data, err] = await a({
-    postId: "hello world",
-    hello: 'testing'
-  })
-
-  console.log("data", data)
-  console.log("err", err)
+  // console.log("data", data)
+  // console.log("err", err)
 }
 
 main()

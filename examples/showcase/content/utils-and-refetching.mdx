@@ -1,117 +1,106 @@
 ---
-title: 'Utils and Refetching'
-group: 'Getting Started'
+title: "Utils and Refetching"
+group: "Getting Started"
 groupOrder: 4
 ---
 
-# Utils and Refetching
+# Utils and refetching
 
-Sometimes, when server actions are being utilized for querying data, we need to explicity refetch that data when it becomes stale. In order to do this, we can utilize `useServerActionsUtils`.
+When using server actions to query data, you may need to explicitly refetch that data when it becomes stale. This can be achieved using the `useServerActionsUtils` hook.
 
-For example, lets say we have some server action that fetches data in a client component.
+First, define a server action that fetches the data you want to refetch. In this example, we'll create an action that returns a random number:
 
 ```typescript:actions.ts
 "use server"
-
 import { createServerActionWrapper } from "server-actions-wrapper"
 import z from "zod"
 
 export const getRandomNumber = createServerActionWrapper()
-    .createAction()
-    .input(
-        z
-            .object({
-                min: z.number(),
-                max: z.number(),
-            })
-            .refine((input) => input.min < input.max)
-    )
-    .handler(async ({ input, ctx }) => {
-        await new Promise((r) => setTimeout(r, 1000))
-        return {
-            number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
-        }
-    })
+  .createAction()
+  .input(
+    z.object({
+      min: z.number(),
+      max: z.number(),
+    }).refine((input) => input.min < input.max)
+  )
+  .handler(async ({ input, ctx }) => {
+    await new Promise((r) => setTimeout(r, 1000))
+    return {
+      number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
+    }
+  })
 ```
 
-```typescript:actions.ts
+This action takes a `min` and `max` value as input, validates that `min` is less than `max`, and returns a random number between those values after a simulated 1-second delay.
+
+Next, use the `useServerAction` hook to call the action in a client component:
+
+```typescript:random-number-display.tsx
 "use client"
-
-import { createServerActionWrapper } from "server-actions-wrapper"
-import z from "zod"
-
-export const getRandomNumber = createServerActionWrapper()
-    .createAction()
-    .input(
-        z
-            .object({
-                min: z.number(),
-                max: z.number(),
-            })
-            .refine((input) => input.min < input.max)
-    )
-    .handler(async ({ input, ctx }) => {
-        await new Promise((r) => setTimeout(r, 1000))
-        return {
-            number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
-        }
-    })
-```
-
-```typescript:random-number.tsx
-"use client"
-
 import { useServerAction } from "@/lib/use-server-action"
-...
+import { getRandomNumber } from "./actions"
 
-export default function RandomNumberExample() {
-  const queryAction = useServerAction(generateRandomNumber, {
+export default function RandomNumberDisplay() {
+  const queryAction = useServerAction(getRandomNumber, {
     input: {
-      query: debouncedInput,
+      min: 0,
+      max: 10,
     },
-    enabled: Boolean(debouncedInput),
-    refetchKey: "searchContacts",
+    refetchKey: "getRandomNumber"
   })
 
-  let contactsView
-
-  if (queryAction.data) {
-    contactsView = (
-      <div>
-        {queryAction.data}
-      </div>
-    )
-  } else if (queryAction.isLoading) {
-    contactsView = <Skeleton />
-  } else if (queryAction.isError) {
-    contactsView = (
-      <div className="text-red-500">
-        Error: {JSON.stringify(queryAction.error)}
-      </div>
-    )
-  }
-
   return (
-    <Card>
+    <Card className="not-prose">
       <CardHeader>
-        <CardTitle>Call From Client Component</CardTitle>
+        <CardTitle>Random number</CardTitle>
         <CardDescription>
-          This card fetches data from a client component
+          This fetches a random number upon mounting
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <Input
-          placeholder="Search contacts..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <h1>Search Results</h1>
-        {contactsView}
+        <p>Random number:</p>
+        {queryAction.isLoading ? 'loading...' : ''}
+        {queryAction.isSuccess && <>{JSON.stringify(queryAction.data.number)}</>}
       </CardContent>
     </Card>
   )
 }
 ```
 
-<ExampleComponent id="random-number-example-display"/>
-<ExampleComponent id="random-number-example-refetch"/>
+The `useServerAction` hook is called with the `getRandomNumber` action and an options object containing the `input` values and a unique `refetchKey`. The component displays the random number returned by the action.
+
+## Refetching example
+
+To manually refetch the data, use the `useServerActionsUtils` hook in another component:
+
+```typescript:random-number-refetch.tsx
+"use client"
+import { useServerActionsUtils } from "@/lib/use-server-action"
+
+export default function RandomNumberRefetch() {
+  const { refetch } = useServerActionsUtils()
+
+  return (
+    <Card className="p-4 w-full ">
+      <Button
+        onClick={() => {
+          refetch("getRandomNumber")
+        }}
+        className="w-full"
+      >
+        refetch
+      </Button>
+    </Card>
+  )
+}
+```
+
+This component renders a button that, when clicked, calls the `refetch` function with the same `refetchKey` used in the `RandomNumberDisplay` component. This will cause the server action to be re-executed and the data to be refreshed.
+
+<ExampleComponent id="random-number-example-display" />
+
+Refetch Button:
+
+<ExampleComponent id="random-number-example-refetch" />
+
+By using the `useServerActionsUtils` hook and assigning a unique `refetchKey` to your server actions, you can easily refetch data when needed in your application.

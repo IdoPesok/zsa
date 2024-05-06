@@ -1,8 +1,8 @@
-import HelloWorld from "@/content/examples/hello-world-action/hello-world-action";
-import IncrementExample from "@/content/examples/hello-world-action/increment-example";
-import RandomNumberExampleDisplay from "@/content/examples/utils-and-refetching/random-number-example-display";
-import RandomNumberExampleRefetch from "@/content/examples/utils-and-refetching/random-number-example-refetch";
-import { memo } from "react";
+import HelloWorld from "@/content/examples/hello-world-action/hello-world-action"
+import IncrementExample from "@/content/examples/hello-world-action/increment-example"
+import RandomNumberExampleDisplay from "@/content/examples/utils-and-refetching/random-number-example-display"
+import RandomNumberExampleRefetch from "@/content/examples/utils-and-refetching/random-number-example-refetch"
+import { memo } from "react"
 
 function ExampleComponent({ id }: { id: string }) {
   switch (id) {

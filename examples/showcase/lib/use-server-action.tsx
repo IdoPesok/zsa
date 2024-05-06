@@ -15,40 +15,40 @@ export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
 > =
   | {
-    // loading state
-    isLoading: true
-    data: undefined | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-    isError: false
-    error: undefined
-    isSuccess: false
-    status: "loading"
-  }
+      // loading state
+      isLoading: true
+      data: undefined | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+      isError: false
+      error: undefined
+      isSuccess: false
+      status: "loading"
+    }
   | {
-    // idle state
-    isLoading: false
-    data: undefined
-    isError: false
-    error: undefined
-    isSuccess: false
-    status: "idle"
-  }
+      // idle state
+      isLoading: false
+      data: undefined
+      isError: false
+      error: undefined
+      isSuccess: false
+      status: "idle"
+    }
   | {
-    // error state
-    isLoading: false
-    data: undefined
-    isError: true
-    error: unknown
-    isSuccess: false
-    status: "error"
-  }
+      // error state
+      isLoading: false
+      data: undefined
+      isError: true
+      error: unknown
+      isSuccess: false
+      status: "error"
+    }
   | {
-    isLoading: false
-    data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-    isError: false
-    error: undefined
-    isSuccess: true
-    status: "success"
-  }
+      isLoading: false
+      data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+      isError: false
+      error: undefined
+      isSuccess: true
+      status: "success"
+    }
 
 type TServerActionUtilsContext = {
   $$refetch: Record<string, number | undefined>
@@ -57,7 +57,7 @@ type TServerActionUtilsContext = {
 
 const ServerActionUtilsContext = createContext<TServerActionUtilsContext>({
   $$refetch: {},
-  refetch: () => { },
+  refetch: () => {},
 })
 
 export function ServerActionUtilsProvider({
@@ -88,7 +88,7 @@ export const useServerActionsUtils = () => {
   if (context === undefined) {
     const defaultState: TServerActionUtilsContext = {
       $$refetch: {},
-      refetch: () => { },
+      refetch: () => {},
     }
 
     return defaultState
@@ -151,36 +151,37 @@ export const useServerAction = <
     [serverAction]
   )
 
-  const prevOptsInputRef = useRef<string | undefined>();
+  const prevOptsInputRef = useRef<string | undefined>()
   useEffect(() => {
-    if (opts === undefined || !enabled) return;
+    if (opts === undefined || !enabled) return
 
-    const currentOptsInput = opts.input === undefined ? 'undefined' : JSON.stringify(opts.input);
+    const currentOptsInput =
+      opts.input === undefined ? "undefined" : JSON.stringify(opts.input)
     if (currentOptsInput !== prevOptsInputRef.current) {
-      execute(opts.input);
-      prevOptsInputRef.current = currentOptsInput;
+      execute(opts.input)
+      prevOptsInputRef.current = currentOptsInput
     }
-  }, [execute, opts?.input, enabled]);
+  }, [execute, opts?.input, enabled])
 
-  const prevRefetchKeyRef = useRef<string | undefined>();
-  const isInitialRenderRef = useRef(true);
+  const prevRefetchKeyRef = useRef<string | undefined>()
+  const isInitialRenderRef = useRef(true)
 
   useEffect(() => {
-    if (!opts?.refetchKey || !enabled) return;
+    if (!opts?.refetchKey || !enabled) return
 
-    const currentRefetchKey = JSON.stringify($$refetch[opts.refetchKey]);
+    const currentRefetchKey = JSON.stringify($$refetch[opts.refetchKey])
 
     if (isInitialRenderRef.current) {
-      isInitialRenderRef.current = false;
-      prevRefetchKeyRef.current = currentRefetchKey;
-      return;
+      isInitialRenderRef.current = false
+      prevRefetchKeyRef.current = currentRefetchKey
+      return
     }
 
     if (currentRefetchKey !== prevRefetchKeyRef.current) {
-      execute(input);
-      prevRefetchKeyRef.current = currentRefetchKey;
+      execute(input)
+      prevRefetchKeyRef.current = currentRefetchKey
     }
-  }, [$$refetch[opts?.refetchKey || "never match"], input, enabled, execute]);
+  }, [$$refetch[opts?.refetchKey || "never match"], input, enabled, execute])
 
   const refetch = useCallback(() => {
     if (!input) return
