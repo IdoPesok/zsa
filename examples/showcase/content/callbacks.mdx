@@ -6,8 +6,76 @@ groupOrder: 3
 
 # Callbacks
 
-Sometimes we want to run code when a server action is errored or 
+Sometimes, we may want to run some logic based on if a server action completes, errors, or other conditions. To do this, we can use the following callbacks on our server actions.
+
+- `onStart`
+- `onSuccess`
+- `onComplete`
+- `onError`
+- `onInputParseError`
+
+Any of these callbacks can be configured when defining your server action, or at the `procedure` level if we want these callbacks to be shared among a set of actions.
+
+For example:
+```typescript:actions.ts
+const wrapper = createServerActionWrapper()
+
+const exampleAction = wrapper
+  .createAction()
+  .input(z.object({message: z.string()}))
+  .onStart(async () => {
+    console.log('onStart')
+  })
+  .onSuccess(async () => {
+    console.log('onSuccess')
+  })
+  .onComplete(async () => {
+    console.log('onComplete')
+  })
+  .onError(async () => {
+    console.log('onError')
+  })
+  .onInputParseError(async () => {
+    console.log('onInputParseError')
+  })
+  .handler(async ({input}) => {
+    console.log(input.message)
+  })
+```
+
+Additionally, the same can be done at the procedure level. By configuring callbacks at the procedure level, they will be run for all actions that utilize that procedure.
 
 ```typescript:actions.ts
+const isAuthed = createServerActionProcedure()
+  .onStart(async () => {
+    console.log('onStart')
+  })
+  .onSuccess(async () => {
+    console.log('onSuccess')
+  })
+  .onComplete(async () => {
+    console.log('onComplete')
+  })
+  .onError(async () => {
+    console.log('onError')
+  })
+  .noInputHandler(async () => {
+    const { id } = await getUser()
 
+    if (!id) {
+      throw new Error('UNAUTHORIZED')
+    }
+
+    return {
+      user: {
+        id,
+      },
+    }
+  })
+
+const authedAction = createServerActionWrapper().procedure(isAuthed)
+
+const someFunction = authedAction.createAction()...
 ```
+
+It is important to note that if a callback is added to BOTH the action and the procedure that the action is utilizing, then both of those callbacks will be individually executed. A callback on the action with NOT override the procedure - both will run.

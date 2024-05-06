@@ -17,13 +17,13 @@ import { Button } from "@/components/ui/button"
 
 export default function HelloWorld() {
     const [input, setInput] = useState("")
-    const [confirmedInput, setConfirmedInput] = useState("")
+    const debouncedInput = useDebounce(input, 300)
 
     const queryAction = useServerAction(helloWorldAction, {
         input: {
-            message: confirmedInput,
+            message: debouncedInput,
         },
-        enabled: Boolean(confirmedInput)
+        enabled: Boolean(debouncedInput)
     })
 
     let messageView
@@ -58,9 +58,7 @@ export default function HelloWorld() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                 />
-                <Button onClick={() => setConfirmedInput(input)}>
-                    Invoke action
-                </Button>
+
                 <p>Message response:</p>
                 {messageView}
             </CardContent>

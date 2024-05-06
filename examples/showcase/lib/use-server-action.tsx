@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   useTransition,
 } from "react"
@@ -150,15 +151,36 @@ export const useServerAction = <
     [serverAction]
   )
 
+  const prevOptsInputRef = useRef<string | undefined>();
   useEffect(() => {
-    if (opts === undefined || !enabled) return
-    execute(opts.input)
-  }, [execute, opts?.input, enabled])
+    if (opts === undefined || !enabled) return;
+
+    const currentOptsInput = opts.input === undefined ? 'undefined' : JSON.stringify(opts.input);
+    if (currentOptsInput !== prevOptsInputRef.current) {
+      execute(opts.input);
+      prevOptsInputRef.current = currentOptsInput;
+    }
+  }, [execute, opts?.input, enabled]);
+
+  const prevRefetchKeyRef = useRef<string | undefined>();
+  const isInitialRenderRef = useRef(true);
 
   useEffect(() => {
-    if (!opts?.refetchKey || !input || !enabled) return
-    execute(input)
-  }, [$$refetch[opts?.refetchKey || "never match"]])
+    if (!opts?.refetchKey || !enabled) return;
+
+    const currentRefetchKey = JSON.stringify($$refetch[opts.refetchKey]);
+
+    if (isInitialRenderRef.current) {
+      isInitialRenderRef.current = false;
+      prevRefetchKeyRef.current = currentRefetchKey;
+      return;
+    }
+
+    if (currentRefetchKey !== prevRefetchKeyRef.current) {
+      execute(input);
+      prevRefetchKeyRef.current = currentRefetchKey;
+    }
+  }, [$$refetch[opts?.refetchKey || "never match"], input, enabled, execute]);
 
   const refetch = useCallback(() => {
     if (!input) return

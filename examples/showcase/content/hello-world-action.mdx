@@ -101,6 +101,8 @@ if(err) {
 
 Next, we will query this server action from a client component whenever a piece of state changes. 
 
+To do this, we simply have to provide an "input" as a second option in `useServerAction`, and the data will be automattcally fetched.
+
 Here is the example below:
 <ExampleComponent id="hello-world-action"/>
 
@@ -183,6 +185,8 @@ export default function HelloWorld() {
     )
 }
 ```
+
+In the example above, the data is automatically refetched when `debouncedInput` changes and when `debouncedInput` is not empty.
 
 Already, we can see `server-actions-wrapper` not only provides built-in error and loading states but also allows seamless integration of server actions into our client components.
 

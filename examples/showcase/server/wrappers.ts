@@ -4,77 +4,63 @@ import {
 } from "server-actions-wrapper"
 import { z } from "zod"
 
+const getUser = async () => {
+  return {
+    id: 0,
+  }
+}
 
-const admin = createServerActionProcedure()
-  .input(z.object({ user: z.object({ id: z.number(), name: z.string() }) }))
-  .handler(async ({ input }) => {
-    if (input.user.id !== 1) throw new Error("You are not authorized")
-    return {
-      user: input.user,
-      isAdmin: true,
-      message: `hello ${input.user}`,
-    } as const
+
+const isAuthed = createServerActionProcedure()
+  .onStart(async () => {
+    console.log('onStart')
   })
-
-const getPost = (id: string) => true
-const getUserOwnsPost = (str: string, str1: number) => true
-
-
-const protectedProcedure = createServerActionProcedure()
+  .onSuccess(async () => {
+    console.log('onSuccess')
+  })
+  .onComplete(async () => {
+    console.log('onComplete')
+  })
+  .onError(async () => {
+    console.log('onError')
+  })
   .noInputHandler(async () => {
+    const { id } = await getUser()
+
+    if (!id) {
+      throw new Error('UNAUTHORIZED')
+    }
+
     return {
       user: {
-        name: "IDO",
-        id: 1,
-        email: "dsfdsfdsf",
+        id,
       },
     }
   })
 
 
+const wrapper = createServerActionWrapper()
 
-const postExistsProcedure = createServerActionProcedure()
-  .input(z.object({ postId: z.string() }))
-  .handler(async ({ input }) => {
-    const valid = await getPost(input.postId)
-
-    if (!valid) throw Error()
-
-    return valid
-  })
-
-
-
-export const protectedAction = createServerActionWrapper()
-  .procedure(protectedProcedure)
+const exampleAction = wrapper
   .createAction()
-  .input(z.object({ hello: z.string() }))
-  .onComplete(async (onCompleteCallback) => {
-    if (onCompleteCallback.isSuccess) {
-      console.log('on complete')
-      onCompleteCallback.args.hello
-    }
+  .input(z.object({ message: z.string() }))
+  .onStart(async () => {
+    console.log('onStart')
   })
-  .onError(async (onErrorCallback) => {
-    if (onErrorCallback.message) {
-      console.log('on error')
-    }
+  .onSuccess(async () => {
+    console.log('onSuccess')
   })
-  .onStart(async (onStartCallback) => {
-    if (onStartCallback.args) {
-      console.log('on start')
-    }
+  .onComplete(async () => {
+    console.log('onComplete')
   })
-  .onInputParseError(async (onInputParseErrorCallback) => {
-    console.log('zod error')
+  .onError(async () => {
+    console.log('onError')
   })
-  .onSuccess(async (onSuccessCallback) => {
-    console.log('on success')
+  .onInputParseError(async () => {
+    console.log('onInputParseError')
   })
-  .output(z.object({ hello: z.string() }))
-  .timeout(1000)
-  .handler(async ({ input, ctx }) => {
-    return input
+  .handler(async ({ input }) => {
+    console.log(input.message)
+    return "hello"
   })
-
 

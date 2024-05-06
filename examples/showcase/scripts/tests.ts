@@ -83,6 +83,7 @@ const main = async () => {
 
   const [data, err] = await a({
     postId: "hello world",
+    hello: 'testing'
   })
 
   console.log("data", data)

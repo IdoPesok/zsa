@@ -1,0 +1,117 @@
+---
+title: 'Utils and Refetching'
+group: 'Getting Started'
+groupOrder: 4
+---
+
+# Utils and Refetching
+
+Sometimes, when server actions are being utilized for querying data, we need to explicity refetch that data when it becomes stale. In order to do this, we can utilize `useServerActionsUtils`.
+
+For example, lets say we have some server action that fetches data in a client component.
+
+```typescript:actions.ts
+"use server"
+
+import { createServerActionWrapper } from "server-actions-wrapper"
+import z from "zod"
+
+export const getRandomNumber = createServerActionWrapper()
+    .createAction()
+    .input(
+        z
+            .object({
+                min: z.number(),
+                max: z.number(),
+            })
+            .refine((input) => input.min < input.max)
+    )
+    .handler(async ({ input, ctx }) => {
+        await new Promise((r) => setTimeout(r, 1000))
+        return {
+            number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
+        }
+    })
+```
+
+```typescript:actions.ts
+"use client"
+
+import { createServerActionWrapper } from "server-actions-wrapper"
+import z from "zod"
+
+export const getRandomNumber = createServerActionWrapper()
+    .createAction()
+    .input(
+        z
+            .object({
+                min: z.number(),
+                max: z.number(),
+            })
+            .refine((input) => input.min < input.max)
+    )
+    .handler(async ({ input, ctx }) => {
+        await new Promise((r) => setTimeout(r, 1000))
+        return {
+            number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
+        }
+    })
+```
+
+```typescript:random-number.tsx
+"use client"
+
+import { useServerAction } from "@/lib/use-server-action"
+...
+
+export default function RandomNumberExample() {
+  const queryAction = useServerAction(generateRandomNumber, {
+    input: {
+      query: debouncedInput,
+    },
+    enabled: Boolean(debouncedInput),
+    refetchKey: "searchContacts",
+  })
+
+  let contactsView
+
+  if (queryAction.data) {
+    contactsView = (
+      <div>
+        {queryAction.data}
+      </div>
+    )
+  } else if (queryAction.isLoading) {
+    contactsView = <Skeleton />
+  } else if (queryAction.isError) {
+    contactsView = (
+      <div className="text-red-500">
+        Error: {JSON.stringify(queryAction.error)}
+      </div>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Call From Client Component</CardTitle>
+        <CardDescription>
+          This card fetches data from a client component
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <Input
+          placeholder="Search contacts..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <h1>Search Results</h1>
+        {contactsView}
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+<ExampleComponent id="random-number-example-display"/>
+<ExampleComponent id="random-number-example-refetch"/>
