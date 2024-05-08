@@ -58,20 +58,18 @@ const main = async () => {
       return "YOOOOOOO"
     })
 
-  console.log("here")
+  const [data, err] = await myAction({
+    userId: "user_id_123",
+    somethingElse: "hello world",
+    postId: "post_id_123",
+  })
 
-  // const [data, err] = await myAction({
-  //   userId: "user_id_123",
-  //   somethingElse: "hello world",
-  //   postId: "post_id_123",
-  // })
+  if (err) {
+    console.log(err)
+    return
+  }
 
-  // if (err) {
-  //   console.log(err)
-  //   return
-  // }
-
-  // console.log("got data", data) // typesafe, not null
+  console.log("got data", data) // typesafe, not null
 }
 
 main()

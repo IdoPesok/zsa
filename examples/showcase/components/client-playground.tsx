@@ -1,9 +1,9 @@
 "use client"
 
-import { useServerAction } from "@/lib/use-server-action"
 import { generateRandomNumber, searchContacts } from "@/server/actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
+import { useServerAction } from "server-actions-wrapper"
 import {
   Card,
   CardContent,

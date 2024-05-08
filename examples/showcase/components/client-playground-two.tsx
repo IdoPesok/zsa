@@ -1,6 +1,6 @@
 "use client"
 
-import { useServerActionsUtils } from "@/lib/use-server-action"
+import { useServerActionsUtils } from "server-actions-wrapper"
 
 export default function ClientPlaygroundTwo() {
   const { refetch } = useServerActionsUtils()

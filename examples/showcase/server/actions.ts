@@ -2,12 +2,10 @@
 
 import { CONTACTS_DATA } from "@/contacts/contacts-data"
 import { z } from "zod"
-import { adminAction, protectedAction } from "./wrappers"
+import { adminProcedure, protectedProcedure } from "./procedures"
 
-export const generateRandomNumber = protectedAction
-  .createActionWithProcedureInput({
-    test: "sdfsdfasf",
-  })
+export const generateRandomNumber = protectedProcedure
+  .createServerAction()
   .input(
     z
       .object({
@@ -23,10 +21,8 @@ export const generateRandomNumber = protectedAction
     }
   })
 
-export const searchContacts = protectedAction
-  .createActionWithProcedureInput({
-    test: "sdflkjsdfsa",
-  })
+export const searchContacts = protectedProcedure
+  .createServerAction()
   .input(
     z.object({
       query: z.string().min(1),
@@ -41,10 +37,8 @@ export const searchContacts = protectedAction
     ).slice(0, 10)
   })
 
-export const getFakeData = protectedAction
-  .createActionWithProcedureInput({
-    test: "dsfsfdsakfjlsdjf",
-  })
+export const getFakeData = protectedProcedure
+  .createServerAction()
   .input(
     z
       .object({
@@ -60,8 +54,4 @@ export const getFakeData = protectedAction
     return Array.from({ length: input.length }, () => Math.random())
   })
 
-const testAction = adminAction
-  .createActionWithProcedureInput({
-    test: "sdfdsfsafafsd",
-  })
-  .noInputHandler(({ ctx }) => {})
+const testAction = adminProcedure.createServerAction().handler(({ ctx }) => {})
