@@ -1,92 +1,77 @@
-import {
-  createServerActionProcedure,
-  createServerActionWrapper,
-} from "server-actions-wrapper"
+import { SAWError, createServerActionProcedure } from "server-actions-wrapper"
 import { z } from "zod"
 
 const main = async () => {
-  const isAuthed = createServerActionProcedure().noInputHandler(async () => {
-    console.log("RUNNING IS AUTHED HANDLER")
-    await new Promise((r) => setTimeout(r, 1000))
-    return {
-      user: {
-        name: "IDO",
-      },
-    }
-  })
+  const isAuthed = createServerActionProcedure()
+    .input(z.object({ userId: z.string() }))
+    .onError((err) => {
+      console.log("onError in auth called", err)
+    })
+    .handler(async ({ input }) => {
+      console.log("isAuthed", Date.now())
+      console.log("got input", JSON.stringify(input, null, 2))
 
-  const postIdOwner = createServerActionProcedure(isAuthed)
+      await new Promise((r) => setTimeout(r, 1000))
+      return {
+        user: {
+          name: "IDO",
+          id: input.userId,
+        },
+      }
+    })
+
+  const ownsPost = createServerActionProcedure(isAuthed) // child of isAuthed
     .input(
-      z.object({ postId: z.string() }).transform((v) => ({
-        postId: `transformed to ` + v.postId.toUpperCase(),
-      }))
+      z
+        .object({ postId: z.string() })
+        .transform((v) => ({ postId: v.postId.toUpperCase() }))
     )
     .handler(async ({ input, ctx }) => {
-      console.log("RUNNING POST HANDLER", input, ctx)
+      let shouldError = true
+      if (shouldError) {
+        throw new SAWError("ERROR", "yo this just errored")
+      }
+
+      console.log("ownsPost", Date.now())
+      console.log("got input", JSON.stringify(input, null, 2))
+      console.log("got ctx", JSON.stringify(ctx, null, 2))
       await new Promise((r) => setTimeout(r, 1000))
-      // validate post id owner here
       return {
-        user: ctx.user,
+        ...ctx,
         post: {
           id: input.postId,
         },
       }
     })
 
-  const other = createServerActionProcedure(postIdOwner)
-    .input(
-      z
-        .object({ otherId: z.string() })
-        .default({ otherId: "got other default" })
-    )
+  const myAction = ownsPost
+    .createServerAction()
+    .input(z.object({ somethingElse: z.string().default("testing") }))
+    .onError((err) => {
+      console.log("onError in action called", err)
+    })
     .handler(async ({ input, ctx }) => {
-      console.log("RUNNING OTHER HANDLER", input, ctx)
-      await new Promise((r) => setTimeout(r, 1000))
-      // validate other id owner here
-      return {
-        user: ctx.user,
-        post: ctx.post,
-        test: {
-          other: input.otherId,
-          hello: "world",
-        } as const,
-      }
+      console.log("FINAL", Date.now())
+      console.log("got input", JSON.stringify(input, null, 2))
+      console.log("got ctx", JSON.stringify(ctx, null, 2))
+
+      return "YOOOOOOO"
     })
 
-  const wrapper = createServerActionWrapper()
-    .procedure(isAuthed)
-    .chainProcedure(postIdOwner)
-    .chainProcedure(other)
+  console.log("here")
 
-  const a = wrapper
-    .createAction()
-    .input(z.object({ hello: z.string().default("world") }))
-    .handler(async ({ input, ctx }) => {
-      console.log("RUNNING MAIN HANDLER")
-      await new Promise((r) => setTimeout(r, 1000))
-      console.log({
-        hmmmm: input.hello,
-        otherId: input.otherId,
-        postId: input.postId,
+  // const [data, err] = await myAction({
+  //   userId: "user_id_123",
+  //   somethingElse: "hello world",
+  //   postId: "post_id_123",
+  // })
 
-        user: ctx.user,
-        post: {
-          id: ctx.post.id,
-        },
-        test: {
-          hello: ctx.test.hello,
-        },
-      })
+  // if (err) {
+  //   console.log(err)
+  //   return
+  // }
 
-      return "GREAT SUCCESS"
-    })
-
-  const [data, err] = await a({
-    postId: "hello world",
-  })
-
-  console.log("data", data)
-  console.log("err", err)
+  // console.log("got data", data) // typesafe, not null
 }
 
 main()
