@@ -2,7 +2,7 @@
 
 import { CONTACTS_DATA } from "@/contacts/contacts-data"
 import { z } from "zod"
-import { adminProcedure, protectedProcedure } from "./procedures"
+import { protectedProcedure } from "./procedures"
 
 export const generateRandomNumber = protectedProcedure
   .createServerAction()
@@ -53,5 +53,3 @@ export const getFakeData = protectedProcedure
     }
     return Array.from({ length: input.length }, () => Math.random())
   })
-
-const testAction = adminProcedure.createServerAction().handler(({ ctx }) => {})

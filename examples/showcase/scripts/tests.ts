@@ -1,24 +1,21 @@
 import { SAWError, createServerActionProcedure } from "server-actions-wrapper"
 import { z } from "zod"
 
-const main = async () => {
-  const isAuthed = createServerActionProcedure()
-    .input(z.object({ userId: z.string() }))
-    .onError((err) => {
-      console.log("onError in auth called", err)
-    })
-    .handler(async ({ input }) => {
-      console.log("isAuthed", Date.now())
-      console.log("got input", JSON.stringify(input, null, 2))
+const auth = () => {
+  return { user: { name: "IDO", id: "user_id_123" } } as const
+}
 
-      await new Promise((r) => setTimeout(r, 1000))
-      return {
-        user: {
-          name: "IDO",
-          id: input.userId,
-        },
-      }
-    })
+const getPost = (id: string) => {
+  return { post: { id: id, authorId: "user_id_123" } } as const
+}
+
+const main = async () => {
+  const isAuthed = createServerActionProcedure().noInputHandler(async () => {
+    console.log("isAuthed", Date.now())
+    const user = await auth()
+    await new Promise((r) => setTimeout(r, 1000))
+    return user
+  })
 
   const ownsPost = createServerActionProcedure(isAuthed) // child of isAuthed
     .input(
@@ -27,8 +24,8 @@ const main = async () => {
         .transform((v) => ({ postId: v.postId.toUpperCase() }))
     )
     .handler(async ({ input, ctx }) => {
-      let shouldError = true
-      if (shouldError) {
+      const postData = await getPost(input.postId)
+      if (postData.post.authorId !== ctx.user.id) {
         throw new SAWError("ERROR", "yo this just errored")
       }
 
@@ -59,7 +56,6 @@ const main = async () => {
     })
 
   const [data, err] = await myAction({
-    userId: "user_id_123",
     somethingElse: "hello world",
     postId: "post_id_123",
   })
