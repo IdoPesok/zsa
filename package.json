@@ -10,7 +10,7 @@
     "format:write": "turbo run format:write",
     "format:check": "turbo run format:check",
     "postinstall": "manypkg check",
-    "publish-packages": "turbo run build lint && changeset version && changeset publish",
+    "publish-packages": "npm run build --workspace=server-actions-wrapper && changeset version && changeset publish",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
   "engines": {
