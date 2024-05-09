@@ -8,7 +8,7 @@ import {
   useState,
   useTransition,
 } from "react"
-import { TAnyZodSafeFunctionHandler } from "server-actions-wrapper"
+import { TAnyZodSafeFunctionHandler } from "./safe-zod-function"
 
 export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
