@@ -22,6 +22,16 @@ export default function ClientPlayground() {
     input: {
       query: debouncedInput,
     },
+    onError: ({ err, refetch }) => {
+      console.log("onError", err)
+      refetch()
+    },
+    onSuccess: ({ data }) => {
+      console.log("onSuccess", data)
+    },
+    onStart: () => {
+      console.log("onStart")
+    },
     enabled: Boolean(debouncedInput),
     actionKey: ActionKeyFactory.postDetails("123"),
   })
@@ -35,6 +45,7 @@ export default function ClientPlayground() {
         {queryAction.data.map((c) => (
           <div key={c.id}>{c.name}</div>
         ))}
+        {queryAction.isLoadingOptimistic && "Saving..."}
       </div>
     )
   } else if (queryAction.isLoading) {
@@ -65,7 +76,14 @@ export default function ClientPlayground() {
         {contactsView}
         <button
           onClick={async () => {
+            // call it with just a value
             setOptimistic({ number: Math.floor(Math.random() * (100 - 1)) + 1 })
+
+            // call it with a function that takes in the current value
+            setOptimistic((current) => ({
+              number: current ? current.number + 1 : 0,
+            }))
+
             await execute({ min: 1, max: 100 })
           }}
         ></button>

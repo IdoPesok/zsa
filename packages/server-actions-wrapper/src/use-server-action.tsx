@@ -17,49 +17,51 @@ export type TServerActionResult<
   | {
       // loading state
       isLoading: true
-      data: undefined | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+      isLoadingOptimistic: false
+      data: undefined
       isError: false
       error: undefined
       isSuccess: false
       status: "loading"
-      setOptimistic: (
-        data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-      ) => void
+    }
+  | {
+      // loading state
+      isLoading: true
+      isLoadingOptimistic: true
+      data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+      isError: false
+      error: undefined
+      isSuccess: false
+      status: "loading"
     }
   | {
       // idle state
       isLoading: false
+      isLoadingOptimistic: false
       data: undefined
       isError: false
       error: undefined
       isSuccess: false
       status: "idle"
-      setOptimistic: (
-        data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-      ) => void
     }
   | {
       // error state
       isLoading: false
+      isLoadingOptimistic: false
       data: undefined
       isError: true
       error: unknown
       isSuccess: false
       status: "error"
-      setOptimistic: (
-        data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-      ) => void
     }
   | {
       isLoading: false
+      isLoadingOptimistic: false
       data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
       isError: false
       error: undefined
       isSuccess: true
       status: "success"
-      setOptimistic: (
-        data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-      ) => void
     }
 
 type ServerActionsKeyFactory<TKey extends string[]> = {
@@ -273,13 +275,31 @@ export const setupServerActionHooks = <
       [execute]
     )
 
+    function isFunction(value: any): value is Function {
+      return typeof value === "function"
+    }
+
     const setOptimistic = useCallback(
-      async (data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>) => {
+      async (
+        fn:
+          | ((
+              current: typeof result.data
+            ) => NonNullable<Awaited<ReturnType<TServerAction>>[0]>)
+          | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+      ) => {
+        const data = isFunction(fn)
+          ? fn(
+              oldResult.status === "empty" ? result.data : oldResult.result.data
+            )
+          : fn
+
         startTransition(() => {
-          setOldResult({
-            status: "filled",
-            result: { ...result },
-          })
+          if (oldResult.status === "empty") {
+            setOldResult({
+              status: "filled",
+              result: { ...result },
+            })
+          }
 
           setResult({
             isError: false,
@@ -323,16 +343,27 @@ export const setupServerActionHooks = <
 
     let final: TServerActionResult<TServerAction>
 
-    if (isExecuting) {
-      // loading state
+    if (isExecuting && oldResult.status === "empty") {
+      // loading state (not optimistic)
       final = {
         isLoading: true,
+        isLoadingOptimistic: false,
         data: undefined,
         isError: false,
         error: undefined,
         isSuccess: false,
         status: "loading",
-        setOptimistic,
+      }
+    } else if (isExecuting && oldResult.status === "filled" && result.data) {
+      // loading state (optimistic)
+      final = {
+        isLoading: true,
+        isLoadingOptimistic: true,
+        data: result.data,
+        isError: false,
+        error: undefined,
+        isSuccess: false,
+        status: "loading",
       }
     } else if (!result.isError && result.data) {
       // success state
@@ -340,10 +371,10 @@ export const setupServerActionHooks = <
         isLoading: false,
         data: result.data,
         isError: false,
+        isLoadingOptimistic: false,
         error: undefined,
         isSuccess: true,
         status: "success",
-        setOptimistic,
       }
     } else if (result.isError) {
       // error state
@@ -352,20 +383,20 @@ export const setupServerActionHooks = <
         data: undefined,
         isError: true,
         error: result.error,
+        isLoadingOptimistic: false,
         isSuccess: false,
         status: "error",
-        setOptimistic,
       }
     } else {
       // idle state
       final = {
         isLoading: false,
         data: undefined,
+        isLoadingOptimistic: false,
         isError: false,
         error: undefined,
         isSuccess: false,
         status: "idle",
-        setOptimistic,
       }
     }
 
@@ -374,6 +405,7 @@ export const setupServerActionHooks = <
       reset,
       refetch,
       execute,
+      setOptimistic,
     }
   }
 
