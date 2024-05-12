@@ -9,7 +9,10 @@ import {
   useTransition,
 } from "react"
 import { SAWError } from "./errors"
-import { TAnyZodSafeFunctionHandler } from "./safe-zod-function"
+import {
+  TAnyZodSafeFunctionHandler,
+  inferServerActionReturnData,
+} from "./safe-zod-function"
 
 export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
@@ -28,7 +31,7 @@ export type TServerActionResult<
       // loading state
       isLoading: true
       isLoadingOptimistic: true
-      data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+      data: inferServerActionReturnData<TServerAction>
       isError: false
       error: undefined
       isSuccess: false
@@ -57,7 +60,7 @@ export type TServerActionResult<
   | {
       isLoading: false
       isLoadingOptimistic: false
-      data: NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+      data: inferServerActionReturnData<TServerAction>
       isError: false
       error: undefined
       isSuccess: true
@@ -175,7 +178,7 @@ export const setupServerActionHooks = <
     type TResult = {
       isError: boolean
       error: undefined | unknown
-      data: undefined | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
+      data: undefined | inferServerActionReturnData<TServerAction>
     }
 
     const enabled = opts?.enabled ?? true
