@@ -21,6 +21,7 @@ export default function HelloWorld() {
     input: {
       message: debouncedInput,
     },
+    actionKey: ["posts"],
   })
 
   return (

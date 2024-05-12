@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   useTransition,
 } from "react"
@@ -13,6 +14,50 @@ import {
   TAnyZodSafeFunctionHandler,
   inferServerActionReturnData,
 } from "./safe-zod-function"
+
+function clone<T>(value: T): T {
+  if (typeof value === "object" && value !== null) {
+    if (Array.isArray(value)) {
+      return [...value.map((item) => clone(item))] as unknown as T
+    } else {
+      return {
+        ...Object.entries(value).reduce(
+          (obj, [key, val]) => ({ ...obj, [key]: clone(val) }),
+          {}
+        ),
+      } as any
+    }
+  }
+  return value
+}
+
+function deepEqual(a: any, b: any): boolean {
+  if (a === b) return true
+
+  if (
+    typeof a !== "object" ||
+    typeof b !== "object" ||
+    a === null ||
+    b === null
+  ) {
+    return false
+  }
+
+  const keysA = Object.keys(a)
+  const keysB = Object.keys(b)
+
+  if (keysA.length !== keysB.length) {
+    return false
+  }
+
+  for (const key of keysA) {
+    if (!keysB.includes(key) || !deepEqual(a[key], b[key])) {
+      return false
+    }
+  }
+
+  return true
+}
 
 export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
@@ -188,9 +233,9 @@ export const setupServerActionHooks = <
       error: undefined,
       data: undefined,
     })
-    const [input, setInput] = useState<
-      Parameters<TServerAction>[0] | undefined
-    >(opts?.input ? opts.input : undefined)
+    const inputRef = useRef<Parameters<TServerAction>[0] | undefined>(
+      opts?.input ? clone(opts.input) : undefined
+    )
     const [isExecuting, setIsExecuting] = useState(
       opts !== undefined && enabled
     )
@@ -216,7 +261,7 @@ export const setupServerActionHooks = <
         if (opts?.onStart) opts.onStart()
 
         setIsExecuting(true)
-        setInput(input)
+        inputRef.current = clone(input)
 
         const [data, err] = await serverAction(input)
 
@@ -315,12 +360,20 @@ export const setupServerActionHooks = <
     )
 
     useEffect(() => {
-      if (opts === undefined || !enabled) return
+      if (opts === undefined || opts.enabled === false) return
+
+      if (deepEqual(opts.input, inputRef.current)) {
+        return
+      }
+
+      inputRef.current = clone(opts.input)
+
       executeWithTransition(opts.input)
-    }, [executeWithTransition, opts?.input, enabled])
+    }, [executeWithTransition, opts?.input, opts?.enabled])
 
     useEffect(() => {
-      if (!opts?.actionKey || !input || !enabled || !$$refetch) return
+      if (!opts?.actionKey || !inputRef.current || !enabled || !$$refetch)
+        return
 
       if (
         !getActionKeyFromArr(opts?.actionKey || []).startsWith($$refetch.key)
@@ -328,13 +381,13 @@ export const setupServerActionHooks = <
         return
       }
 
-      executeWithTransition(input)
+      executeWithTransition(inputRef.current)
     }, [executeWithTransition, $$refetch])
 
     const refetch = useCallback(() => {
-      if (!input) return
-      executeWithTransition(input)
-    }, [input, executeWithTransition])
+      if (!inputRef.current) return
+      executeWithTransition(inputRef.current)
+    }, [inputRef.current, executeWithTransition])
 
     const reset = useCallback(() => {
       setResult({
