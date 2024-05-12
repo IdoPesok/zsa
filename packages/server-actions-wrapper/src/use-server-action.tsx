@@ -79,31 +79,47 @@ export const createServerActionsKeyFactory = <
 }
 
 type TServerActionUtilsContext<T extends string[]> = {
-  $$refetch: Record<string, number | undefined>
+  $$refetch:
+    | undefined
+    | {
+        timestamp: number
+        key: string
+      }
   refetch: (keys: T) => void
 }
 
 const ServerActionUtilsContext = createContext<
   TServerActionUtilsContext<string[]>
 >({
-  $$refetch: {},
+  $$refetch: undefined,
   refetch: () => {},
 })
 
-const getActionKeyFromArr = (arr: string[]) => arr.join("<|break|>")
+const ACTION_KEY_SEPARATOR = "<|break|>"
+const getActionKeyFromArr = (arr: string[]) => arr.join(ACTION_KEY_SEPARATOR)
 
 export function ServerActionUtilsProvider({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [refetchState, setRefetchState] = useState<
-    TServerActionUtilsContext<any>["$$refetch"]
-  >({})
+  const [refetchState, setRefetchState] =
+    useState<TServerActionUtilsContext<any>["$$refetch"]>(undefined)
 
   const refetch = useCallback((keyArr: string[]) => {
     const key = getActionKeyFromArr(keyArr)
-    setRefetchState((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }))
+
+    if (key.includes(ACTION_KEY_SEPARATOR)) {
+      console.error(
+        `ServerActionUtilsProvider: key contains separator (${ACTION_KEY_SEPARATOR}). This will lead to invalid refetching. Please remove it.`,
+        key
+      )
+    }
+
+    setRefetchState({
+      timestamp: Date.now(),
+      key,
+    })
   }, [])
 
   return (
@@ -128,7 +144,7 @@ export const setupServerActionHooks = <
       const defaultState: TServerActionUtilsContext<
         ServerActionKeys<TFactory>
       > = {
-        $$refetch: {},
+        $$refetch: undefined,
         refetch: () => {},
       }
 
@@ -260,12 +276,16 @@ export const setupServerActionHooks = <
     }, [executeWithTransition, opts?.input, enabled])
 
     useEffect(() => {
-      if (!opts?.actionKey || !input || !enabled) return
+      if (!opts?.actionKey || !input || !enabled || !$$refetch) return
+
+      if (
+        !getActionKeyFromArr(opts?.actionKey || []).startsWith($$refetch.key)
+      ) {
+        return
+      }
+
       executeWithTransition(input)
-    }, [
-      executeWithTransition,
-      $$refetch[getActionKeyFromArr(opts?.actionKey || []) || "never match"],
-    ])
+    }, [executeWithTransition, $$refetch])
 
     const refetch = useCallback(() => {
       if (!input) return
