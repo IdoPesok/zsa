@@ -8,6 +8,7 @@ import {
   useState,
   useTransition,
 } from "react"
+import { SAWError } from "./errors"
 import { TAnyZodSafeFunctionHandler } from "./safe-zod-function"
 
 export type TServerActionResult<
@@ -162,6 +163,11 @@ export const setupServerActionHooks = <
       input: Parameters<TServerAction>[0]
       actionKey?: ServerActionKeys<TFactory>
       enabled?: boolean
+      onError?: (args: { err: SAWError; refetch: () => void }) => void
+      onSuccess?: (args: {
+        data: Awaited<ReturnType<TServerAction>>[0]
+      }) => void
+      onStart?: () => void
     }
   ) => {
     type TResult = {
@@ -202,12 +208,21 @@ export const setupServerActionHooks = <
       async (
         input: Parameters<TServerAction>[0]
       ): Promise<Awaited<ReturnType<TServerAction>>> => {
+        if (opts?.onStart) opts.onStart()
+
         setIsExecuting(true)
         setInput(input)
 
         const [data, err] = await serverAction(input)
 
         if (err) {
+          if (opts?.onError) {
+            opts.onError({
+              err,
+              refetch: refetch,
+            })
+          }
+
           if (oldResult.status === "filled") {
             setResult(oldResult.result)
           } else {
@@ -223,6 +238,12 @@ export const setupServerActionHooks = <
           })
 
           return [data, err] as any
+        }
+
+        if (opts?.onSuccess) {
+          opts.onSuccess({
+            data,
+          })
         }
 
         setResult({
