@@ -157,7 +157,7 @@ export const setupServerActionHooks = <
       return defaultState
     }
 
-    return context
+    return context as TServerActionUtilsContext<ServerActionKeys<TFactory>>
   }
 
   const useServerAction = <

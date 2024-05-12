@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useServerAction } from "@/lib/utils"
+import { useServerAction } from "@/lib/server-action-hooks"
 import { useState } from "react"
 import { incrementNumberAction } from "./actions"
 

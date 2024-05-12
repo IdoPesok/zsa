@@ -1,9 +1,5 @@
 import clsx, { ClassValue } from "clsx"
 import { customAlphabet } from "nanoid"
-import {
-  createServerActionsKeyFactory,
-  setupServerActionHooks,
-} from "server-actions-wrapper"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
@@ -58,13 +54,3 @@ export function slugify(str: string) {
     .replace(/[^\w\-]+/g, "") // Remove all non-word characters except for -
     .replace(/\-\-+/g, "-") // Replace multiple - with single -
 }
-
-export const ActionKeyFactory = createServerActionsKeyFactory({
-  getRandomNumber: () => ["getRandomNumber"],
-  posts: () => ["posts"],
-  postsList: () => ["posts", "list"],
-  postDetails: (id: string) => ["posts", "details", id],
-})
-
-export const { useServerActionsUtils, useServerAction } =
-  setupServerActionHooks(ActionKeyFactory)

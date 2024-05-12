@@ -1,9 +1,9 @@
-import { z } from "zod"
 import {
   SAWError,
   chainServerActionProcedures,
   createServerActionProcedure,
-} from "../../../packages/server-actions-wrapper/dist"
+} from "server-actions-wrapper"
+import { z } from "zod"
 
 const posts: any = 5
 const db: any = 5

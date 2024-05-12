@@ -5,10 +5,6 @@ import remarkGfm from 'remark-gfm'
 const nextConfig = {
   pageExtensions: ['js', 'jsx', 'mdx', 'ts', 'tsx'],
   transpilePackages: [],
-  webpack: (config) => {
-    config.optimization.minimize = false;
-    return config
-  }
 };
 
 const withMDX = createMDX({

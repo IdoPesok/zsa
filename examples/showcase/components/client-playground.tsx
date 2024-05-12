@@ -1,6 +1,6 @@
 "use client"
 
-import { ActionKeyFactory, useServerAction } from "@/lib/utils"
+import { ActionKeyFactory, useServerAction } from "@/lib/server-action-hooks"
 import { generateRandomNumber, searchContacts } from "@/server/actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"

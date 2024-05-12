@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useServerAction } from "@/lib/utils"
+import { useServerAction } from "@/lib/server-action-hooks"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
 import { helloWorldAction } from "./actions"

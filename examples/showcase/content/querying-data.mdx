@@ -34,7 +34,7 @@ Querying from the client:
 "use client"
 
 import { helloWorldAction } from "./actions";
-import { useServerAction } from "@/lib/utils";
+import { useServerAction } from "@/lib/server-action-hooks";
 
 export default function HelloWorld() {
     const [input, setInput] = useState("");
@@ -119,7 +119,7 @@ Next, use the `useServerAction` hook to call the action in a client component:
 
 ```typescript:random-number-display.tsx
 "use client"
-import { useServerAction } from "@/lib/utils"
+import { useServerAction } from "@/lib/server-action-hooks"
 import { getRandomNumber } from "./actions"
 
 export default function RandomNumberDisplay() {

@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { useServerAction } from "@/lib/utils"
+import { useServerAction } from "@/lib/server-action-hooks"
 import { getRandomNumber } from "./actions"
 
 export default function RandomNumberDisplay() {

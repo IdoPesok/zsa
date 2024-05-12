@@ -32,9 +32,11 @@ export const searchContacts = authedProcedure
     // fake loading state
     await new Promise((r) => setTimeout(r, 2000))
 
-    return CONTACTS_DATA.filter((c) =>
+    const ret = CONTACTS_DATA.filter((c) =>
       c.name.toLowerCase().includes(input.query.toLowerCase())
     ).slice(0, 10)
+
+    return ret
   })
 
 export const getFakeData = authedProcedure
