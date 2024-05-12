@@ -1,0 +1,69 @@
+---
+title: "Timeouts"
+group: "Getting Started"
+groupOrder: 5
+---
+
+# Timeouts
+
+When you need to limit the execution time of a server action, you can configure a `timeout` (in milliseconds). If the action runs longer than the specified timeout, it will throw a `SAWError`.
+
+## Timeouts on Actions
+
+To set a timeout on an individual action, use the `timeout` method:
+
+```typescript:actions.ts
+"use server"
+
+import { createServerAction } from "server-actions-wrapper/src"
+import z from "zod"
+
+export const helloWorldAction = createServerAction()
+    .input(z.object({ message: z.string() }))
+    .timeout(1000) // Set the timeout to 1000ms (1 second) <|highlight|>
+    .handler(async ({ input }) => {
+        // Simulating a random execution time between 0 and 2 seconds
+        await new Promise((resolve) => setTimeout(resolve, 2000 * Math.random()))
+        return input.message
+    })
+```
+
+In this example, if the `helloWorldAction` takes more than 1 second to complete, it will throw a `SAWError`.
+
+## Timeouts on Procedures
+
+You can also set a timeout on a procedure to apply it to all actions that use that procedure:
+
+```typescript:actions.ts
+"use server"
+
+const longRunningAuthedProcedure = createServerActionProcedure()
+    .timeout(1000) // Set the timeout to 1000ms (1 second) <|highlight|>
+    .noInputHandler(async () => {
+        try {
+            const { email, id } = await getUser();
+            // Simulating a random execution time between 0 and 2 seconds
+            await new Promise((resolve) => setTimeout(resolve, 2000 * Math.random()))
+            return {
+                user: {
+                    email,
+                    id,
+                }
+            }
+        } catch {
+            throw new Error("UNAUTHORIZED")
+        }
+    })
+
+export const exampleAction = longRunningAuthedProcedure.createServerAction()...
+```
+
+In this case, all actions using the `protectedProcedure` will have a timeout of 1 second.
+
+## Timeout precedence
+
+If a timeout is configured on both a procedure and an action that uses that procedure, the action's timeout will take precedence and overwrite the procedure's timeout.
+
+For example, if `protectedProcedure` has a timeout of 1000ms and `exampleAction` has a timeout of 500ms, the effective timeout for `exampleAction` will be 500ms.
+
+By utilizing timeouts, you can prevent server actions from running indefinitely and ensure that your application remains responsive. This is particularly useful when dealing with external APIs or long-running computations that might exceed acceptable response times.

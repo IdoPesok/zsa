@@ -1,9 +1,10 @@
-import { SAWError, createServerActionProcedure } from "server-actions-wrapper"
+import { SAWError, createServerAction, createServerActionProcedure } from "server-actions-wrapper/src"
 import { z } from "zod"
 
 const auth = () => {
   return { user: { name: "IDO", id: "user_id_123" } } as const
 }
+
 
 const getPost = (id: string) => {
   return { post: { id: id, authorId: "user_id_123" } } as const

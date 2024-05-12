@@ -1,0 +1,185 @@
+---
+title: "Querying data"
+group: "Getting Started"
+groupOrder: 1
+---
+
+
+# Querying data
+
+Server actions can also be used as queries from the client to fetch data from the server on page load or whenever a piece of state changes. Here's an example:
+
+Creating your query:
+
+```typescript:actions.ts
+"use server"
+
+import { createServerAction } from "server-actions-wrapper/src";
+import z from "zod";
+
+export const helloWorldAction = createServerAction() 
+    .input(z.object({
+        message: z.string()
+    }))
+    .handler(async ({ input }) => {
+        // sleep for .5 seconds
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        // update the message
+        return "Message: " + (input.message || 'N/A');
+    });
+```
+
+Querying from the client:
+```typescript:hello-world-example.tsx
+"use client"
+
+import { helloWorldAction } from "./actions";
+import { useServerAction } from "server-actions-wrapper/src";
+
+export default function HelloWorld() {
+    const [input, setInput] = useState("");
+    const debouncedInput = useDebounce(input, 300);
+
+    // Call useServerAction with the imported server action and provide the necessary input
+    const queryAction = useServerAction(helloWorldAction, { <|highlight|>
+        input: { <|highlight|>
+            message: debouncedInput, <|highlight|>
+        },  <|highlight|>
+    }); <|highlight|>
+
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Say hello</CardTitle>
+                <CardDescription>
+                    This card fetches data from a client component using a server action
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+                <Input
+                    placeholder="Message..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                />
+                {queryAction.isLoading ? 'loading...': queryAction.data} <|highlight|>
+            </CardContent>
+        </Card>
+    );
+}
+```
+
+In the client component:
+
+1. Import the `helloWorldAction` and `useServerAction` hook.
+2. Call `useServerAction` with the imported action and provide the necessary input and options.
+3. Bind the user input to the server action's input using state and debounce it to avoid excessive requests.
+4. Render different views based on the `queryAction`'s state (`isSuccess`, `isLoading`, `isError`).
+
+<ExampleComponent id="hello-world-action" />
+
+As you can see, `server-actions-wrapper` provides built-in error and loading states and allows easy integration of server actions into your client components.
+
+
+## Refetching queries
+
+
+When using server actions to query data, you may need to explicitly refetch that data when it becomes stale. This can be achieved using the `useServerActionsUtils` hook.
+
+First, define a server action that fetches the data you want to refetch. In this example, we'll create an action that returns a random number:
+
+```typescript:actions.ts
+"use server"
+import { createServerAction } from "server-actions-wrapper/src"
+import z from "zod"
+
+export const getRandomNumber = createServerAction()
+  .input(
+    z
+      .object({
+        min: z.number(),
+        max: z.number(),
+      })
+      .refine((input) => input.min < input.max)
+  )
+  .handler(async ({ input, ctx }) => {
+    await new Promise((r) => setTimeout(r, 1000))
+    return {
+      number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
+    }
+  })
+```
+
+This action takes a `min` and `max` value as input, validates that `min` is less than `max`, and returns a random number between those values after a simulated 1-second delay.
+
+Next, use the `useServerAction` hook to call the action in a client component:
+
+```typescript:random-number-display.tsx
+"use client"
+import { useServerAction } from "server-actions-wrapper/src"
+import { getRandomNumber } from "./actions"
+
+export default function RandomNumberDisplay() {
+  const queryAction = useServerAction(getRandomNumber, {
+    input: {
+      min: 0,
+      max: 10,
+    },
+    refetchKey: "getRandomNumber" <|highlight|>
+  })
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Random number</CardTitle>
+        <CardDescription>
+          This fetches a random number upon mounting
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p>Random number:</p>
+        {queryAction.isLoading ? 'loading...' : ''}
+        {queryAction.isSuccess && <>{JSON.stringify(queryAction.data.number)}</>}
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+The `useServerAction` hook is called with the `getRandomNumber` action and an options object containing the `input` values and a unique `refetchKey`. The component displays the random number returned by the action.
+
+## Refetching example
+
+To manually refetch the data, use the `useServerActionsUtils` hook in another component:
+
+```typescript:random-number-refetch.tsx
+"use client"
+import { useServerActionsUtils } from "server-actions-wrapper/src" 
+
+export default function RandomNumberRefetch() {
+  const { refetch } = useServerActionsUtils() <|highlight|>
+
+  return (
+    <Card className="p-4 w-full ">
+      <Button
+        onClick={() => {
+          refetch("getRandomNumber") <|highlight|>
+        }}
+        className="w-full"
+      >
+        refetch
+      </Button>
+    </Card>
+  )
+}
+```
+
+This component renders a button that, when clicked, calls the `refetch` function with the same `refetchKey` used in the `RandomNumberDisplay` component. This will cause the server action to be re-executed and the data to be refreshed.
+
+<ExampleComponent id="random-number-example-display" />
+
+Refetch Button:
+
+<ExampleComponent id="random-number-example-refetch" />
+
+By using the `useServerActionsUtils` hook and assigning a unique `refetchKey` to your server actions, you can easily refetch data when needed in your application.
