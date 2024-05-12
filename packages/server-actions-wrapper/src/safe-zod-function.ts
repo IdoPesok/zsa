@@ -67,7 +67,8 @@ export interface TNoHandlerFunc<
     placeholder?: undefined,
     // very janky but basically in the `getProcedureChainOutput` function
     // we pass the context second
-    $ctx?: TProcedureChainOutput
+    $ctx?: TProcedureChainOutput,
+    $overrideInputSchema?: undefined
   ): TDataOrError<
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
@@ -81,7 +82,8 @@ export interface THandlerFunc<
 > {
   (
     args: TInputSchema["_input"],
-    $ctx?: TProcedureChainOutput
+    $ctx?: TProcedureChainOutput,
+    $overrideInputSchema?: z.ZodType
   ): TDataOrError<
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
@@ -109,8 +111,16 @@ const DefaultOmitted = {
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
 
 export type TAnyZodSafeFunctionHandler =
-  | ((input: any, ctx?: any) => TDataOrError<any>)
-  | ((placeholder?: undefined, ctx?: any) => TDataOrError<any>)
+  | ((
+      input: any,
+      ctx?: any,
+      $overrideInputSchema?: undefined
+    ) => TDataOrError<any>)
+  | ((
+      placeholder?: undefined,
+      ctx?: any,
+      $overrideInputSchema?: z.ZodType
+    ) => TDataOrError<any>)
 
 export interface TAnyZodSafeFunction
   extends ZodSafeFunction<any, any, any, any, boolean> {}
@@ -555,14 +565,18 @@ export class ZodSafeFunction<
 
   public async parseInputData(
     data: any,
-    timeoutStatus: TimeoutStatus
+    timeoutStatus: TimeoutStatus,
+    $overrideInputSchema?: z.ZodType
   ): Promise<TInputSchema["_output"]> {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
-    if (!this.$internals.inputSchema) return data
 
-    if (this.$internals.inputSchema instanceof z.ZodUndefined) return undefined
+    const inputSchema = $overrideInputSchema || this.$internals.inputSchema
 
-    const safe = await this.$internals.inputSchema.safeParseAsync(data)
+    if (!inputSchema) return data
+
+    if (inputSchema instanceof z.ZodUndefined) return undefined
+
+    const safe = await inputSchema.safeParseAsync(data)
 
     if (!safe.success) {
       if (this.$internals.onInputParseError) {
@@ -690,7 +704,8 @@ export class ZodSafeFunction<
 
     const wrapper = async (
       args: TInputSchema["_input"],
-      $ctx?: TProcedureChainOutput
+      $ctx?: TProcedureChainOutput,
+      $overrideInputSchema?: z.ZodType
     ) => {
       try {
         await this.handleStart(args, timeoutStatus)
@@ -703,7 +718,11 @@ export class ZodSafeFunction<
           $ctx || (await this.getProcedureChainOutput(args, timeoutStatus))
 
         // parse the input data
-        const input = await this.parseInputData(args, timeoutStatus)
+        const input = await this.parseInputData(
+          args,
+          timeoutStatus,
+          $overrideInputSchema
+        )
 
         // timeout checkpoint
         this.checkTimeoutStatus(timeoutStatus) // checkpoint
@@ -725,13 +744,14 @@ export class ZodSafeFunction<
 
     const withTimeout = async (
       args: TInputSchema["_input"],
-      ctx?: TProcedureChainOutput
+      ctx?: TProcedureChainOutput,
+      $overrideInputSchema?: z.ZodType
     ) => {
       const timeoutMs = this.$internals.timeout
-      if (!timeoutMs) return await wrapper(args, ctx)
+      if (!timeoutMs) return await wrapper(args, ctx, $overrideInputSchema)
 
       return await Promise.race([
-        wrapper(args, ctx),
+        wrapper(args, ctx, $overrideInputSchema),
         this.getTimeoutErrorPromise(timeoutMs),
       ])
         .then((r) => r)

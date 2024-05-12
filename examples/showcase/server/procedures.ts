@@ -1,5 +1,5 @@
-import { createServerActionProcedure } from "server-actions-wrapper"
 import { z } from "zod"
+import { createServerActionProcedure } from "../../../packages/server-actions-wrapper/dist"
 
 export const protectedProcedure = createServerActionProcedure().noInputHandler(
   () => {

@@ -1,9 +1,9 @@
 "use client"
 
+import { ActionKeyFactory, useServerAction } from "@/lib/utils"
 import { generateRandomNumber, searchContacts } from "@/server/actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
-import { useServerAction } from "server-actions-wrapper"
 import {
   Card,
   CardContent,
@@ -23,9 +23,9 @@ export default function ClientPlayground() {
       query: debouncedInput,
     },
     enabled: Boolean(debouncedInput),
-    refetchKey: "searchContacts",
+    actionKey: ActionKeyFactory.postDetails("123"),
   })
-  const fakeAction = useServerAction(generateRandomNumber)
+  const { execute, setOptimistic, data } = useServerAction(generateRandomNumber)
 
   let contactsView
 
@@ -63,6 +63,12 @@ export default function ClientPlayground() {
         />
         <h1>Search Results</h1>
         {contactsView}
+        <button
+          onClick={async () => {
+            setOptimistic({ number: Math.floor(Math.random() * (100 - 1)) + 1 })
+            await execute({ min: 1, max: 100 })
+          }}
+        ></button>
       </CardContent>
     </Card>
   )

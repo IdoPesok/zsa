@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { ServerActionUtilsProvider } from "server-actions-wrapper"
+import { ServerActionUtilsProvider } from "../../../packages/server-actions-wrapper/dist"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
