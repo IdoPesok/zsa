@@ -2,9 +2,9 @@
 
 import { CONTACTS_DATA } from "@/contacts/contacts-data"
 import { z } from "zod"
-import { protectedProcedure } from "./procedures"
+import { authedProcedure } from "./procedures"
 
-export const generateRandomNumber = protectedProcedure
+export const generateRandomNumber = authedProcedure
   .createServerAction()
   .input(
     z
@@ -21,7 +21,7 @@ export const generateRandomNumber = protectedProcedure
     }
   })
 
-export const searchContacts = protectedProcedure
+export const searchContacts = authedProcedure
   .createServerAction()
   .input(
     z.object({
@@ -37,7 +37,7 @@ export const searchContacts = protectedProcedure
     ).slice(0, 10)
   })
 
-export const getFakeData = protectedProcedure
+export const getFakeData = authedProcedure
   .createServerAction()
   .input(
     z

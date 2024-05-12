@@ -1,0 +1,116 @@
+---
+title: "Callbacks"
+group: "Getting Started"
+groupOrder: 3
+---
+
+# Callbacks
+
+Callbacks allow you to run additional logic based on the lifecycle of a server action, such as when it starts, completes successfully, errors out, or encounters an input parsing error.
+
+## Available callbacks
+
+The following callbacks can be configured when defining your server action or at the `procedure` level to be shared among a set of actions:
+
+- `onStart`
+- `onSuccess`
+- `onComplete`
+- `onError`
+- `onInputParseError`
+
+The lifecycle of these callbacks when an action is invoked is as follows:
+
+1. Action gets invoked
+2. `onStart` runs
+3. `onInputParseError` runs if the input fails parsing (execution stops here if this occurs)
+4. The main logic for the action runs
+5. `onSuccess` runs if the handler completes successfully, or `onError` runs if the handler throws an error
+6. `onComplete` runs under all exit conditions
+7. The action's response is `return`ed
+
+## Callbacks on actions
+
+Here's an example of configuring callbacks on an individual action:
+
+```typescript:actions.ts
+const exampleAction = createServerAction()
+  .input(z.object({message: z.string()}))
+  .onStart(async () => {
+    console.log('onStart')
+  })
+  .onSuccess(async () => {
+    console.log('onSuccess')
+  })
+  .onComplete(async () => {
+    console.log('onComplete')
+  })
+  .onError(async () => {
+    console.log('onError')
+  })
+  .onInputParseError(async () => {
+    console.log('onInputParseError')
+  })
+  .handler(async ({input}) => {
+    console.log(input.message)
+  })
+```
+
+## Callbacks on procedures
+
+You can also configure callbacks at the procedure level. Callbacks defined on a procedure will run for all actions that utilize that procedure:
+
+```typescript:actions.ts
+const authedProcedure = createServerActionProcedure() <|highlight|>
+    .onStart(async () => {
+        console.log('onStart')
+    })
+    .onSuccess(async () => {
+        console.log('onSuccess')
+    })
+    .onComplete(async () => {
+        console.log('onComplete')
+    })
+    .onError(async () => {
+        console.log('onError')
+    })
+    .noInputHandler(async () => {
+        try {
+            const { email, id } = await getUser();
+
+            return {
+                user: {
+                    email,
+                    id,
+                }
+            }
+        } catch {
+            throw new Error("User not authenticated")
+        }
+    })
+  
+const someFunction = authedProcedure.createServerAction()...
+```
+
+<Info>
+Note that procedure callbacks will execute *before* their corresponding action callbacks, but will still be called when the action is running. For example, a `onComplete` callback attached to a procedure will execute after the *action* is complete, not when the procedure is complete. Also, if there is also a `onComplete` handler on the action, then the `onComplete` handler on the procedure will run before the `onComplete` handler for the action.
+</Info>
+
+## Callback arguments
+
+Each callback receives different arguments:
+
+- `onStart`
+  - `args`: the original input to the action (same as `input` in the handler)
+- `onSuccess`
+  - `args`: the original input to the action
+- `onComplete`
+  - `isSuccess`: boolean indicating if the action succeeded
+  - `isError`: boolean indicating if the action errored
+  - `status`: string of either `'success'` or `'error'`
+  - `args`: the original input to the action (only exists if `isSuccess === true`)
+- `onError`
+  - The error that occurred
+- `onInputParseError`
+  - The zod error that occurred during input parsing
+
+By leveraging these callbacks, you can add logging, error handling, or other side effects to your server actions.

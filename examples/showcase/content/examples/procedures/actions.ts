@@ -1,18 +1,16 @@
+"use server"
+
 import { createServerActionProcedure } from "server-actions-wrapper"
 import { z } from "zod"
 
-const getUser = () => {
+async function getUser() {
   return {
     email: "",
     id: "",
   }
 }
 
-const getUserRole = (str: string) => {
-  return ""
-}
-
-export const authedProcedure = createServerActionProcedure().noInputHandler(
+const authedProcedure = createServerActionProcedure().noInputHandler(
   async () => {
     try {
       const { email, id } = await getUser()
@@ -29,7 +27,7 @@ export const authedProcedure = createServerActionProcedure().noInputHandler(
   }
 )
 
-const updateEmail = authedProcedure
+export const updateEmail = authedProcedure
   .createServerAction()
   .input(
     z.object({
@@ -39,8 +37,17 @@ const updateEmail = authedProcedure
   .handler(async ({ input, ctx }) => {
     const { user } = ctx
 
+    // Update user's email in the database
+    // await db.update(users).set({
+    //   email: newEmail,
+    // }).where(eq(users.id, user.id))
+
     return input.newEmail
   })
+
+const getUserRole = (str: string) => {
+  return ""
+}
 
 const isAdminProcedure = createServerActionProcedure(
   authedProcedure
@@ -55,6 +62,7 @@ const isAdminProcedure = createServerActionProcedure(
     user: {
       id: ctx.user.id,
       email: ctx.user.email,
+      role: role,
     },
   }
 })
@@ -68,7 +76,7 @@ const deleteUser = isAdminProcedure
   )
   .handler(async ({ input, ctx }) => {
     const { userIdToDelete } = input
-    const { user } = ctx // receive the context from the isAdminProcedure procedure
+    const { user } = ctx // receive the context from the procedures
 
     // Delete user from database
     // await db.delete(users).where(eq(users.id, userIdToDelete))
@@ -76,7 +84,7 @@ const deleteUser = isAdminProcedure
     return userIdToDelete
   })
 
-const checkUserOwnsPost = (id1: string, id2: string) => true
+const checkUserOwnsPost = async (userId: string, postId: string) => true
 
 const ownsPostProcedure = createServerActionProcedure(isAdminProcedure)
   .input(z.object({ postId: z.string() }))

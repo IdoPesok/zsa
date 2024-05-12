@@ -1,0 +1,134 @@
+---
+title: "Introduction"
+group: "Getting Started"
+groupOrder: 0
+---
+
+#### Welcome! 👋
+
+# Introduction
+
+`server-actions-wrapper` is the best library for building typesafe server actions in NextJS. Built for a simple, scalable developer experience, some majors features include...
+- Validated inputs/outputs
+- Procedures (aka middleware) that pass context to your server actions
+- Easy querying of server actions in client components (with refetching)
+
+*and much more!*
+
+To get started, you can install `server-actions-wrapper` using any package manager:
+
+```bash:terminal
+npm i server-actions-wrapper zod
+```
+
+<Note>
+  [Zod](https://zod.dev/) provides a simple way to define and validate types in
+  your code.
+</Note>
+
+
+## Creating your first action
+
+There's plenty of functionality with `server-actions-wrapper`, but to start, here is how you make a simple, validated server action:
+
+*(we know this function is silly but it gets the point across)*
+
+
+   ```typescript:actions.ts
+   "use server"
+
+   import { createServerAction } from "server-actions-wrapper" 
+   import z from "zod"
+
+   export const incrementNumberAction = createServerAction() <|highlight|>
+       .input(z.object({
+           number: z.number()
+       }))
+       .handler(async ({ input }) => {
+           // Sleep for .5 seconds
+           await new Promise((resolve) => setTimeout(resolve, 500))
+           // Increment the input number by 1
+           return input.number + 1;
+       });
+   ```
+
+   Let's break down the code:
+
+   - `createServerAction` initializes a server action.
+   - `input` sets the input schema for the action using a Zod schema. 
+   - `handler` sets the handler function for the action. **The input is automatically validated based on the input schema.**
+
+
+<Info>
+  A `SAWError` with the code `INPUT_PARSE_ERROR` will be returned if the handler's input is does not match input schema.
+</Info>
+
+<Info>
+    To make a server action with no input, you can use a `noInputHandler` to avoid needing to declare a nullish input schema.
+</Info>
+
+## Calling from the server
+
+Server actions can also be called directly from the server without the need for a try/catch block. 
+
+```typescript:example.ts
+"use server"
+
+const [data, err] = await incrementNumberAction({ number: 24 }); <|highlight|>
+
+if (err) {
+    return;
+} else {
+    console.log(data); // 25
+}
+```
+
+The action will return either `[data, null]` on success or `[null, err]` on error.
+
+
+## Calling from the client
+
+Server actions come with built-in loading states, making it easy to handle asynchronous operations. Here's an example of using the `incrementNumberAction` as a mutation:
+
+```typescript:increment-example.tsx
+"use client"
+
+import { incrementNumberAction } from "./actions";
+import { useServerAction } from "@/lib/utils";
+import { useState } from "react";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "ui";
+
+export default function IncrementExample() {
+    const [counter, setCounter] = useState(0);
+    const incrementAction = useServerAction(incrementNumberAction); <|highlight|>
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Increment Number</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+                <Button onClick={async () => {
+                    const [data, err] = await incrementAction.execute({ number: counter }); <|highlight|>
+                    if (!err) {
+                        setCounter(data);
+                    }
+                }}>
+                    Invoke action
+                </Button>
+                <p>Count:</p>
+                <div>{incrementAction.isLoading ? 'loading...' : counter}</div> <|highlight|>
+            </CardContent>
+        </Card>
+    );
+}
+```
+
+   - `useServerAction` allows you to use this server action from within your client components.
+   - `incrementAction.execute` executes the server action endpoint with the typesafe input directly from `onClick`. 
+
+Here is the result:
+
+<ExampleComponent id="increment-example" />
+
+Thats just the beginning... Continue exploring to discover more features and capabilities of `server-actions-wrapper`!

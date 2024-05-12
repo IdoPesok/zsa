@@ -4,65 +4,137 @@
 
 @layer base {
   :root {
+    --sh-class: #8e44ad;
+    --sh-identifier: #2c3e50;
+    --sh-sign: #7f8c8d;
+    --sh-property: #3498db;
+    --sh-entity: #16a085;
+    --sh-jsxliterals: #9b59b6;
+    --sh-string: #27ae60;
+    --sh-keyword: #e74c3c;
+    --sh-comment: #95a5a6;
+
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 240 10% 3.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 10% 3.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 240 10% 3.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 221 83% 53%;
+    --primary-gradient-start: 213 94% 68%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 5.9% 10%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72.22% 50.59%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
 
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+
+    --success: 160, 84%, 39%;
+    --success-foreground: 210 40% 98%;
+
+    --ring: 240 5% 64.9%;
     --radius: 0.5rem;
+
+    --stone-50: rgb(250 250 249);
+    --stone-100: rgb(245 245 244);
+    --stone-200: rgb(231 229 228);
+    --stone-300: rgb(214 211 209);
+    --stone-400: rgb(168 162 158);
+    --stone-500: rgb(120 113 108);
+    --stone-600: rgb(87 83 78);
+    --stone-700: rgb(68 64 60);
+    --stone-800: rgb(41 37 36);
+    --stone-900: rgb(28 25 23);
+
+    --highlight-default: #ffffff;
+    --highlight-purple: #f6f3f8;
+    --highlight-red: #fdebeb;
+    --highlight-yellow: #fbf4a2;
+    --highlight-blue: #c1ecf9;
+    --highlight-green: #acf79f;
+    --highlight-orange: #faebdd;
+    --highlight-pink: #faf1f5;
+    --highlight-gray: #f1f1ef;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --sh-identifier: #ecf0f1;
+    --sh-sign: #bdc3c7;
+    --sh-class: #dd8dff;
+    --sh-keyword: #ff5e4c;
+    --sh-jsxliterals: #ff85f9;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --primary-gradient: 217 91% 60%;
+    --primary-gradient-start: 224 76% 48%;
+    --primary-foreground: 0 0% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --secondary: 0 0% 98%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 85.7% 97.3%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --warning: 48 96% 89%;
+    --warning-foreground: 38 92% 50%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+
+    --success: 161, 94%, 30%;
+    --success-foreground: 210 40% 98%;
+
+    --stone-50: rgb(35 35 34);
+    --stone-100: rgb(41 37 36);
+    --stone-200: rgb(66 69 71);
+    --stone-300: rgb(112 118 123);
+    --stone-400: rgb(160 167 173);
+    --stone-500: rgb(193 199 204);
+    --stone-600: rgb(212 217 221);
+    --stone-700: rgb(229 232 235);
+    --stone-800: rgb(232 234 235);
+    --stone-900: rgb(240, 240, 241);
+
+    --highlight-default: #000000;
+    --highlight-purple: #3f2c4b;
+    --highlight-red: #5c1a1a;
+    --highlight-yellow: #5c4b1a;
+    --highlight-blue: #1a3d5c;
+    --highlight-green: #1a5c20;
+    --highlight-orange: #5c3a1a;
+    --highlight-pink: #5c1a3a;
+    --highlight-gray: #3a3a3a;
   }
 }
 
@@ -70,7 +142,100 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+@layer utilities {
+  .step {
+    counter-increment: step;
+  }
+
+  .step:before {
+    @apply absolute w-9 h-9 bg-muted rounded-full font-mono font-medium text-center text-base inline-flex items-center justify-center -indent-px border-4 border-background;
+    @apply ml-[-50px] mt-[-4px];
+    content: counter(step);
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.dark [data-hide-on-theme='dark'],
+.light [data-hide-on-theme='light'] {
+  display: none;
+}
+
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before {
+  content: "";
+}
+
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+  content: "";
+}
+
+.prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  text-decoration: none;
+}
+
+.sh__line {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.sh__line--highlighted {
+  background-color: rgba(0, 200, 255, 0.18);
+  border-top: 3px solid rgba(0, 200, 255, 0.0);
+  border-bottom: 3px solid rgba(0, 200, 255, 0.0);
+  padding-right: 3px;
+  position: relative;
+}
+
+.sh__line--highlighted::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 0px;
+  width: 3px;
+  height: calc(100% + 6px);
+  background-color: rgba(0, 200, 255);
+}
+
+.sh__line--error-highlighted {
+  background-color: rgba(255, 0, 0, 0.18);
+  border-top: 3px solid rgba(255, 0, 0, 0.0);
+  border-bottom: 3px solid rgba(255, 0, 0, 0.0);
+  padding-right: 3px;
+  position: relative;
+}
+
+.sh__line--error-highlighted::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 0px;
+  width: 3px;
+  height: calc(100% + 6px);
+  background-color: rgba(255, 0, 0);
 }
