@@ -1,6 +1,6 @@
 "use client"
 
-import { ActionKeyFactory, useServerAction } from "@/lib/server-action-hooks"
+import { useServerAction } from "@/lib/server-action-hooks"
 import { generateRandomNumber, searchContacts } from "@/server/actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
@@ -33,7 +33,7 @@ export default function ClientPlayground() {
       console.log("onStart")
     },
     enabled: Boolean(debouncedInput),
-    actionKey: ActionKeyFactory.postDetails("123"),
+    actionKey: ['posts', 'details', '123']
   })
   const { execute, setOptimistic, data } = useServerAction(generateRandomNumber)
 
