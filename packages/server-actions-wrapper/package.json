@@ -8,8 +8,8 @@
     "dist/**"
   ],
   "exports": {
-    "./hooks": "./src/use-server-action.tsx",
-    ".": "./src/index.ts"
+    "./hooks": "./dist/use-server-action.mjs",
+    ".": "./dist/index.mjs"
   },
   "typesVersions": {
     "*": {
