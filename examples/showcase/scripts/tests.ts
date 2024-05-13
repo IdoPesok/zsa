@@ -1,8 +1,15 @@
-import { SAWError, createServerActionProcedure } from "server-actions-wrapper"
+import {
+  SAWError,
+  chainServerActionProcedures,
+  createServerActionProcedure,
+} from "server-actions-wrapper"
 import { z } from "zod"
 
+const posts: any = 5
+const db: any = 5
+
 const auth = () => {
-  return { user: { name: "IDO", id: "user_id_123" } } as const
+  return { user: { name: "IDO", id: "user_id_123" } }
 }
 
 const getPost = (id: string) => {
@@ -11,28 +18,35 @@ const getPost = (id: string) => {
 
 const main = async () => {
   const isAuthed = createServerActionProcedure().noInputHandler(async () => {
-    console.log("isAuthed", Date.now())
     const user = await auth()
-    await new Promise((r) => setTimeout(r, 1000))
-    return user
+    if (!user) throw new SAWError("NOT_AUTHORIZED", "get outta here")
+    return {
+      auth: user,
+    }
   })
 
+  const isAdmin = createServerActionProcedure(isAuthed).noInputHandler(
+    async ({ ctx }) => {
+      if (ctx.auth.user.id !== "user_id_123")
+        throw new SAWError("NOT_AUTHORIZED", "get outta here")
+
+      return {
+        auth: {
+          ...ctx.auth,
+          isAdmin: true,
+        },
+      }
+    }
+  )
+
   const ownsPost = createServerActionProcedure(isAuthed) // child of isAuthed
-    .input(
-      z
-        .object({ postId: z.string() })
-        .transform((v) => ({ postId: v.postId.toUpperCase() }))
-    )
+    .input(z.object({ postId: z.string() }))
     .handler(async ({ input, ctx }) => {
       const postData = await getPost(input.postId)
-      if (postData.post.authorId !== ctx.user.id) {
-        throw new SAWError("ERROR", "yo this just errored")
+      if (postData.post.authorId !== ctx.auth.user.id) {
+        throw new SAWError("NOT_AUTHORIZED", "get outta here")
       }
 
-      console.log("ownsPost", Date.now())
-      console.log("got input", JSON.stringify(input, null, 2))
-      console.log("got ctx", JSON.stringify(ctx, null, 2))
-      await new Promise((r) => setTimeout(r, 1000))
       return {
         ...ctx,
         post: {
@@ -41,22 +55,25 @@ const main = async () => {
       }
     })
 
-  const myAction = ownsPost
+  const ownsPostIsAdmin = chainServerActionProcedures(isAdmin, ownsPost)
+
+  const updatePost = ownsPostIsAdmin
     .createServerAction()
-    .input(z.object({ somethingElse: z.string().default("testing") }))
-    .onError((err) => {
-      console.log("onError in action called", err)
-    })
+    .input(z.object({ title: z.string() }))
     .handler(async ({ input, ctx }) => {
-      console.log("FINAL", Date.now())
-      console.log("got input", JSON.stringify(input, null, 2))
-      console.log("got ctx", JSON.stringify(ctx, null, 2))
+      // do some db stuff here
+
+      input.postId // type-safe
+      input.title // type-safe
+
+      ctx.auth // type-safe
+      ctx.post // type-safe
 
       return "YOOOOOOO"
     })
 
-  const [data, err] = await myAction({
-    somethingElse: "hello world",
+  const [data, err] = await updatePost({
+    title: "hello world",
     postId: "post_id_123",
   })
 

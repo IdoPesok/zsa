@@ -1,9 +1,9 @@
 "use client"
 
+import { useServerAction } from "@/lib/server-action-hooks"
 import { generateRandomNumber, searchContacts } from "@/server/actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
-import { useServerAction } from "server-actions-wrapper"
 import {
   Card,
   CardContent,
@@ -22,10 +22,20 @@ export default function ClientPlayground() {
     input: {
       query: debouncedInput,
     },
+    onError: ({ err, refetch }) => {
+      console.log("onError", err)
+      refetch()
+    },
+    onSuccess: ({ data }) => {
+      console.log("onSuccess", data)
+    },
+    onStart: () => {
+      console.log("onStart")
+    },
     enabled: Boolean(debouncedInput),
-    refetchKey: "searchContacts",
+    actionKey: ['posts', 'details', '123']
   })
-  const fakeAction = useServerAction(generateRandomNumber)
+  const { execute, setOptimistic, data } = useServerAction(generateRandomNumber)
 
   let contactsView
 
@@ -35,6 +45,7 @@ export default function ClientPlayground() {
         {queryAction.data.map((c) => (
           <div key={c.id}>{c.name}</div>
         ))}
+        {queryAction.isLoadingOptimistic && "Saving..."}
       </div>
     )
   } else if (queryAction.isLoading) {
@@ -63,6 +74,19 @@ export default function ClientPlayground() {
         />
         <h1>Search Results</h1>
         {contactsView}
+        <button
+          onClick={async () => {
+            // call it with just a value
+            setOptimistic({ number: Math.floor(Math.random() * (100 - 1)) + 1 })
+
+            // call it with a function that takes in the current value
+            setOptimistic((current) => ({
+              number: current ? current.number + 1 : 0,
+            }))
+
+            await execute({ min: 1, max: 100 })
+          }}
+        ></button>
       </CardContent>
     </Card>
   )

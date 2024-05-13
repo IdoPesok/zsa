@@ -2,9 +2,9 @@
 
 import { CONTACTS_DATA } from "@/contacts/contacts-data"
 import { z } from "zod"
-import { protectedProcedure } from "./procedures"
+import { authedProcedure } from "./procedures"
 
-export const generateRandomNumber = protectedProcedure
+export const generateRandomNumber = authedProcedure
   .createServerAction()
   .input(
     z
@@ -21,7 +21,7 @@ export const generateRandomNumber = protectedProcedure
     }
   })
 
-export const searchContacts = protectedProcedure
+export const searchContacts = authedProcedure
   .createServerAction()
   .input(
     z.object({
@@ -32,12 +32,14 @@ export const searchContacts = protectedProcedure
     // fake loading state
     await new Promise((r) => setTimeout(r, 2000))
 
-    return CONTACTS_DATA.filter((c) =>
+    const ret = CONTACTS_DATA.filter((c) =>
       c.name.toLowerCase().includes(input.query.toLowerCase())
     ).slice(0, 10)
+
+    return ret
   })
 
-export const getFakeData = protectedProcedure
+export const getFakeData = authedProcedure
   .createServerAction()
   .input(
     z

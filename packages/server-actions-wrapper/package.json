@@ -7,6 +7,10 @@
   "files": [
     "dist/**"
   ],
+  "exports": {
+    "./hooks": "./src/use-server-action.tsx",
+    ".": "./src/index.ts"
+  },
   "sideEffects": false,
   "license": "MIT",
   "main": "./dist/index.js",
@@ -23,6 +27,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
   "dependencies": {
+    "react": "^18.3.1",
     "typescript": "latest",
     "zod": "^3.23.5"
   },
