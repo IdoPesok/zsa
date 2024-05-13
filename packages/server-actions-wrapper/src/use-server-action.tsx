@@ -65,7 +65,9 @@ export type TServerActionResult<
   | {
       // loading state
       isLoading: true
-      isLoadingOptimistic: false
+      isRefetching: false
+      isExecuting: true
+      isOptimistic: false
       data: undefined
       isError: false
       error: undefined
@@ -73,9 +75,23 @@ export type TServerActionResult<
       status: "loading"
     }
   | {
-      // loading state
+      // refetching state
+      isLoading: false
+      isRefetching: true
+      isOptimistic: false
+      isExecuting: true
+      data: inferServerActionReturnData<TServerAction>
+      isError: false
+      error: undefined
+      isSuccess: true
+      status: "refetching"
+    }
+  | {
+      // loading state (optimistic)
       isLoading: true
-      isLoadingOptimistic: true
+      isRefetching: false
+      isOptimistic: true
+      isExecuting: true
       data: inferServerActionReturnData<TServerAction>
       isError: false
       error: undefined
@@ -83,9 +99,23 @@ export type TServerActionResult<
       status: "loading"
     }
   | {
+      // refetching state (optimistic)
+      isLoading: false
+      isRefetching: true
+      isOptimistic: true
+      isExecuting: true
+      data: inferServerActionReturnData<TServerAction>
+      isError: false
+      error: undefined
+      isSuccess: true
+      status: "refetching"
+    }
+  | {
       // idle state
       isLoading: false
-      isLoadingOptimistic: false
+      isRefetching: false
+      isOptimistic: false
+      isExecuting: false
       data: undefined
       isError: false
       error: undefined
@@ -95,7 +125,9 @@ export type TServerActionResult<
   | {
       // error state
       isLoading: false
-      isLoadingOptimistic: false
+      isRefetching: false
+      isOptimistic: false
+      isExecuting: false
       data: undefined
       isError: true
       error: unknown
@@ -104,7 +136,9 @@ export type TServerActionResult<
     }
   | {
       isLoading: false
-      isLoadingOptimistic: false
+      isRefetching: false
+      isOptimistic: false
+      isExecuting: false
       data: inferServerActionReturnData<TServerAction>
       isError: false
       error: undefined
@@ -218,6 +252,11 @@ export const setupServerActionHooks = <
         data: Awaited<ReturnType<TServerAction>>[0]
       }) => void
       onStart?: () => void
+
+      /**
+       * Refetch the action every `refetchInterval` milliseconds
+       */
+      refetchInterval?: number
     }
   ) => {
     type TResult = {
@@ -253,11 +292,21 @@ export const setupServerActionHooks = <
       status: "empty",
       result: undefined,
     })
+    const intervalId = useRef<ReturnType<typeof setInterval> | undefined>(
+      undefined
+    )
 
     const execute = useCallback(
       async (
         input: Parameters<TServerAction>[0]
       ): Promise<Awaited<ReturnType<TServerAction>>> => {
+        if (opts?.refetchInterval) {
+          clearInterval(intervalId.current)
+          intervalId.current = setInterval(() => {
+            execute(input)
+          }, opts.refetchInterval)
+        }
+
         if (opts?.onStart) opts.onStart()
 
         setIsExecuting(true)
@@ -400,34 +449,73 @@ export const setupServerActionHooks = <
     let final: TServerActionResult<TServerAction>
 
     if (isExecuting && oldResult.status === "empty") {
-      // loading state (not optimistic)
-      final = {
-        isLoading: true,
-        isLoadingOptimistic: false,
-        data: undefined,
+      const base = {
+        isOptimistic: false,
+        isExecuting: true,
         isError: false,
         error: undefined,
-        isSuccess: false,
-        status: "loading",
+      } as const
+
+      // loading state (not optimistic)
+      if (result.data) {
+        // refetching
+        final = {
+          ...base,
+          isLoading: false,
+          isRefetching: true,
+          data: result.data,
+          isSuccess: true,
+          status: "refetching",
+        }
+      } else {
+        final = {
+          ...base,
+          isLoading: true,
+          isSuccess: false,
+          isRefetching: false,
+          data: undefined,
+          status: "loading",
+        }
       }
     } else if (isExecuting && oldResult.status === "filled" && result.data) {
-      // loading state (optimistic)
-      final = {
-        isLoading: true,
-        isLoadingOptimistic: true,
-        data: result.data,
+      const base = {
+        isOptimistic: true,
+        isExecuting: true,
         isError: false,
         error: undefined,
-        isSuccess: false,
-        status: "loading",
+      } as const
+
+      // loading state (optimistic)
+      if (oldResult.result.data) {
+        // refetching
+        final = {
+          ...base,
+          isLoading: false,
+          isRefetching: true,
+          data: result.data,
+          isSuccess: true,
+          status: "refetching",
+        }
+      } else {
+        // loading
+        final = {
+          ...base,
+          isLoading: true,
+          isRefetching: false,
+          isSuccess: false,
+          data: result.data,
+          status: "loading",
+        }
       }
     } else if (!result.isError && result.data) {
       // success state
       final = {
         isLoading: false,
+        isRefetching: false,
+        isExecuting: false,
         data: result.data,
         isError: false,
-        isLoadingOptimistic: false,
+        isOptimistic: false,
         error: undefined,
         isSuccess: true,
         status: "success",
@@ -436,10 +524,12 @@ export const setupServerActionHooks = <
       // error state
       final = {
         isLoading: false,
+        isRefetching: false,
+        isExecuting: false,
         data: undefined,
         isError: true,
         error: result.error,
-        isLoadingOptimistic: false,
+        isOptimistic: false,
         isSuccess: false,
         status: "error",
       }
@@ -447,8 +537,10 @@ export const setupServerActionHooks = <
       // idle state
       final = {
         isLoading: false,
+        isExecuting: false,
+        isRefetching: false,
         data: undefined,
-        isLoadingOptimistic: false,
+        isOptimistic: false,
         isError: false,
         error: undefined,
         isSuccess: false,
