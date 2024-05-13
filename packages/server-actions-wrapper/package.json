@@ -2,7 +2,15 @@
   "name": "server-actions-wrapper",
   "version": "0.1.0",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "typesVersions": {
+      "*": {
+        "*": [
+          "dist/*.d.ts",
+          "dist/*/index.d.ts"
+        ]
+      }
+    }
   },
   "files": [
     "dist/**"
@@ -10,6 +18,14 @@
   "exports": {
     "./hooks": "./src/use-server-action.tsx",
     ".": "./src/index.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*",
+        "src/*/index"
+      ]
+    }
   },
   "sideEffects": false,
   "license": "MIT",
