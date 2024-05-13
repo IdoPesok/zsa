@@ -1,6 +1,6 @@
 "use client"
 
-import {
+import React, {
   createContext,
   useCallback,
   useContext,
@@ -63,54 +63,88 @@ export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
 > =
   | {
-    // loading state
-    isLoading: true
-    isLoadingOptimistic: false
-    data: undefined
-    isError: false
-    error: undefined
-    isSuccess: false
-    status: "loading"
-  }
+      // loading state
+      isLoading: true
+      isRefetching: false
+      isExecuting: true
+      isOptimistic: false
+      data: undefined
+      isError: false
+      error: undefined
+      isSuccess: false
+      status: "loading"
+    }
   | {
-    // loading state
-    isLoading: true
-    isLoadingOptimistic: true
-    data: inferServerActionReturnData<TServerAction>
-    isError: false
-    error: undefined
-    isSuccess: false
-    status: "loading"
-  }
+      // refetching state
+      isLoading: false
+      isRefetching: true
+      isOptimistic: false
+      isExecuting: true
+      data: inferServerActionReturnData<TServerAction>
+      isError: false
+      error: undefined
+      isSuccess: true
+      status: "refetching"
+    }
   | {
-    // idle state
-    isLoading: false
-    isLoadingOptimistic: false
-    data: undefined
-    isError: false
-    error: undefined
-    isSuccess: false
-    status: "idle"
-  }
+      // loading state (optimistic)
+      isLoading: true
+      isRefetching: false
+      isOptimistic: true
+      isExecuting: true
+      data: inferServerActionReturnData<TServerAction>
+      isError: false
+      error: undefined
+      isSuccess: false
+      status: "loading"
+    }
   | {
-    // error state
-    isLoading: false
-    isLoadingOptimistic: false
-    data: undefined
-    isError: true
-    error: unknown
-    isSuccess: false
-    status: "error"
-  }
+      // refetching state (optimistic)
+      isLoading: false
+      isRefetching: true
+      isOptimistic: true
+      isExecuting: true
+      data: inferServerActionReturnData<TServerAction>
+      isError: false
+      error: undefined
+      isSuccess: true
+      status: "refetching"
+    }
   | {
-    isLoading: false
-    isLoadingOptimistic: false
-    data: inferServerActionReturnData<TServerAction>
-    isError: false
-    error: undefined
-    isSuccess: true
-    status: "success"
-  }
+      // idle state
+      isLoading: false
+      isRefetching: false
+      isOptimistic: false
+      isExecuting: false
+      data: undefined
+      isError: false
+      error: undefined
+      isSuccess: false
+      status: "idle"
+    }
+  | {
+      // error state
+      isLoading: false
+      isRefetching: false
+      isOptimistic: false
+      isExecuting: false
+      data: undefined
+      isError: true
+      error: unknown
+      isSuccess: false
+      status: "error"
+    }
+  | {
+      isLoading: false
+      isRefetching: false
+      isOptimistic: false
+      isExecuting: false
+      data: inferServerActionReturnData<TServerAction>
+      isError: false
+      error: undefined
+      isSuccess: true
+      status: "success"
+    }
 
 type ServerActionsKeyFactory<TKey extends string[]> = {
   [key: string]: (...args: any[]) => TKey
@@ -131,11 +165,11 @@ export const createServerActionsKeyFactory = <
 
 type TServerActionUtilsContext<T extends string[]> = {
   $$refetch:
-  | undefined
-  | {
-    timestamp: number
-    key: string
-  }
+    | undefined
+    | {
+        timestamp: number
+        key: string
+      }
   refetch: (keys: T) => void
 }
 
@@ -143,7 +177,7 @@ const ServerActionUtilsContext = createContext<
   TServerActionUtilsContext<string[]>
 >({
   $$refetch: undefined,
-  refetch: () => { },
+  refetch: () => {},
 })
 
 const ACTION_KEY_SEPARATOR = "<|break|>"
@@ -196,7 +230,7 @@ export const setupServerActionHooks = <
         ServerActionKeys<TFactory>
       > = {
         $$refetch: undefined,
-        refetch: () => { },
+        refetch: () => {},
       }
 
       return defaultState
@@ -218,6 +252,11 @@ export const setupServerActionHooks = <
         data: Awaited<ReturnType<TServerAction>>[0]
       }) => void
       onStart?: () => void
+
+      /**
+       * Refetch the action every `refetchInterval` milliseconds
+       */
+      refetchInterval?: number
     }
   ) => {
     type TResult = {
@@ -240,28 +279,47 @@ export const setupServerActionHooks = <
     const { $$refetch } = useServerActionsUtils()
     const [oldResult, setOldResult] = useState<
       | {
-        status: "empty"
-        result: undefined
-      }
+          status: "empty"
+          result: undefined
+        }
       | {
-        status: "filled"
-        result: TResult
-      }
+          status: "filled"
+          result: TResult
+        }
     >({
       status: "empty",
       result: undefined,
     })
+    const lastTimeoutId = useRef<number | undefined>(undefined)
 
-    const execute = useCallback(
+    const internalExecute = useCallback(
       async (
-        input: Parameters<TServerAction>[0]
+        input: Parameters<TServerAction>[0],
+        isFromTimeoutId?: number
       ): Promise<Awaited<ReturnType<TServerAction>>> => {
+        // if the timeout ids don't match, we should not refetch
+        if (isFromTimeoutId && lastTimeoutId.current !== isFromTimeoutId) {
+          return null as any
+        }
+
+        // start a new timeout id
+        const timeoutId = Math.floor(Math.random() * 10000)
+        lastTimeoutId.current = timeoutId
+
         if (opts?.onStart) opts.onStart()
 
         setIsExecuting(true)
         inputRef.current = clone(input)
 
         const [data, err] = await serverAction(input)
+
+        // handle refetching
+        // call with the timeout id
+        if (opts?.refetchInterval) {
+          setTimeout(() => {
+            internalExecute(input, timeoutId)
+          }, opts.refetchInterval)
+        }
 
         if (err) {
           if (opts?.onError) {
@@ -312,6 +370,13 @@ export const setupServerActionHooks = <
       [serverAction]
     )
 
+    const execute = useCallback(
+      async (input: Parameters<TServerAction>[0]) => {
+        return await internalExecute(input)
+      },
+      [internalExecute]
+    )
+
     const executeWithTransition = useCallback(
       async (input: Parameters<TServerAction>[0]) => {
         setIsExecuting(true)
@@ -330,14 +395,14 @@ export const setupServerActionHooks = <
       async (
         fn:
           | ((
-            current: typeof result.data
-          ) => NonNullable<Awaited<ReturnType<TServerAction>>[0]>)
+              current: typeof result.data
+            ) => NonNullable<Awaited<ReturnType<TServerAction>>[0]>)
           | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
       ) => {
         const data = isFunction(fn)
           ? fn(
-            oldResult.status === "empty" ? result.data : oldResult.result.data
-          )
+              oldResult.status === "empty" ? result.data : oldResult.result.data
+            )
           : fn
 
         if (oldResult.status === "empty") {
@@ -397,34 +462,73 @@ export const setupServerActionHooks = <
     let final: TServerActionResult<TServerAction>
 
     if (isExecuting && oldResult.status === "empty") {
-      // loading state (not optimistic)
-      final = {
-        isLoading: true,
-        isLoadingOptimistic: false,
-        data: undefined,
+      const base = {
+        isOptimistic: false,
+        isExecuting: true,
         isError: false,
         error: undefined,
-        isSuccess: false,
-        status: "loading",
+      } as const
+
+      // loading state (not optimistic)
+      if (result.data) {
+        // refetching
+        final = {
+          ...base,
+          isLoading: false,
+          isRefetching: true,
+          data: result.data,
+          isSuccess: true,
+          status: "refetching",
+        }
+      } else {
+        final = {
+          ...base,
+          isLoading: true,
+          isSuccess: false,
+          isRefetching: false,
+          data: undefined,
+          status: "loading",
+        }
       }
     } else if (isExecuting && oldResult.status === "filled" && result.data) {
-      // loading state (optimistic)
-      final = {
-        isLoading: true,
-        isLoadingOptimistic: true,
-        data: result.data,
+      const base = {
+        isOptimistic: true,
+        isExecuting: true,
         isError: false,
         error: undefined,
-        isSuccess: false,
-        status: "loading",
+      } as const
+
+      // loading state (optimistic)
+      if (oldResult.result.data) {
+        // refetching
+        final = {
+          ...base,
+          isLoading: false,
+          isRefetching: true,
+          data: result.data,
+          isSuccess: true,
+          status: "refetching",
+        }
+      } else {
+        // loading
+        final = {
+          ...base,
+          isLoading: true,
+          isRefetching: false,
+          isSuccess: false,
+          data: result.data,
+          status: "loading",
+        }
       }
     } else if (!result.isError && result.data) {
       // success state
       final = {
         isLoading: false,
+        isRefetching: false,
+        isExecuting: false,
         data: result.data,
         isError: false,
-        isLoadingOptimistic: false,
+        isOptimistic: false,
         error: undefined,
         isSuccess: true,
         status: "success",
@@ -433,10 +537,12 @@ export const setupServerActionHooks = <
       // error state
       final = {
         isLoading: false,
+        isRefetching: false,
+        isExecuting: false,
         data: undefined,
         isError: true,
         error: result.error,
-        isLoadingOptimistic: false,
+        isOptimistic: false,
         isSuccess: false,
         status: "error",
       }
@@ -444,8 +550,10 @@ export const setupServerActionHooks = <
       // idle state
       final = {
         isLoading: false,
+        isExecuting: false,
+        isRefetching: false,
         data: undefined,
-        isLoadingOptimistic: false,
+        isOptimistic: false,
         isError: false,
         error: undefined,
         isSuccess: false,

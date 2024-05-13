@@ -17,9 +17,10 @@ export default function RandomNumberDisplay() {
       max: 10,
     },
     actionKey: ["getRandomNumber"],
+    refetchInterval: 3000,
   })
 
-  console.log('isLoading', queryAction.isLoading)
+  console.log("isLoading", queryAction.isLoading)
 
   return (
     <Card className="not-prose">
@@ -32,6 +33,8 @@ export default function RandomNumberDisplay() {
       <CardContent className="flex flex-col gap-4">
         <p>Random number:</p>
         {queryAction.isLoading ? "loading..." : ""}
+        {queryAction.isRefetching ? "refetching..." : ""}
+        {queryAction.isExecuting ? "executing..." : ""}
         {queryAction.isSuccess && (
           <>{JSON.stringify(queryAction.data.number)}</>
         )}

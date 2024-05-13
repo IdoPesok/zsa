@@ -41,7 +41,7 @@ export const getRandomNumber = createServerAction()
       .refine((input) => input.min < input.max)
   )
   .handler(async ({ input, ctx }) => {
-    await new Promise((r) => setTimeout(r, 1000))
+    await new Promise((r) => setTimeout(r, 3000))
     return {
       number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
     }
