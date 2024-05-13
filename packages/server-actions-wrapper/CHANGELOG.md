@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.2
+
+### Patch Changes
+
+- c955c60: Fix type versions
+
 ## 0.1.1
 
 ### Patch Changes
