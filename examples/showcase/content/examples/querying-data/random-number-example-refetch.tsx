@@ -2,10 +2,10 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { useServerActionsUtils } from "@/lib/server-action-hooks"
+import { useServerActionUtils } from "@/lib/server-action-hooks"
 
 export default function RandomNumberRefetch() {
-  const { refetch } = useServerActionsUtils()
+  const { refetch } = useServerActionUtils()
 
   return (
     <Card className="p-4 w-full ">

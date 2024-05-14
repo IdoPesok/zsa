@@ -9,11 +9,13 @@ import {
   inferServerActionReturnData,
 } from "./safe-zod-function"
 
+/** Calculate the correct ommited keys given if an input schema is defined */
 type TOmitted<TInputSchema extends z.ZodType> =
   TInputSchema extends z.ZodUndefined
     ? TZodSafeFunctionDefaultOmitted
     : Exclude<TZodSafeFunctionDefaultOmitted, "handler"> | "noInputHandler"
 
+/** The return type of `createServerActionProcedure` given a parent procedure */
 type TRet<T extends TAnyCompleteProcedure | undefined> =
   T extends TAnyCompleteProcedure
     ? TZodSafeFunction<
@@ -31,6 +33,11 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
         true
       >
 
+/**
+ * Create a server action procedure
+ *
+ * @param parent optional parent procedure to chain off of
+ */
 export const createServerActionProcedure = <
   T extends TAnyCompleteProcedure | undefined = undefined,
 >(
@@ -39,6 +46,14 @@ export const createServerActionProcedure = <
   return createZodSafeFunction(true, parent) as any
 }
 
+/**
+ * Chain a server action procedure off of another
+ *
+ * NOTE: the context of the second procedure must extend the context of the first
+ *
+ * @param first the first procedure to chain off of
+ * @param second the second procedure to chain off of
+ */
 export const chainServerActionProcedures = <
   T2 extends TAnyCompleteProcedure,
   TContext extends NonNullable<Parameters<T2["$internals"]["lastHandler"]>[1]>,
