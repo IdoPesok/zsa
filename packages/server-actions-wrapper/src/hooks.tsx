@@ -1,7 +1,6 @@
 "use client"
 
-import React, {
-  createContext,
+import {
   useCallback,
   useContext,
   useEffect,
@@ -9,213 +8,49 @@ import React, {
   useState,
   useTransition,
 } from "react"
+import {
+  ServerActionKeys,
+  ServerActionsKeyFactory,
+  createServerActionsKeyFactory,
+} from "./action-key-factory"
 import { SAWError } from "./errors"
+import { clone, deepEqual } from "./helpers"
+import {
+  ServerActionUtilsContext,
+  ServerActionUtilsProvider,
+  TServerActionUtilsContext,
+  getActionKeyFromArr,
+} from "./provider"
+import { TServerActionResult } from "./result-states"
 import {
   TAnyZodSafeFunctionHandler,
   inferServerActionReturnData,
 } from "./safe-zod-function"
 
-function clone<T>(value: T): T {
-  if (typeof value === "object" && value !== null) {
-    if (Array.isArray(value)) {
-      return [...value.map((item) => clone(item))] as unknown as T
-    } else {
-      return {
-        ...Object.entries(value).reduce(
-          (obj, [key, val]) => ({ ...obj, [key]: clone(val) }),
-          {}
-        ),
-      } as any
-    }
-  }
-  return value
-}
-
-function deepEqual(a: any, b: any): boolean {
-  if (a === b) return true
-
-  if (
-    typeof a !== "object" ||
-    typeof b !== "object" ||
-    a === null ||
-    b === null
-  ) {
-    return false
-  }
-
-  const keysA = Object.keys(a)
-  const keysB = Object.keys(b)
-
-  if (keysA.length !== keysB.length) {
-    return false
-  }
-
-  for (const key of keysA) {
-    if (!keysB.includes(key) || !deepEqual(a[key], b[key])) {
-      return false
-    }
-  }
-
-  return true
-}
-
-export type TServerActionResult<
-  TServerAction extends TAnyZodSafeFunctionHandler,
-> =
-  | {
-      // loading state
-      isLoading: true
-      isRefetching: false
-      isExecuting: true
-      isOptimistic: false
-      data: undefined
-      isError: false
-      error: undefined
-      isSuccess: false
-      status: "loading"
-    }
-  | {
-      // refetching state
-      isLoading: false
-      isRefetching: true
-      isOptimistic: false
-      isExecuting: true
-      data: inferServerActionReturnData<TServerAction>
-      isError: false
-      error: undefined
-      isSuccess: true
-      status: "refetching"
-    }
-  | {
-      // loading state (optimistic)
-      isLoading: true
-      isRefetching: false
-      isOptimistic: true
-      isExecuting: true
-      data: inferServerActionReturnData<TServerAction>
-      isError: false
-      error: undefined
-      isSuccess: false
-      status: "loading"
-    }
-  | {
-      // refetching state (optimistic)
-      isLoading: false
-      isRefetching: true
-      isOptimistic: true
-      isExecuting: true
-      data: inferServerActionReturnData<TServerAction>
-      isError: false
-      error: undefined
-      isSuccess: true
-      status: "refetching"
-    }
-  | {
-      // idle state
-      isLoading: false
-      isRefetching: false
-      isOptimistic: false
-      isExecuting: false
-      data: undefined
-      isError: false
-      error: undefined
-      isSuccess: false
-      status: "idle"
-    }
-  | {
-      // error state
-      isLoading: false
-      isRefetching: false
-      isOptimistic: false
-      isExecuting: false
-      data: undefined
-      isError: true
-      error: unknown
-      isSuccess: false
-      status: "error"
-    }
-  | {
-      isLoading: false
-      isRefetching: false
-      isOptimistic: false
-      isExecuting: false
-      data: inferServerActionReturnData<TServerAction>
-      isError: false
-      error: undefined
-      isSuccess: true
-      status: "success"
-    }
-
-type ServerActionsKeyFactory<TKey extends string[]> = {
-  [key: string]: (...args: any[]) => TKey
-}
-
-export type ServerActionKeys<
-  TFactory extends ServerActionsKeyFactory<string[]>,
-> = ReturnType<TFactory[keyof TFactory]>
-
-export const createServerActionsKeyFactory = <
-  const TKeys extends string[],
-  const TFactory extends ServerActionsKeyFactory<TKeys>,
->(
-  factory: TFactory
-) => {
-  return factory
-}
-
-type TServerActionUtilsContext<T extends string[]> = {
-  $$refetch:
-    | undefined
-    | {
-        timestamp: number
-        key: string
-      }
-  refetch: (keys: T) => void
-}
-
-const ServerActionUtilsContext = createContext<
-  TServerActionUtilsContext<string[]>
->({
-  $$refetch: undefined,
-  refetch: () => {},
-})
-
-const ACTION_KEY_SEPARATOR = "<|break|>"
-const getActionKeyFromArr = (arr: string[]) => arr.join(ACTION_KEY_SEPARATOR)
-
-export function ServerActionUtilsProvider({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const [refetchState, setRefetchState] =
-    useState<TServerActionUtilsContext<any>["$$refetch"]>(undefined)
-
-  const refetch = useCallback((keyArr: string[]) => {
-    const key = getActionKeyFromArr(keyArr)
-
-    if (key.includes(ACTION_KEY_SEPARATOR)) {
-      console.error(
-        `ServerActionUtilsProvider: key contains separator (${ACTION_KEY_SEPARATOR}). This will lead to invalid refetching. Please remove it.`,
-        key
-      )
-    }
-
-    setRefetchState({
-      timestamp: Date.now(),
-      key,
-    })
-  }, [])
-
-  return (
-    <ServerActionUtilsContext.Provider
-      value={{ refetch, $$refetch: refetchState }}
-    >
-      {children}
-    </ServerActionUtilsContext.Provider>
-  )
-}
-
+/**
+ * Setup the server action hooks `useServerActionUtils` and `useServerAction`
+ *
+ * @param factory Optionally pass a factory of action keys.
+ * to make your action keys strongly typed. To create a factory, use
+ * {@link createServerActionsKeyFactory}
+ *
+ * @example
+ * Without type-safe action keys
+ * ```ts
+ * const { useServerActionUtils, useServerAction } = setupServerActionHooks()
+ * ```
+ *
+ * @example
+ * With type-safe action keys
+ * ```ts
+ * const actionKeyFactory = createServerActionsKeyFactory({
+ *   posts: () => ["posts"],
+ *   postsList: () => ["posts", "list"],
+ *   postDetails: (id: string) => ["posts", "details", id],
+ * })
+ * const { useServerActionUtils, useServerAction } = setupServerActionHooks(actionKeyFactory)
+ * ```
+ */
 export const setupServerActionHooks = <
   TFactory extends ServerActionsKeyFactory<string[]> = ServerActionsKeyFactory<
     string[]
@@ -223,7 +58,7 @@ export const setupServerActionHooks = <
 >(
   factory?: TFactory
 ) => {
-  const useServerActionsUtils = () => {
+  const useServerActionUtils = () => {
     const context = useContext(ServerActionUtilsContext)
     if (context === undefined) {
       const defaultState: TServerActionUtilsContext<
@@ -242,22 +77,81 @@ export const setupServerActionHooks = <
   const useServerAction = <
     const TServerAction extends TAnyZodSafeFunctionHandler,
   >(
+    /** The server action to use */
     serverAction: TServerAction,
+
+    /** The options for querying the server action */
     opts?: {
+      /** The input argument for the server action */
       input: Parameters<TServerAction>[0]
+
+      /**
+       * Bind a server action to a specific action key, can be used to refetch the action
+       * with refetch from `useServerActionUtils`
+       *
+       * The action key should be an array of strings that represents a path
+       *
+       * @example
+       * ```ts
+       * actionKey: ["posts", "details", "123"]
+       * ```
+       * This action would be able to be refetched with
+       * - ["posts"]
+       * - ["posts", "list"]
+       * - ["posts", "details", "123"]
+       *
+       * It would not be able to be refetched with
+       * - ["posts", "details", "345"]
+       * - ["something", "posts"]
+       */
       actionKey?: ServerActionKeys<TFactory>
+
+      /** A boolean indicating whether the action can be executed */
       enabled?: boolean
-      onError?: (args: { err: SAWError; refetch: () => void }) => void
-      onSuccess?: (args: {
+
+      /**
+       * A function to run when the action errors
+       *
+       * @param data an object containing the error and a function to refetch the action
+       */
+      onError?: (data: { err: SAWError; refetch: () => void }) => void
+
+      /**
+       * A function to run when the action is successful
+       *
+       * @param data the data returned from the action
+       */
+      onSuccess?: (data: {
         data: Awaited<ReturnType<TServerAction>>[0]
       }) => void
+
+      /** A function to run when the action is started */
       onStart?: () => void
 
+      /** A retry configuration for the action */
       retry?: {
+        /** The maximum number of times to retry the action. Inclusive. */
         maxAttempts: number
-        delay?: number | ((currentAttempt: number, err: SAWError) => number)
+        /**
+         * The delay in milliseconds between each retry attempt.
+         *
+         * Can either be a number (ms) or a function that takes the
+         * current attempt number and the error as arguments and returns a number of ms.
+         *
+         * NOTE: The current attempt starts at 2
+         * (the first attempt errored then the current attempt becomes is 2)
+         */
+        delay?:
+          | number
+          | ((
+              /** The current attempt number. Note this starts at 2 */
+              currentAttempt: number,
+              /** The error that occurred during the last attempt */
+              err: SAWError
+            ) => number)
       }
 
+      /** Optional initial data for the action */
       initialData?: Awaited<ReturnType<TServerAction>>[0]
 
       /**
@@ -280,10 +174,11 @@ export const setupServerActionHooks = <
       data: undefined,
     })
     const inputRef = useRef<Parameters<TServerAction>[0] | undefined>()
+    const hasInputBeenSet = useRef(false)
     const [isExecuting, setIsExecuting] = useState(
       opts !== undefined && enabled
     )
-    const { $$refetch } = useServerActionsUtils()
+    const { $$refetch } = useServerActionUtils()
     const [oldResult, setOldResult] = useState<
       | {
           status: "empty"
@@ -338,6 +233,7 @@ export const setupServerActionHooks = <
 
         setIsExecuting(true)
         inputRef.current = clone(input)
+        hasInputBeenSet.current = true
 
         const [data, err] = await serverAction(input)
 
@@ -491,12 +387,18 @@ export const setupServerActionHooks = <
       }
 
       inputRef.current = clone(opts.input)
+      hasInputBeenSet.current = true
 
       executeWithTransition(opts.input)
     }, [executeWithTransition, opts?.input, opts?.enabled])
 
     useEffect(() => {
-      if (!opts?.actionKey || !inputRef.current || !enabled || !$$refetch)
+      if (
+        !opts?.actionKey ||
+        !hasInputBeenSet.current ||
+        !enabled ||
+        !$$refetch
+      )
         return
 
       if (
@@ -509,9 +411,9 @@ export const setupServerActionHooks = <
     }, [executeWithTransition, $$refetch])
 
     const refetch = useCallback(() => {
-      if (!inputRef.current) return
+      if (!hasInputBeenSet.current) return // can't refetch if input hasn't been set
       executeWithTransition(inputRef.current)
-    }, [inputRef.current, executeWithTransition])
+    }, [hasInputBeenSet.current, executeWithTransition, inputRef.current])
 
     const reset = useCallback(() => {
       setResult({
@@ -625,15 +527,45 @@ export const setupServerActionHooks = <
 
     return {
       ...final,
+
+      /** reset the server action result to the idle state */
       reset,
+
+      /** refetch the server action with the current input */
       refetch,
+
+      /** execute the server action */
       execute,
+
+      /** set an optimistic state for the server action */
       setOptimistic,
     }
   }
 
   return {
-    useServerActionsUtils,
+    /**
+     * `refetch` is used to refetch the action
+     * @param keyArr The action key array
+     */
+    useServerActionUtils,
+
+    /**
+     * Manage a server action query or mutation on the client
+     * @example
+     * Mutation
+     * ```ts
+     * const { isLoading, execute } = useServerAction(myAction)
+     * ```
+     * @example
+     * Query
+     * ```ts
+     * const { isLoading, data } = useServerAction(myAction, {
+     *  input: { id: 123 },
+     * })
+     * ```
+     */
     useServerAction,
   }
 }
+
+export { ServerActionUtilsProvider, createServerActionsKeyFactory }

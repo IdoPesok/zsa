@@ -12,5 +12,5 @@ export const ActionKeyFactory = createServerActionsKeyFactory({
   postDetails: (id: string) => ["posts", "details", id],
 })
 
-export const { useServerActionsUtils, useServerAction } =
+export const { useServerActionUtils, useServerAction } =
   setupServerActionHooks(ActionKeyFactory)

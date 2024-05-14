@@ -1,8 +1,23 @@
-import { SAWError, createServerAction } from "server-actions-wrapper"
+import { SAWError, createServerActionProcedure } from "server-actions-wrapper"
 import { z } from "zod"
 
 const main = async () => {
-  const test = createServerAction()
+  const isAdmin = createServerActionProcedure()
+    .input(
+      z.object({
+        other: z.string(),
+      })
+    )
+    .handler(async () => {
+      return {
+        user: {
+          email: "",
+        },
+      }
+    })
+
+  const test = isAdmin
+    .createServerAction()
     .input(z.object({ message: z.string() }))
     .retry({
       maxAttempts: 3,
@@ -24,7 +39,7 @@ const main = async () => {
       return input.message
     })
 
-  const [data, err] = await test({ message: "hello world" })
+  const [data, err] = await test({ message: "hello world", other: "2421421" })
 
   if (err) {
     console.log("error", err)

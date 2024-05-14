@@ -1,32 +1,53 @@
 import { z } from "zod"
 import { SAWError, TSAWError } from "./errors"
 
+/** The return type of a server action */
 export type TDataOrError<TData> =
   | Promise<[Awaited<TData>, null]>
   | Promise<[null, TSAWError]>
 
+/** Internal data stored inside a server action procedure */
 export interface TCompleteProcedureInternals<
   TInputSchema extends z.ZodType,
   THandler extends TAnyZodSafeFunctionHandler,
 > {
+  /** The chained input schema */
   inputSchema: TInputSchema
+  /** An ordered array of handlers */
   handlerChain: TAnyZodSafeFunctionHandler[]
+  /** The last handler in the chain */
   lastHandler: THandler
+  /** The most recent error handler */
   onErrorFn: TOnErrorFn | undefined
+  /** The most recent onStart handler */
   onStartFn: TOnStartFn<any, true> | undefined
+  /** The most recent onSuccess handler */
   onSuccessFn: TOnSuccessFn<any, any, true> | undefined
+  /** The most recent onComplete handler */
   onCompleteFn: TOnCompleteFn<any, any, true> | undefined
+  /** The timeout of the procedure */
   timeout: number | undefined
+  /** The retry config of the procedure */
   retryConfig: RetryConfig | undefined
 }
 
+/** A configuration object for retrying a server action */
 interface RetryConfig {
-  /** this is inclusive */
+  /** The maximum number of times to retry the action. Inclusive. */
   maxAttempts: number
-
+  /**
+   * The delay in milliseconds between each retry attempt.
+   *
+   * Can either be a number (ms) or a function that takes the
+   * current attempt number and the error as arguments and returns a number of ms.
+   *
+   * NOTE: The current attempt starts at 2
+   * (the first attempt errored then the current attempt becomes is 2)
+   */
   delay?: number | ((currentAttempt: number, err: SAWError) => number)
 }
 
+/** A completed procedure */
 export class CompleteProcedure<
   TInputSchema extends z.ZodType,
   THandler extends TAnyZodSafeFunctionHandler,
@@ -37,6 +58,7 @@ export class CompleteProcedure<
     this.$internals = params
   }
 
+  /** make a server action with the current procedure */
   createServerAction(): TZodSafeFunction<
     TInputSchema,
     z.ZodUndefined,
@@ -65,9 +87,11 @@ export class CompleteProcedure<
   }
 }
 
+/** a helper type to hold any complete procedure */
 export interface TAnyCompleteProcedure extends CompleteProcedure<any, any> {}
 
-export interface TNoHandlerFunc<
+/** A function type for a handler that does not have an input */
+export interface TNoInputHandlerFunc<
   TRet extends any,
   TOutputSchema extends z.ZodType,
   TProcedureChainOutput extends any,
@@ -83,6 +107,7 @@ export interface TNoHandlerFunc<
   >
 }
 
+/** A function type for a handler that has an input */
 export interface THandlerFunc<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
@@ -90,18 +115,23 @@ export interface THandlerFunc<
   TProcedureChainOutput extends any,
 > {
   (
+    /** The input to the handler */
     args: TInputSchema["_input"],
+    /** The context of the handler */
     $ctx?: TProcedureChainOutput,
+    /** An optional override input schema */
     $overrideInputSchema?: z.ZodType
   ): TDataOrError<
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
 }
 
+/** a helper type to hold the status of a timeout */
 interface TimeoutStatus {
   isTimeout: boolean
 }
 
+/** which keys should be default omitted from the safe zod function */
 const DefaultOmitted = {
   handler: 1,
   $internals: 1,
@@ -120,6 +150,7 @@ const DefaultOmitted = {
 
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
 
+/** A combination of both a no input handler and a handler */
 export type TAnyZodSafeFunctionHandler =
   | ((
       input: any,
@@ -132,9 +163,11 @@ export type TAnyZodSafeFunctionHandler =
       $overrideInputSchema?: z.ZodType
     ) => TDataOrError<any>)
 
+/** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
   extends ZodSafeFunction<any, any, any, any, boolean> {}
 
+/** A helper type to wrap ZodSafeFunction in an Omit */
 export type TZodSafeFunction<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
@@ -152,30 +185,41 @@ export type TZodSafeFunction<
   TOmitted
 >
 
+/** An error handler function */
 export interface TOnErrorFn {
   (err: SAWError): any
 }
 
+/** A start handler function */
 export interface TOnStartFn<
   TInputSchema extends z.ZodType,
   TIsProcedure extends boolean,
 > {
   (value: {
+    /** The known args passed to the handler */
     args: TIsProcedure extends false ? TInputSchema["_input"] : unknown
   }): any
 }
 
+/** A success handler function */
 export interface TOnSuccessFn<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
   TIsProcedure extends boolean,
 > {
   (value: {
+    /** The known args passed to the handler */
     args: TIsProcedure extends false ? TInputSchema["_output"] : unknown
+    /** The successful data returned from the handler */
     data: TIsProcedure extends false ? TOutputSchema["_output"] : unknown
   }): any
 }
 
+/**
+ * A complete handler function
+ *
+ * Runs after onSuccess or onError
+ */
 export interface TOnCompleteFn<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
@@ -184,60 +228,111 @@ export interface TOnCompleteFn<
   (
     value:
       | {
+          /** A boolean indicating if the action was successful */
           isSuccess: true
+          /** A boolean indicating if the action was an error */
           isError: false
+          /** The status of the action */
           status: "success"
+          /** The known args passed to the handler */
           args: TIsProcedure extends false ? TInputSchema["_output"] : unknown
+          /** The successful data returned from the handler */
           data: TIsProcedure extends false ? TOutputSchema["_output"] : unknown
         }
       | {
+          /** A boolean indicating if the action was successful */
           isSuccess: false
+          /** A boolean indicating if the action was an error */
           isError: true
+          /** The status of the action */
           status: "error"
+          /** The error thrown by the handler */
           error: SAWError
         }
   ): any
 }
 
+/**
+ * A data type for the internals of a Zod Safe Function
+ */
 interface TInternals<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
   TIsProcedure extends boolean,
 > {
+  /**
+   *
+   * A chain of handler functions to run before the main handler (if any)
+   *
+   * These would come from the procedure chain
+   *
+   */
   procedureHandlerChain: TAnyZodSafeFunctionHandler[]
 
+  /** The final input schema of the handler */
   inputSchema: TInputSchema
+
+  /** The final output schema of the handler */
   outputSchema: TOutputSchema
 
+  /** A function to run when an input parse error occurs */
   onInputParseError?: ((err: z.ZodError<TInputSchema>) => any) | undefined
+
+  /** A function to run when the output parse error occurs */
   onOutputParseError?: ((err: z.ZodError<TOutputSchema>) => any) | undefined
 
+  /**
+   * The timeout of the handler in milliseconds
+   */
   timeout?: number | undefined
 
+  /**
+   * The retry configuration of the handler
+   */
   retryConfig?: RetryConfig | undefined
+
+  /** The number of atttempts the handler has made */
   attempts?: number | undefined
 
+  /** A function to run when the handler errors */
   onErrorFn?: TOnErrorFn | undefined
+
+  /** A function to run when the handler starts */
   onStartFn?: TOnStartFn<TInputSchema, TIsProcedure> | undefined
+
+  /** A function to run when the handler succeeds */
   onSuccessFn?:
     | TOnSuccessFn<TInputSchema, TOutputSchema, TIsProcedure>
     | undefined
+
+  /** A function to run when the handler completes (success or error) */
   onCompleteFn?:
     | TOnCompleteFn<TInputSchema, TOutputSchema, TIsProcedure>
     | undefined
 
+  /** The procedure function to run when an error occurs */
   onErrorFromProcedureFn?: TOnErrorFn | undefined
+
+  /** The procedure function to run when the handler starts */
   onStartFromProcedureFn?: TOnStartFn<TInputSchema, true> | undefined
+
+  /** The procedure function to run when the handler succeeds */
   onSuccessFromProcedureFn?:
     | TOnSuccessFn<TInputSchema, TOutputSchema, true>
     | undefined
+
+  /** The procedure function to run when the handler completes (success or error) */
   onCompleteFromProcedureFn?:
     | TOnCompleteFn<TInputSchema, TOutputSchema, true>
     | undefined
 
+  /** Boolean indicating if the procedure has a parent */
   isChained?: boolean | undefined
+
+  /** Boolean indicating if the handler is a procedure */
   isProcedure?: TIsProcedure | undefined
 
+  /** The handler function */
   handler?: TAnyZodSafeFunctionHandler | undefined
 }
 
@@ -248,6 +343,7 @@ export class ZodSafeFunction<
   TProcedureChainOutput extends any,
   TIsProcedure extends boolean,
 > {
+  /** The internals of the Zod Safe Function */
   public $internals: TInternals<TInputSchema, TOutputSchema, TIsProcedure>
 
   constructor(
@@ -256,6 +352,7 @@ export class ZodSafeFunction<
     this.$internals = internals
   }
 
+  /** Check if the timeout has triggered, if so, throw a SAWError */
   public checkTimeoutStatus(timeoutStatus: TimeoutStatus) {
     if (timeoutStatus.isTimeout) {
       throw new SAWError(
@@ -296,6 +393,9 @@ export class ZodSafeFunction<
     return -1
   }
 
+  /**
+   *  Run through the procedure chain and get the final context
+   */
   public async getProcedureChainOutput(
     args: TInputSchema["_input"],
     timeoutStatus: TimeoutStatus
@@ -310,12 +410,15 @@ export class ZodSafeFunction<
       if (err) {
         throw err
       }
+
+      // update the accumulated data
       accData = data as any
     }
 
     return accData as any
   }
 
+  /** set a timeout on the server action */
   public timeout<T extends number>(
     milliseconds: T
   ): TZodSafeFunction<
@@ -331,6 +434,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** set a retry mechanism on the server action */
   public retry(
     config: RetryConfig
   ): TZodSafeFunction<
@@ -346,6 +450,16 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /**
+   * set the input schema for the server action
+   *
+   * @example
+   * ```ts
+   * .input(z.object({
+   *   message: z.string()
+   * }))
+   * ```
+   */
   public input<T extends z.ZodType>(
     schema: T
   ): TZodSafeFunction<
@@ -369,6 +483,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** set the output schema for the server action */
   public output<T extends z.ZodType>(
     schema: T
   ): TZodSafeFunction<
@@ -385,6 +500,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** set a handler function for input parse errors */
   public onInputParseError(
     fn: (
       err: z.ZodError<TIsProcedure extends false ? TInputSchema : any>
@@ -402,6 +518,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** set a handler function for output parse errors */
   public onOutputParseError(
     fn: (
       err: z.ZodError<TIsProcedure extends false ? TOutputSchema : any>
@@ -419,6 +536,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** set a handler function for errors */
   public onError(
     fn: (err: SAWError) => any
   ): TZodSafeFunction<
@@ -434,6 +552,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** set a handler function for when the server action starts */
   public onStart(
     fn: TOnStartFn<TInputSchema, TIsProcedure>
   ): TZodSafeFunction<
@@ -449,6 +568,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** set a handler function for when the server action succeeds */
   public onSuccess(
     fn: TOnSuccessFn<TInputSchema, TOutputSchema, TIsProcedure>
   ): TZodSafeFunction<
@@ -464,6 +584,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** set a handler function for when the server action completes (success or error) */
   public onComplete(
     fn: TOnCompleteFn<TInputSchema, TOutputSchema, TIsProcedure>
   ): TZodSafeFunction<
@@ -479,6 +600,7 @@ export class ZodSafeFunction<
     }) as any
   }
 
+  /** a helper function to parse output data given the active output schema */
   public async parseOutputData(
     data: any,
     timeoutStatus: TimeoutStatus
@@ -499,6 +621,7 @@ export class ZodSafeFunction<
     return safe.data
   }
 
+  /** helper function to handle start with timeout checkpoints */
   public async handleStart(args: any, timeoutStatus: TimeoutStatus) {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
@@ -520,6 +643,7 @@ export class ZodSafeFunction<
     }
   }
 
+  /** helper function to handle success with timeout checkpoints */
   public async handleSuccess(
     args: any,
     data: any,
@@ -574,6 +698,7 @@ export class ZodSafeFunction<
     }
   }
 
+  /** helper function to handle errors with timeout checkpoints */
   public async handleError(err: any): Promise<[null, TSAWError]> {
     const customError =
       err instanceof SAWError ? err : new SAWError("ERROR", err)
@@ -622,6 +747,7 @@ export class ZodSafeFunction<
     ]
   }
 
+  /** helper function to parse input data given the active input schema */
   public async parseInputData(
     data: any,
     timeoutStatus: TimeoutStatus,
@@ -654,6 +780,7 @@ export class ZodSafeFunction<
       }, timeoutMs)
     })
 
+  /** set the handler function for when there is no input */
   public noInputHandler<
     TRet extends TOutputSchema extends z.ZodUndefined
       ? any | Promise<any>
@@ -661,10 +788,10 @@ export class ZodSafeFunction<
   >(
     fn: (v: { ctx: TProcedureChainOutput }) => TRet
   ): TIsProcedure extends false
-    ? TNoHandlerFunc<TRet, TOutputSchema, TProcedureChainOutput>
+    ? TNoInputHandlerFunc<TRet, TOutputSchema, TProcedureChainOutput>
     : CompleteProcedure<
         TInputSchema,
-        TNoHandlerFunc<TRet, TOutputSchema, TProcedureChainOutput>
+        TNoInputHandlerFunc<TRet, TOutputSchema, TProcedureChainOutput>
       > {
     const timeoutStatus: TimeoutStatus = {
       isTimeout: false,
@@ -702,6 +829,7 @@ export class ZodSafeFunction<
       }
     }
 
+    // helper function to run a Promise race between the timeout and the wrapper
     const withTimeout = async (
       $placeholder: any,
       $ctx?: TProcedureChainOutput
@@ -719,8 +847,9 @@ export class ZodSafeFunction<
         })
     }
 
+    // if this is a procedure, we need to return the complete procedure
     if (this.$internals.isProcedure) {
-      const noHandlerFn: TNoHandlerFunc<
+      const noHandlerFn: TNoInputHandlerFunc<
         TRet,
         TOutputSchema,
         TProcedureChainOutput
@@ -745,6 +874,7 @@ export class ZodSafeFunction<
       }) as any
     }
 
+    // if there is a timeout, use withTimeout
     if (this.$internals.timeout) {
       return withTimeout as any
     }
@@ -752,13 +882,16 @@ export class ZodSafeFunction<
     return wrapper as any
   }
 
+  /** set the handler function for the server action */
   public handler<
     TRet extends TOutputSchema extends z.ZodUndefined
       ? any | Promise<any>
       : TOutputSchema["_output"] | Promise<TOutputSchema["_output"]>,
   >(
     fn: (v: {
+      /** the parsed input to the action */
       input: TInputSchema["_output"]
+      /** the final context of the action */
       ctx: TProcedureChainOutput
     }) => TRet
   ): TIsProcedure extends false
@@ -818,6 +951,7 @@ export class ZodSafeFunction<
       }
     }
 
+    // helper function to run a Promise race between the timeout and the wrapper
     const withTimeout = async (
       args: TInputSchema["_input"],
       ctx?: TProcedureChainOutput,
@@ -837,6 +971,7 @@ export class ZodSafeFunction<
         })
     }
 
+    // if this is a procedure, we need to return the complete procedure
     if (this.$internals.isProcedure) {
       const handler: THandlerFunc<
         TInputSchema,
@@ -864,6 +999,7 @@ export class ZodSafeFunction<
       }) as any
     }
 
+    // if there is a timeout, use withTimeout
     if (this.$internals.timeout) {
       return withTimeout as any
     }
@@ -872,6 +1008,7 @@ export class ZodSafeFunction<
   }
 }
 
+// helper function to create a properly typed zod safe function
 export function createZodSafeFunction<TIsProcedure extends boolean>(
   isProcedure?: TIsProcedure,
   parentProcedure?: TAnyCompleteProcedure
@@ -895,17 +1032,21 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
   }) as any
 }
 
+// helper type to infer the return data of a server action
 export type inferServerActionReturnData<
   TAction extends TAnyZodSafeFunctionHandler,
 > = NonNullable<Awaited<ReturnType<TAction>>[0]>
 
+// helper type to infer the return type of a server action
 export type inferServerActionReturnType<
   TAction extends TAnyZodSafeFunctionHandler,
 > = Awaited<ReturnType<TAction>>
 
+// helper type to infer the input of a server action
 export type inferServerActionInput<TAction extends TAnyZodSafeFunctionHandler> =
   Parameters<TAction>[0]
 
+// create a server action without a procedure
 export function createServerAction(): TZodSafeFunction<
   z.ZodUndefined,
   z.ZodUndefined,
