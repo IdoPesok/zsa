@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.2.0
+
+### Minor Changes
+
+- 5e59c56: Comments and renaming
+
 ## 0.1.4
 
 ### Patch Changes
