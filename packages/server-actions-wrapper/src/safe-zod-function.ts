@@ -17,6 +17,14 @@ export interface TCompleteProcedureInternals<
   onSuccessFn: TOnSuccessFn<any, any, true> | undefined
   onCompleteFn: TOnCompleteFn<any, any, true> | undefined
   timeout: number | undefined
+  retryConfig: RetryConfig | undefined
+}
+
+interface RetryConfig {
+  /** this is inclusive */
+  maxAttempts: number
+
+  delay?: number | ((currentAttempt: number, err: SAWError) => number)
 }
 
 export class CompleteProcedure<
@@ -52,6 +60,7 @@ export class CompleteProcedure<
       onSuccessFromProcedureFn: this.$internals.onSuccessFn,
       onCompleteFromProcedureFn: this.$internals.onCompleteFn,
       timeout: this.$internals.timeout,
+      retryConfig: this.$internals.retryConfig,
     }) as any
   }
 }
@@ -106,6 +115,7 @@ const DefaultOmitted = {
   parseOutputData: 1,
   onOutputParseError: 1,
   checkTimeoutStatus: 1,
+  getRetryDelay: 1,
 } as const
 
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
@@ -204,6 +214,9 @@ interface TInternals<
 
   timeout?: number | undefined
 
+  retryConfig?: RetryConfig | undefined
+  attempts?: number | undefined
+
   onErrorFn?: TOnErrorFn | undefined
   onStartFn?: TOnStartFn<TInputSchema, TIsProcedure> | undefined
   onSuccessFn?:
@@ -252,6 +265,37 @@ export class ZodSafeFunction<
     }
   }
 
+  /**
+   *
+   * Get the retry delay for the current retry attempt
+   *
+   * If there should be no retry, returns -1
+   */
+  public getRetryDelay($err: unknown) {
+    const err = $err instanceof SAWError ? $err : new SAWError("ERROR", $err)
+
+    const config = this.$internals.retryConfig
+    if (!config) return -1
+
+    this.$internals.attempts = this.$internals.attempts
+      ? this.$internals.attempts + 1
+      : 1
+
+    const attempts = this.$internals.attempts || 0
+
+    const shouldRetry = attempts < config.maxAttempts
+
+    let retryDelay = 0
+    if (typeof config.delay === "function") {
+      retryDelay = config.delay(attempts + 1, err)
+    } else if (typeof config.delay === "number") {
+      retryDelay = config.delay
+    }
+
+    if (shouldRetry) return retryDelay
+    return -1
+  }
+
   public async getProcedureChainOutput(
     args: TInputSchema["_input"],
     timeoutStatus: TimeoutStatus
@@ -284,6 +328,21 @@ export class ZodSafeFunction<
     return new ZodSafeFunction({
       ...this.$internals,
       timeout: milliseconds,
+    }) as any
+  }
+
+  public retry(
+    config: RetryConfig
+  ): TZodSafeFunction<
+    TInputSchema,
+    TOutputSchema,
+    TOmitted | "retry",
+    TProcedureChainOutput,
+    TIsProcedure
+  > {
+    return new ZodSafeFunction({
+      ...this.$internals,
+      retryConfig: config,
     }) as any
   }
 
@@ -611,7 +670,10 @@ export class ZodSafeFunction<
       isTimeout: false,
     }
 
-    const wrapper = async ($placeholder: any, $ctx?: TProcedureChainOutput) => {
+    const wrapper = async (
+      $placeholder: any,
+      $ctx?: TProcedureChainOutput
+    ): Promise<any> => {
       try {
         await this.handleStart(undefined, timeoutStatus)
 
@@ -629,6 +691,13 @@ export class ZodSafeFunction<
 
         return [parsed, null]
       } catch (err) {
+        const retryDelay = this.getRetryDelay(err)
+
+        if (retryDelay >= 0) {
+          await new Promise((r) => setTimeout(r, retryDelay))
+          return await wrapper($placeholder, $ctx)
+        }
+
         return await this.handleError(err)
       }
     }
@@ -651,7 +720,6 @@ export class ZodSafeFunction<
     }
 
     if (this.$internals.isProcedure) {
-      // @ts-expect-error
       const noHandlerFn: TNoHandlerFunc<
         TRet,
         TOutputSchema,
@@ -673,6 +741,7 @@ export class ZodSafeFunction<
           this.$internals.onSuccessFn ||
           this.$internals.onSuccessFromProcedureFn,
         timeout: this.$internals.timeout,
+        retryConfig: this.$internals.retryConfig,
       }) as any
     }
 
@@ -706,7 +775,7 @@ export class ZodSafeFunction<
       args: TInputSchema["_input"],
       $ctx?: TProcedureChainOutput,
       $overrideInputSchema?: z.ZodType
-    ) => {
+    ): Promise<any> => {
       try {
         await this.handleStart(args, timeoutStatus)
 
@@ -738,6 +807,13 @@ export class ZodSafeFunction<
 
         return [parsed, null]
       } catch (err) {
+        const retryDelay = this.getRetryDelay(err)
+
+        if (retryDelay >= 0) {
+          await new Promise((r) => setTimeout(r, retryDelay))
+          return await wrapper(args, $ctx, $overrideInputSchema)
+        }
+
         return await this.handleError(err)
       }
     }
@@ -762,7 +838,6 @@ export class ZodSafeFunction<
     }
 
     if (this.$internals.isProcedure) {
-      // @ts-expect-error
       const handler: THandlerFunc<
         TInputSchema,
         TOutputSchema,
@@ -785,6 +860,7 @@ export class ZodSafeFunction<
           this.$internals.onSuccessFn ||
           this.$internals.onSuccessFromProcedureFn,
         timeout: this.$internals.timeout,
+        retryConfig: this.$internals.retryConfig,
       }) as any
     }
 

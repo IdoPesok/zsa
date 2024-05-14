@@ -80,6 +80,7 @@ export const chainServerActionProcedures = <
     handlerChain: [...first.$internals.handlerChain, newLastHandler],
     lastHandler: newLastHandler,
     timeout: second.$internals.timeout || first.$internals.timeout,
+    retryConfig: second.$internals.retryConfig || first.$internals.retryConfig,
     onErrorFn: second.$internals.onErrorFn || first.$internals.onErrorFn,
     onStartFn: second.$internals.onStartFn || first.$internals.onStartFn,
     onSuccessFn: second.$internals.onSuccessFn || first.$internals.onSuccessFn,

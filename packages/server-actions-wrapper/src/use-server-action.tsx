@@ -253,6 +253,13 @@ export const setupServerActionHooks = <
       }) => void
       onStart?: () => void
 
+      retry?: {
+        maxAttempts: number
+        delay?: number | ((currentAttempt: number, err: SAWError) => number)
+      }
+
+      initialData?: Awaited<ReturnType<TServerAction>>[0]
+
       /**
        * Refetch the action every `refetchInterval` milliseconds
        */
@@ -290,21 +297,42 @@ export const setupServerActionHooks = <
       status: "empty",
       result: undefined,
     })
-    const lastTimeoutId = useRef<number | undefined>(undefined)
+    const lastRefetchId = useRef<number | undefined>(undefined)
+    const lastRetryId = useRef<number | undefined>(undefined)
+    const retryCount = useRef(0)
 
     const internalExecute = useCallback(
       async (
         input: Parameters<TServerAction>[0],
-        isFromTimeoutId?: number
+        args?: {
+          isFromTimeoutId?: number
+          isFromRetryId?: number
+        }
       ): Promise<Awaited<ReturnType<TServerAction>>> => {
+        const { isFromTimeoutId, isFromRetryId } = args || {}
+
         // if the timeout ids don't match, we should not refetch
-        if (isFromTimeoutId && lastTimeoutId.current !== isFromTimeoutId) {
+        if (isFromTimeoutId && lastRefetchId.current !== isFromTimeoutId) {
+          return null as any
+        }
+
+        // if the retry ids don't match, we should not refetch
+        if (isFromRetryId && lastRetryId.current !== isFromRetryId) {
           return null as any
         }
 
         // start a new timeout id
         const timeoutId = Math.floor(Math.random() * 10000)
-        lastTimeoutId.current = timeoutId
+        lastRefetchId.current = timeoutId
+
+        // start a new retry count
+        if (!isFromRetryId) {
+          retryCount.current = 0
+        }
+
+        // start a new retry id
+        const retryId = Math.floor(Math.random() * 10000)
+        lastRetryId.current = retryId
 
         if (opts?.onStart) opts.onStart()
 
@@ -315,9 +343,13 @@ export const setupServerActionHooks = <
 
         // handle refetching
         // call with the timeout id
-        if (opts?.refetchInterval) {
+        const triggerRefetchIfNeeded = () => {
+          if (!opts?.refetchInterval) return
           setTimeout(() => {
-            internalExecute(input, timeoutId)
+            internalExecute(input, {
+              ...(args || {}),
+              isFromTimeoutId: timeoutId,
+            })
           }, opts.refetchInterval)
         }
 
@@ -329,19 +361,47 @@ export const setupServerActionHooks = <
             })
           }
 
-          if (oldResult.status === "filled") {
-            setResult(oldResult.result)
-          } else {
-            setResult({ error: err, isError: true, data: undefined })
-          }
-
           setIsExecuting(false)
 
-          // clear the old data
-          setOldResult({
-            status: "empty",
-            result: undefined,
-          })
+          // calculate if we should retry
+          const retryConfig = opts?.retry
+          const shouldRetry = retryConfig
+            ? retryCount.current < retryConfig.maxAttempts
+            : false
+
+          let retryDelay = 0
+          const retryDelayOpt = retryConfig?.delay
+          if (retryDelayOpt && typeof retryDelayOpt === "function") {
+            retryDelay = retryDelayOpt(retryCount.current + 1, err)
+          } else if (retryDelayOpt && typeof retryDelayOpt === "number") {
+            retryDelay = retryDelayOpt
+          }
+
+          if (shouldRetry) {
+            // execute the retry logic
+            retryCount.current += 1
+            setTimeout(() => {
+              internalExecute(input, {
+                ...(args || {}),
+                isFromRetryId: retryId,
+              })
+            }, retryDelay)
+          } else {
+            // don't retry => update the result
+            if (oldResult.status === "filled") {
+              setResult(oldResult.result)
+            } else {
+              setResult({ error: err, isError: true, data: undefined })
+            }
+
+            // clear the old data
+            setOldResult({
+              status: "empty",
+              result: undefined,
+            })
+
+            triggerRefetchIfNeeded()
+          }
 
           return [data, err] as any
         }
@@ -364,6 +424,8 @@ export const setupServerActionHooks = <
           status: "empty",
           result: undefined,
         })
+
+        triggerRefetchIfNeeded()
 
         return [data, err] as any
       },

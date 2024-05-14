@@ -22,18 +22,17 @@ export default function ClientPlayground() {
     input: {
       query: debouncedInput,
     },
-    onError: ({ err, refetch }) => {
-      console.log("onError", err)
-      refetch()
-    },
-    onSuccess: ({ data }) => {
-      console.log("onSuccess", data)
-    },
-    onStart: () => {
-      console.log("onStart")
-    },
     enabled: Boolean(debouncedInput),
-    actionKey: ['posts', 'details', '123']
+    actionKey: ["posts", "details", "123"],
+    retry: {
+      maxAttempts: 3,
+      delay: (currentAttempt) =>
+        // expontential backoff
+        Math.min(
+          currentAttempt > 1 ? 2 ** currentAttempt * 1000 : 1000,
+          30 * 1000
+        ),
+    },
   })
   const { execute, setOptimistic, data } = useServerAction(generateRandomNumber)
 
@@ -45,7 +44,7 @@ export default function ClientPlayground() {
         {queryAction.data.map((c) => (
           <div key={c.id}>{c.name}</div>
         ))}
-        {queryAction.isLoadingOptimistic && "Saving..."}
+        {queryAction.isOptimistic && "Saving..."}
       </div>
     )
   } else if (queryAction.isLoading) {
