@@ -1,5 +1,13 @@
 # server-actions-wrapper
 
+## 0.0.1
+
+### Patch Changes
+
+- 0102ffe: Initial push
+- Updated dependencies [0102ffe]
+  - zsa@0.0.1
+
 ## 0.0.2
 
 ### Patch Changes

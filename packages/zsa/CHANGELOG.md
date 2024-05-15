@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.0.1
+
+### Patch Changes
+
+- 0102ffe: Initial push
+
 ## 0.0.2
 
 ### Patch Changes
