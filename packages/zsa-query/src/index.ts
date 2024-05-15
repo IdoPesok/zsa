@@ -13,7 +13,7 @@ import {
   inferServerActionInput,
   inferServerActionReturnData,
   inferServerActionReturnType,
-} from "@za/server"
+} from "zsa"
 
 export const setupServerActionHooks = (args: {
   useQuery: typeof import("@tanstack/react-query").useQuery

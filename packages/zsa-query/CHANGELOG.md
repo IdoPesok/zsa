@@ -6,7 +6,7 @@
 
 - 3ba6b05: Initial commit
 - Updated dependencies [3ba6b05]
-  - @za/server@0.0.2
+  - zsa@0.0.2
 
 ## 0.1.4
 

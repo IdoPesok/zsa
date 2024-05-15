@@ -1,5 +1,5 @@
-import { createServerActionProcedure } from "@za/server"
 import { z } from "zod"
+import { createServerActionProcedure } from "zsa"
 
 const getUser = () => {
   return {

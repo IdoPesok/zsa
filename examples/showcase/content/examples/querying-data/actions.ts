@@ -1,7 +1,7 @@
 "use server"
 
-import { createServerAction } from "@za/server"
 import z from "zod"
+import { createServerAction } from "zsa"
 
 export async function Hello() {
   return "hello"

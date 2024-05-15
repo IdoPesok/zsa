@@ -1,5 +1,5 @@
-import { createServerAction, createServerActionProcedure } from "@za/server"
 import { z } from "zod"
+import { createServerAction, createServerActionProcedure } from "zsa"
 
 const main = async () => {
   const isAuth = createServerActionProcedure().handler(async () => {
