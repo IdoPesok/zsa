@@ -22,7 +22,7 @@ export default function HelloWorld() {
       helloWorldAction({
         message: debouncedInput,
       }),
-    queryKey: ["hello world"],
+    queryKey: [debouncedInput],
   })
 
   return (
