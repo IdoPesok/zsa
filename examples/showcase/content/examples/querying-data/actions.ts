@@ -17,7 +17,9 @@ export const helloWorldAction = createServerAction()
     // sleep for .5 seconds
     await new Promise((resolve) => setTimeout(resolve, 500))
     // update the message
-    return "Message: " + (input.message || "N/A")
+    return {
+      result: "Message: " + (input.message || "N/A"),
+    }
   })
 
 export const incrementNumberAction = createServerAction()
