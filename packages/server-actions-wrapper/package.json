@@ -38,6 +38,7 @@
     "zod": "^3.23.5"
   },
   "devDependencies": {
+    "@types/react-query": "^1.2.9",
     "tsup": "^8.0.2"
   }
 }

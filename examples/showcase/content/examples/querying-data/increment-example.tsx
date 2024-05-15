@@ -2,15 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useMutationCustom } from "@/lib/hooks/react-query-custom"
+import { useServerActionMutation } from "@/lib/hooks/react-query-server-actions"
 import { useState } from "react"
 import { incrementNumberAction } from "./actions"
 
 export default function IncrementExample() {
   const [counter, setCounter] = useState(0)
 
-  const incrementAction = useMutationCustom({
+  const incrementAction = useServerActionMutation({
     mutationFn: incrementNumberAction,
+    mutationKey: ["incrementNumberAction"],
   })
 
   return (

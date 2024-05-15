@@ -1,6 +1,9 @@
 "use client"
 
-import { useServerAction } from "@/lib/server-action-hooks"
+import {
+  useServerActionMutation,
+  useServerActionQuery,
+} from "@/lib/hooks/react-query-server-actions"
 import { generateRandomNumber, searchContacts } from "@/server/actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
@@ -18,24 +21,16 @@ export default function ClientPlayground() {
   const [input, setInput] = useState("")
   const debouncedInput = useDebounce(input, 300)
 
-  const queryAction = useServerAction(searchContacts, {
-    input: {
-      query: debouncedInput,
-    },
+  const queryAction = useServerActionQuery({
+    queryFn: () => searchContacts({ query: debouncedInput }),
     enabled: Boolean(debouncedInput),
-    actionKey: ["posts", "details", "123"],
-    retry: {
-      maxAttempts: 3,
-      delay: (currentAttempt) =>
-        // expontential backoff
-        Math.min(
-          currentAttempt > 1 ? 2 ** currentAttempt * 1000 : 1000,
-          30 * 1000
-        ),
-    },
+    queryKey: ["posts", "details", debouncedInput],
   })
-  const { execute, setOptimistic, data, isLoading } =
-    useServerAction(generateRandomNumber)
+  const { mutateAsync, data: mutateData } = useServerActionMutation({
+    mutationFn: generateRandomNumber,
+    mutationKey: ["generateRandomNumber"],
+    neverThrow: true,
+  })
 
   let contactsView
 
@@ -45,7 +40,6 @@ export default function ClientPlayground() {
         {queryAction.data.map((c) => (
           <div key={c.id}>{c.name}</div>
         ))}
-        {queryAction.isOptimistic && "Saving..."}
       </div>
     )
   } else if (queryAction.isLoading) {
@@ -76,17 +70,10 @@ export default function ClientPlayground() {
         {contactsView}
         <button
           onClick={async () => {
-            // call it with just a value
-            setOptimistic({ number: Math.floor(Math.random() * (100 - 1)) + 1 })
-
-            // call it with a function that takes in the current value
-            setOptimistic((current) => ({
-              number: current ? current.number + 1 : 0,
-            }))
-
-            await execute({ min: 1, max: 100 })
+            await mutateAsync({ min: 1, max: 100 })
           }}
         ></button>
+        {JSON.stringify(mutateData)}
       </CardContent>
     </Card>
   )

@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { useQueryCustom } from "@/lib/hooks/react-query-custom"
+import { useServerActionQuery } from "@/lib/hooks/react-query-server-actions"
 import { useEffect, useState } from "react"
 import { getRandomNumber } from "./actions"
 
@@ -23,7 +23,7 @@ export default function RandomNumberDisplay() {
     return () => clearInterval(it)
   }, [])
 
-  const queryAction = useQueryCustom({
+  const queryAction = useServerActionQuery({
     queryFn: () =>
       getRandomNumber({
         min: 0,
