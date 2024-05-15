@@ -1,7 +1,4 @@
-import {
-  createServerAction,
-  createServerActionProcedure,
-} from "server-actions-wrapper"
+import { createServerAction, createServerActionProcedure } from "@za/server"
 import { z } from "zod"
 
 const exampleAction = createServerAction()

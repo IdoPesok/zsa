@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerAction } from "server-actions-wrapper"
+import { createServerAction } from "@za/server"
 import z from "zod"
 
 export async function Hello() {

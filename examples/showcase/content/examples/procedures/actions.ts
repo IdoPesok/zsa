@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerActionProcedure } from "server-actions-wrapper"
+import { createServerActionProcedure } from "@za/server"
 import { z } from "zod"
 
 async function getUser() {

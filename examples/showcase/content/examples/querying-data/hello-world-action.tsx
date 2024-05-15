@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useServerActionQuery } from "@/lib/hooks/react-query-server-actions"
+import { useServerActionQuery } from "@/lib/hooks/server-action-hooks"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
 import { helloWorldAction } from "./actions"
@@ -17,16 +17,17 @@ export default function HelloWorld() {
   const [input, setInput] = useState("")
   const debouncedInput = useDebounce(input, 300)
 
-  const query = useServerActionQuery({
-    queryFn: () =>
-      helloWorldAction({
-        message: debouncedInput,
-      }),
-    queryKey: [debouncedInput],
+  const { isLoading, data } = useServerActionQuery(helloWorldAction, {
+    input: {
+      message: debouncedInput,
+    },
+    queryKey: ["hello", "world", debouncedInput],
     enabled: Boolean(debouncedInput),
     initialData: {
       result: "124124",
     },
+    refetchOnWindowFocus: false,
+    retry: false,
   })
 
   return (
@@ -43,7 +44,7 @@ export default function HelloWorld() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        {query.isFetching ? "loading..." : query.data.result}
+        {isLoading ? "loading..." : data.result}
       </CardContent>
     </Card>
   )

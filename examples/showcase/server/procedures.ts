@@ -1,4 +1,4 @@
-import { createServerActionProcedure } from "server-actions-wrapper"
+import { createServerActionProcedure } from "@za/server"
 import { z } from "zod"
 
 const getUser = () => {

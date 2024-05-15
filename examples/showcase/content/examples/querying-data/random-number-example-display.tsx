@@ -7,16 +7,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { useServerActionQuery } from "@/lib/hooks/react-query-server-actions"
+import { useServerActionQuery } from "@/lib/hooks/server-action-hooks"
 import { getRandomNumber } from "./actions"
 
 export default function RandomNumberDisplay() {
-  const queryAction = useServerActionQuery({
-    queryFn: () =>
-      getRandomNumber({
-        min: 0,
-        max: 100,
-      }),
+  const queryAction = useServerActionQuery(getRandomNumber, {
+    input: {
+      min: 0,
+      max: 100,
+    },
     queryKey: ["getRandomNumber"],
   })
 

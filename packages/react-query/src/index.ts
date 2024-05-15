@@ -1,3 +1,5 @@
+"use client"
+
 import {
   DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
@@ -5,52 +7,57 @@ import {
   InfiniteData,
   QueryKey,
 } from "@tanstack/react-query"
-import { SAWError } from "./errors"
 import {
+  SAWError,
   TAnyZodSafeFunctionHandler,
   inferServerActionInput,
   inferServerActionReturnData,
   inferServerActionReturnType,
-  inferServerActionReturnTypeHot,
-} from "./zod-safe-function"
+} from "@za/server"
 
-type TData<
-  TReturn extends inferServerActionReturnTypeHot<TAnyZodSafeFunctionHandler>,
-> = NonNullable<Awaited<TReturn>[0]>
-
-export const setupReactQueryHooksWithServerActions = (
-  useQuery: typeof import("@tanstack/react-query").useQuery,
-  useMutation: typeof import("@tanstack/react-query").useMutation,
+export const setupServerActionHooks = (args: {
+  useQuery: typeof import("@tanstack/react-query").useQuery
+  useMutation: typeof import("@tanstack/react-query").useMutation
   useInfiniteQuery: typeof import("@tanstack/react-query").useInfiniteQuery
-) => {
-  const useInfiniteQueryOverride = <
+}) => {
+  const { useQuery, useMutation, useInfiniteQuery } = args
+
+  const useServerActionInfiniteQuery = <
     TPageParam extends unknown,
-    TReturn extends inferServerActionReturnTypeHot<TAnyZodSafeFunctionHandler>,
+    THandler extends TAnyZodSafeFunctionHandler,
   >(
+    action: THandler,
     options: Omit<
       Parameters<
         typeof useInfiniteQuery<
-          TData<TReturn>,
+          inferServerActionReturnData<THandler>,
           SAWError,
-          InfiniteData<TData<TReturn>>,
+          InfiniteData<inferServerActionReturnData<THandler>>,
           QueryKey,
           TPageParam
         >
       >[0],
-      "queryFn" | "getNextPageParam"
+      "getNextPageParam"
     > & {
-      queryFn: (args: { pageParam: TPageParam }) => TReturn
-      getNextPageParam: GetNextPageParamFunction<TPageParam, TData<TReturn>>
+      input: (args: {
+        pageParam: TPageParam
+      }) => inferServerActionInput<THandler>
+      getNextPageParam: GetNextPageParamFunction<
+        TPageParam,
+        inferServerActionReturnData<THandler>
+      >
     },
     queryClient?: Parameters<typeof useInfiniteQuery>[1]
-  ): DefinedUseInfiniteQueryResult<TData<TReturn>, SAWError> => {
+  ): DefinedUseInfiniteQueryResult<
+    inferServerActionReturnData<THandler>,
+    SAWError
+  > => {
     return useInfiniteQuery(
       {
         ...options,
         queryFn: async ({ pageParam }) => {
-          const [data, err] = await options.queryFn({
-            pageParam: pageParam as TPageParam,
-          })
+          const input = options.input({ pageParam: pageParam as TPageParam })
+          const [data, err] = await action(input)
 
           if (err) {
             throw err
@@ -63,22 +70,23 @@ export const setupReactQueryHooksWithServerActions = (
     ) as any
   }
 
-  const useQueryOverride = <
-    TReturn extends inferServerActionReturnTypeHot<TAnyZodSafeFunctionHandler>,
-  >(
+  const useServerActionQuery = <THandler extends TAnyZodSafeFunctionHandler>(
+    action: THandler,
     options: Omit<
-      Parameters<typeof useQuery<TData<TReturn>, SAWError>>[0],
+      Parameters<
+        typeof useQuery<inferServerActionReturnData<THandler>, SAWError>
+      >[0],
       "queryFn"
     > & {
-      queryFn: () => TReturn
+      input: inferServerActionInput<THandler>
     },
     queryClient?: Parameters<typeof useQuery>[1]
-  ): DefinedUseQueryResult<TData<TReturn>, SAWError> => {
+  ): DefinedUseQueryResult<inferServerActionReturnData<THandler>, SAWError> => {
     return useQuery(
       {
         ...options,
         queryFn: async () => {
-          const [data, err] = await options.queryFn()
+          const [data, err] = await action(options.input)
 
           if (err) {
             throw err
@@ -102,26 +110,26 @@ export const setupReactQueryHooksWithServerActions = (
     inferServerActionInput<THandler>
   >
 
-  const useMutationOverride = <
+  const useServerActionMutation = <
     THandler extends TAnyZodSafeFunctionHandler,
-    TNeverThrow extends boolean = false,
+    TReturnError extends boolean = false,
   >(
-    options: Omit<
-      Parameters<TUseMutation<THandler, TNeverThrow>>[0],
+    action: THandler,
+    options?: Omit<
+      Parameters<TUseMutation<THandler, TReturnError>>[0],
       "mutationFn"
     > & {
-      mutationFn: THandler
-      neverThrow?: TNeverThrow
+      returnError?: TReturnError
     },
     queryClient?: Parameters<typeof useMutation>[1]
-  ): ReturnType<TUseMutation<THandler, TNeverThrow>> => {
+  ): ReturnType<TUseMutation<THandler, TReturnError>> => {
     return useMutation(
       {
         ...options,
         mutationFn: async (...args) => {
-          const [data, err] = await options.mutationFn(...args)
+          const [data, err] = await action(...args)
 
-          if (options.neverThrow) {
+          if (options?.returnError) {
             return [data, err]
           }
 
@@ -137,8 +145,8 @@ export const setupReactQueryHooksWithServerActions = (
   }
 
   return {
-    useQuery: useQueryOverride,
-    useMutation: useMutationOverride,
-    useInfiniteQuery: useInfiniteQueryOverride,
+    useServerActionInfiniteQuery,
+    useServerActionQuery,
+    useServerActionMutation,
   }
 }

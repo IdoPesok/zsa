@@ -1,8 +1,8 @@
-import { createServerActionProcedure } from "server-actions-wrapper"
+import { createServerAction, createServerActionProcedure } from "@za/server"
 import { z } from "zod"
 
 const main = async () => {
-  const isAuth = createServerActionProcedure().handler(async ({ ctx }) => {
+  const isAuth = createServerActionProcedure().handler(async () => {
     return {
       user: {
         id: 123,
@@ -21,12 +21,22 @@ const main = async () => {
       }
     })
 
-  const testAction = ownsPost.createServerAction().handler(async ({ ctx }) => {
-    return ctx
+  const updatePostTitle = ownsPost
+    .createServerAction()
+    .handler(async ({ ctx, input }) => {
+      return ctx
+    })
+
+  const test = createServerAction().handler(async ({ input }) => {
+    return {
+      user: {
+        id: 123,
+      },
+    }
   })
 
   console.log(
-    await testAction({
+    await updatePostTitle({
       postId: "124124124",
     })
   )

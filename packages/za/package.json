@@ -1,6 +1,6 @@
 {
-  "name": "server-actions-wrapper",
-  "version": "0.1.4",
+  "name": "@za/server",
+  "version": "0.0.1",
   "publishConfig": {
     "access": "public"
   },
@@ -38,7 +38,6 @@
     "zod": "^3.23.5"
   },
   "devDependencies": {
-    "@types/react-query": "^1.2.9",
     "tsup": "^8.0.2"
   }
 }

@@ -3,7 +3,7 @@
 import {
   useServerActionMutation,
   useServerActionQuery,
-} from "@/lib/hooks/react-query-server-actions"
+} from "@/lib/hooks/server-action-hooks"
 import { generateRandomNumber, searchContacts } from "@/server/actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
@@ -21,16 +21,20 @@ export default function ClientPlayground() {
   const [input, setInput] = useState("")
   const debouncedInput = useDebounce(input, 300)
 
-  const queryAction = useServerActionQuery({
-    queryFn: () => searchContacts({ query: debouncedInput }),
+  const queryAction = useServerActionQuery(searchContacts, {
+    input: {
+      query: debouncedInput,
+    },
     enabled: Boolean(debouncedInput),
     queryKey: ["posts", "details", debouncedInput],
   })
-  const { mutateAsync, data: mutateData } = useServerActionMutation({
-    mutationFn: generateRandomNumber,
-    mutationKey: ["generateRandomNumber"],
-    neverThrow: true,
-  })
+  const { mutateAsync, data: mutateData } = useServerActionMutation(
+    generateRandomNumber,
+    {
+      mutationKey: ["generateRandomNumber"],
+      returnError: true,
+    }
+  )
 
   let contactsView
 
