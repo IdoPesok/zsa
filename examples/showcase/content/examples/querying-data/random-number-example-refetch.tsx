@@ -2,16 +2,18 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { useServerActionUtils } from "@/lib/server-action-hooks"
+import { useQueryClient } from "@tanstack/react-query"
 
 export default function RandomNumberRefetch() {
-  const { refetch } = useServerActionUtils()
+  const queryClient = useQueryClient()
 
   return (
     <Card className="p-4 w-full ">
       <Button
         onClick={() => {
-          refetch(["getRandomNumber"])
+          queryClient.refetchQueries({
+            queryKey: ["getRandomNumber"],
+          })
         }}
         className="w-full"
       >

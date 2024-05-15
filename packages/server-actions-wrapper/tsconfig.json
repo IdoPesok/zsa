@@ -1,5 +1,0 @@
-{
-  "extends": "@repo/typescript-config/nextjs.json",
-  "include": ["./src/**/*.ts", "./src/**/*.tsx"],
-  "exclude": ["dist", "build", "node_modules"]
-}

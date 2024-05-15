@@ -1,19 +1,83 @@
 import z from "zod"
 import {
-  CompleteProcedure,
-  TAnyCompleteProcedure,
+  TOnCompleteFn,
+  TOnErrorFn,
+  TOnStartFn,
+  TOnSuccessFn,
+} from "./callbacks"
+import {
+  RetryConfig,
+  TAnyZodSafeFunctionHandler,
   TDataOrError,
   TZodSafeFunction,
   TZodSafeFunctionDefaultOmitted,
+  ZodSafeFunction,
   createZodSafeFunction,
   inferServerActionReturnData,
-} from "./safe-zod-function"
+} from "./zod-safe-function"
 
-/** Calculate the correct ommited keys given if an input schema is defined */
-type TOmitted<TInputSchema extends z.ZodType> =
-  TInputSchema extends z.ZodUndefined
-    ? TZodSafeFunctionDefaultOmitted
-    : Exclude<TZodSafeFunctionDefaultOmitted, "handler"> | "noInputHandler"
+/** Internal data stored inside a server action procedure */
+export interface TCompleteProcedureInternals<
+  TInputSchema extends z.ZodType,
+  THandler extends TAnyZodSafeFunctionHandler,
+> {
+  /** The chained input schema */
+  inputSchema: TInputSchema
+  /** An ordered array of handlers */
+  handlerChain: TAnyZodSafeFunctionHandler[]
+  /** The last handler in the chain */
+  lastHandler: THandler
+  /** The most recent error handler */
+  onErrorFn: TOnErrorFn | undefined
+  /** The most recent onStart handler */
+  onStartFn: TOnStartFn<any, true> | undefined
+  /** The most recent onSuccess handler */
+  onSuccessFn: TOnSuccessFn<any, any, true> | undefined
+  /** The most recent onComplete handler */
+  onCompleteFn: TOnCompleteFn<any, any, true> | undefined
+  /** The timeout of the procedure */
+  timeout: number | undefined
+  /** The retry config of the procedure */
+  retryConfig: RetryConfig | undefined
+}
+
+/** A completed procedure */
+export class CompleteProcedure<
+  TInputSchema extends z.ZodType,
+  THandler extends TAnyZodSafeFunctionHandler,
+> {
+  $internals: TCompleteProcedureInternals<TInputSchema, THandler>
+
+  constructor(params: TCompleteProcedureInternals<TInputSchema, THandler>) {
+    this.$internals = params
+  }
+
+  /** make a server action with the current procedure */
+  createServerAction(): TZodSafeFunction<
+    TInputSchema,
+    z.ZodUndefined,
+    TInputSchema extends z.ZodUndefined
+      ? TZodSafeFunctionDefaultOmitted
+      : Exclude<TZodSafeFunctionDefaultOmitted, "input" | "onInputParseError">,
+    inferServerActionReturnData<THandler>,
+    false
+  > {
+    return new ZodSafeFunction({
+      inputSchema: this.$internals.inputSchema,
+      outputSchema: z.undefined(),
+      procedureHandlerChain: this.$internals.handlerChain,
+      onErrorFromProcedureFn: this.$internals.onErrorFn,
+      onStartFromProcedureFn: this.$internals.onStartFn,
+      onSuccessFromProcedureFn: this.$internals.onSuccessFn,
+      onCompleteFromProcedureFn: this.$internals.onCompleteFn,
+      timeout: this.$internals.timeout,
+      retryConfig: this.$internals.retryConfig,
+    }) as any
+  }
+}
+
+/** a helper type to hold any complete procedure */
+export interface TAnyCompleteProcedure extends CompleteProcedure<any, any> {}
 
 /** The return type of `createServerActionProcedure` given a parent procedure */
 type TRet<T extends TAnyCompleteProcedure | undefined> =
@@ -21,7 +85,7 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
     ? TZodSafeFunction<
         T["$internals"]["inputSchema"],
         z.ZodUndefined,
-        TOmitted<T["$internals"]["inputSchema"]>,
+        TZodSafeFunctionDefaultOmitted,
         inferServerActionReturnData<T["$internals"]["lastHandler"]>,
         true
       >

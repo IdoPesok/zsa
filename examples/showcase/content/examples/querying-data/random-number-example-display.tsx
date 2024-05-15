@@ -7,20 +7,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { useServerAction } from "@/lib/server-action-hooks"
+import { useServerActionQuery } from "@/lib/hooks/server-action-hooks"
 import { getRandomNumber } from "./actions"
 
 export default function RandomNumberDisplay() {
-  const queryAction = useServerAction(getRandomNumber, {
+  const queryAction = useServerActionQuery(getRandomNumber, {
     input: {
       min: 0,
-      max: 10,
+      max: 100,
     },
-    actionKey: ["getRandomNumber"],
-    refetchInterval: 3000,
+    queryKey: ["getRandomNumber"],
   })
-
-  console.log("isLoading", queryAction.isLoading)
 
   return (
     <Card className="not-prose">
@@ -34,7 +31,6 @@ export default function RandomNumberDisplay() {
         <p>Random number:</p>
         {queryAction.isLoading ? "loading..." : ""}
         {queryAction.isRefetching ? "refetching..." : ""}
-        {queryAction.isExecuting ? "executing..." : ""}
         {queryAction.isSuccess && (
           <>{JSON.stringify(queryAction.data.number)}</>
         )}

@@ -2,14 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useServerAction } from "@/lib/server-action-hooks"
+import { useServerActionMutation } from "@/lib/hooks/server-action-hooks"
 import { useState } from "react"
 import { incrementNumberAction } from "./actions"
 
 export default function IncrementExample() {
   const [counter, setCounter] = useState(0)
 
-  const incrementAction = useServerAction(incrementNumberAction)
+  const incrementAction = useServerActionMutation(incrementNumberAction)
 
   return (
     <Card className="not-prose">
@@ -19,18 +19,18 @@ export default function IncrementExample() {
       <CardContent className="flex flex-col gap-4">
         <Button
           onClick={async () => {
-            const [data, err] = await incrementAction.execute({
+            await incrementAction.mutateAsync({
               number: counter,
             })
-            if (!err) {
-              setCounter(data)
-            }
+
+            setCounter((prev) => prev + 1)
           }}
         >
           Invoke action
         </Button>
         <p>Count:</p>
-        <div>{incrementAction.isLoading ? "loading..." : counter}</div>
+        <div>{incrementAction.isPending && "saving..."}</div>
+        <div>{incrementAction.data && incrementAction.data}</div>
       </CardContent>
     </Card>
   )

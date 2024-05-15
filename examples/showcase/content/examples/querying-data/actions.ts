@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerAction } from "server-actions-wrapper"
+import { createServerAction } from "@za/server"
 import z from "zod"
 
 export async function Hello() {
@@ -17,7 +17,9 @@ export const helloWorldAction = createServerAction()
     // sleep for .5 seconds
     await new Promise((resolve) => setTimeout(resolve, 500))
     // update the message
-    return "Message: " + (input.message || "N/A")
+    return {
+      result: "Message: " + (input.message || "N/A"),
+    }
   })
 
 export const incrementNumberAction = createServerAction()
@@ -41,8 +43,12 @@ export const getRandomNumber = createServerAction()
       .refine((input) => input.min < input.max)
   )
   .handler(async ({ input, ctx }) => {
-    await new Promise((r) => setTimeout(r, 3000))
+    await new Promise((r) => setTimeout(r, 1000))
     return {
       number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
     }
   })
+
+export const testAction = async (data: string) => {
+  return "123"
+}

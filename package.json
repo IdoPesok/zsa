@@ -1,5 +1,5 @@
 {
-  "name": "server-actions-wrapper-root",
+  "name": "za-root",
   "private": true,
   "scripts": {
     "build": "turbo build",
@@ -10,7 +10,7 @@
     "format:write": "turbo run format:write",
     "format:check": "turbo run format:check",
     "postinstall": "manypkg check",
-    "publish-packages": "npm run build --workspace=server-actions-wrapper && changeset version && changeset publish",
+    "publish-packages": "npm run build && changeset version && changeset publish",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
   "engines": {
@@ -27,6 +27,7 @@
     "@manypkg/cli": "^0.21.4",
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
+    "@tanstack/react-query": "^5.36.2",
     "prettier": "^3.2.5",
     "prettier-plugin-organize-imports": "^3.2.4",
     "turbo": "latest",

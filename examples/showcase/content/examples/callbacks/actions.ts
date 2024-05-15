@@ -1,7 +1,4 @@
-import {
-  createServerAction,
-  createServerActionProcedure,
-} from "server-actions-wrapper"
+import { createServerAction, createServerActionProcedure } from "@za/server"
 import { z } from "zod"
 
 const exampleAction = createServerAction()
@@ -45,7 +42,7 @@ const authedProcedure = createServerActionProcedure()
   .onError(async () => {
     console.log("onError")
   })
-  .noInputHandler(async () => {
+  .handler(async () => {
     try {
       const { email, id } = await getUser()
 
