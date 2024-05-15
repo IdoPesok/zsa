@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.0.2
+
+### Patch Changes
+
+- 3ba6b05: Initial commit
+
 ## 0.1.4
 
 ### Patch Changes
