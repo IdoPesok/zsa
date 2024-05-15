@@ -21,12 +21,11 @@ export const helloWorldAction = createServerAction()
     await new Promise((resolve) => setTimeout(resolve, 2000 * Math.random()))
     return input.message
   })
-
 ;("use server")
 
 const longRunningAuthedProcedure = createServerActionProcedure()
   .timeout(1000) // Set the timeout to 1000ms (1 second)
-  .noInputHandler(async () => {
+  .handler(async () => {
     try {
       const { email, id } = await getUser()
       await new Promise((resolve) => setTimeout(resolve, 2000 * Math.random()))

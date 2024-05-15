@@ -12,7 +12,7 @@ const getUserRole = (str: string) => {
   return ""
 }
 
-export const authedProcedure = createServerActionProcedure().noInputHandler(
+export const authedProcedure = createServerActionProcedure().handler(
   async () => {
     try {
       const { email, id } = await getUser()
@@ -42,22 +42,22 @@ const updateEmail = authedProcedure
     return input.newEmail
   })
 
-const isAdminProcedure = createServerActionProcedure(
-  authedProcedure
-).noInputHandler(async ({ ctx }) => {
-  const role = getUserRole(ctx.user.id)
+const isAdminProcedure = createServerActionProcedure(authedProcedure).handler(
+  async ({ ctx }) => {
+    const role = getUserRole(ctx.user.id)
 
-  if (role !== "admin") {
-    throw new Error("User is not an admin")
-  }
+    if (role !== "admin") {
+      throw new Error("User is not an admin")
+    }
 
-  return {
-    user: {
-      id: ctx.user.id,
-      email: ctx.user.email,
-    },
+    return {
+      user: {
+        id: ctx.user.id,
+        email: ctx.user.email,
+      },
+    }
   }
-})
+)
 
 const deleteUser = isAdminProcedure
   .createServerAction()

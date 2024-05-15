@@ -45,7 +45,7 @@ const authedProcedure = createServerActionProcedure()
   .onError(async () => {
     console.log("onError")
   })
-  .noInputHandler(async () => {
+  .handler(async () => {
     try {
       const { email, id } = await getUser()
 

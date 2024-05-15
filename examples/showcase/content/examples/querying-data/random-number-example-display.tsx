@@ -8,28 +8,16 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { useServerActionQuery } from "@/lib/hooks/react-query-server-actions"
-import { useEffect, useState } from "react"
 import { getRandomNumber } from "./actions"
 
 export default function RandomNumberDisplay() {
-  const [max, setMax] = useState(100)
-
-  useEffect(() => {
-    const it = setInterval(() => {
-      // set max to a random number between 1 and 100
-      setMax(Math.floor(Math.random() * 100) + 1)
-    }, 5000)
-
-    return () => clearInterval(it)
-  }, [])
-
   const queryAction = useServerActionQuery({
     queryFn: () =>
       getRandomNumber({
         min: 0,
-        max,
+        max: 100,
       }),
-    queryKey: ["getRandomNumber", max],
+    queryKey: ["getRandomNumber"],
   })
 
   return (

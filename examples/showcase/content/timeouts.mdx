@@ -39,7 +39,7 @@ You can also set a timeout on a procedure to apply it to all actions that use th
 
 const longRunningAuthedProcedure = createServerActionProcedure()
     .timeout(1000) // Set the timeout to 1000ms (1 second) <|highlight|>
-    .noInputHandler(async () => {
+    .handler(async () => {
         try {
             const { email, id } = await getUser();
             // Simulating a random execution time between 0 and 2 seconds

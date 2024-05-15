@@ -18,7 +18,7 @@ import { createServerActionProcedure } from "server-actions-wrapper"
 
 
 const authedProcedure = createServerActionProcedure() <|highlight|>
-  .noInputHandler(async () => {
+  .handler(async () => {
     try {
       const { email, id } = await getUser();
 
@@ -61,7 +61,7 @@ What if you need to restrict an action based on additional conditions, like the 
 
 ```typescript:actions.ts
 const isAdminProcedure = createServerActionProcedure(authedProcedure) <|highlight|>
-  .noInputHandler(async ({ ctx }) => {
+  .handler(async ({ ctx }) => {
     const role = getUserRole(ctx.user.id)
 
     if (role !== "admin") {

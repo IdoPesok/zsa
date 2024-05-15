@@ -8,10 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  useServerActionInfiniteQuery,
-  useServerActionQuery,
-} from "@/lib/hooks/react-query-server-actions"
+import { useServerActionQuery } from "@/lib/hooks/react-query-server-actions"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
 import { helloWorldAction } from "./actions"
@@ -32,14 +29,6 @@ export default function HelloWorld() {
     },
   })
 
-  const testQuery = useServerActionInfiniteQuery({
-    queryFn: ({ pageParam }) =>
-      helloWorldAction({ message: pageParam.toString() }),
-    queryKey: ["test"],
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => 5 + 2,
-  })
-
   return (
     <Card className="not-prose">
       <CardHeader>
@@ -54,7 +43,7 @@ export default function HelloWorld() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        {query.isPending ? "loading..." : query.data.result}
+        {query.isFetching ? "loading..." : query.data.result}
       </CardContent>
     </Card>
   )
