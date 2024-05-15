@@ -1,5 +1,5 @@
-import { createServerAction, createServerActionProcedure } from "@za/server"
 import { z } from "zod"
+import { createServerAction, createServerActionProcedure } from "zsa"
 
 const exampleAction = createServerAction()
   .input(z.object({ message: z.string() }))

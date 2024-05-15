@@ -1,7 +1,7 @@
 "use server"
 
-import { createServerActionProcedure } from "@za/server"
 import { z } from "zod"
+import { createServerActionProcedure } from "zsa"
 
 async function getUser() {
   return {

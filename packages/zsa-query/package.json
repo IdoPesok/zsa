@@ -1,6 +1,7 @@
 {
-  "name": "@za/server",
-  "version": "0.0.2",
+  "name": "zsa-react-query",
+  "version": "0.0.0",
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
@@ -8,19 +9,19 @@
     "dist/**"
   ],
   "exports": {
-    ".": "./dist/index.mjs"
+    ".": "./dist/index.cjs"
   },
   "typesVersions": {
     "*": {
       ".": [
-        "./dist/index.d.mts"
+        "./dist/index.d.cts"
       ]
     }
   },
   "sideEffects": false,
   "license": "MIT",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "module": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "scripts": {
     "lint": "eslint .",
@@ -33,9 +34,11 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.36.2",
     "react": "^18.3.1",
     "typescript": "latest",
-    "zod": "^3.23.5"
+    "zod": "^3.23.5",
+    "zsa": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.2"
