@@ -9,9 +9,7 @@ import { incrementNumberAction } from "./actions"
 export default function IncrementExample() {
   const [counter, setCounter] = useState(0)
 
-  const incrementAction = useServerActionMutation(incrementNumberAction, {
-    mutationKey: ["incrementNumberAction"],
-  })
+  const incrementAction = useServerActionMutation(incrementNumberAction)
 
   return (
     <Card className="not-prose">
