@@ -27,6 +27,7 @@
     "@manypkg/cli": "^0.21.4",
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
+    "@tanstack/react-query": "^5.36.1",
     "prettier": "^3.2.5",
     "prettier-plugin-organize-imports": "^3.2.4",
     "turbo": "latest",

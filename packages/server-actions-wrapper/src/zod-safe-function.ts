@@ -43,6 +43,23 @@ interface RetryConfig {
    *
    * NOTE: The current attempt starts at 2
    * (the first attempt errored then the current attempt becomes is 2)
+   *
+   * @example
+   * Exponential backoff
+   * ```ts
+   * delay: (currentAttempt) =>
+   *   Math.min(
+   *     currentAttempt > 2 ? 2 ** currentAttempt * 1000 : 1000,
+   *     30 * 1000
+   *   ),
+   * ```
+   *
+   * @example
+   * Linear backoff
+   * ```ts
+   * delay: (currentAttempt) =>
+   *   (currentAttempt - 1) * 1000,
+   * ```
    */
   delay?: number | ((currentAttempt: number, err: SAWError) => number)
 }
@@ -1041,6 +1058,12 @@ export type inferServerActionReturnData<
 export type inferServerActionReturnType<
   TAction extends TAnyZodSafeFunctionHandler,
 > = Awaited<ReturnType<TAction>>
+
+// helper type to infer the return type of a server action
+// hot promise
+export type inferServerActionReturnTypeHot<
+  TAction extends TAnyZodSafeFunctionHandler,
+> = ReturnType<TAction>
 
 // helper type to infer the input of a server action
 export type inferServerActionInput<TAction extends TAnyZodSafeFunctionHandler> =

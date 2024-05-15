@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils"
 import type { Metadata } from "next"
 import { ThemeProvider } from "next-themes"
 import { Inter } from "next/font/google"
-import { ServerActionUtilsProvider } from "server-actions-wrapper/hooks"
 import { Toaster } from "sonner"
 import SideNav from "./_components/side-nav"
 import TopNav from "./_components/top-nav"
+import ReactQueryProvider from "./_providers/react-query-provider"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -32,7 +32,7 @@ export default function RootLayout({
           inter
         )}
       >
-        <ServerActionUtilsProvider>
+        <ReactQueryProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
@@ -51,7 +51,7 @@ export default function RootLayout({
             </TooltipProvider>
             <Toaster duration={3000} />
           </ThemeProvider>
-        </ServerActionUtilsProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   )

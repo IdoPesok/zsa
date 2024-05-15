@@ -34,7 +34,8 @@ export default function ClientPlayground() {
         ),
     },
   })
-  const { execute, setOptimistic, data } = useServerAction(generateRandomNumber)
+  const { execute, setOptimistic, data, isLoading } =
+    useServerAction(generateRandomNumber)
 
   let contactsView
 

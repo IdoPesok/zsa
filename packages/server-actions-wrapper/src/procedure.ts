@@ -7,7 +7,7 @@ import {
   TZodSafeFunctionDefaultOmitted,
   createZodSafeFunction,
   inferServerActionReturnData,
-} from "./safe-zod-function"
+} from "./zod-safe-function"
 
 /** Calculate the correct ommited keys given if an input schema is defined */
 type TOmitted<TInputSchema extends z.ZodType> =

@@ -1,16 +1,8 @@
 "use client"
 
-import {
-  createServerActionsKeyFactory,
-  setupServerActionHooks,
-} from "server-actions-wrapper/hooks"
-
-export const ActionKeyFactory = createServerActionsKeyFactory({
-  getRandomNumber: () => ["getRandomNumber"],
-  posts: () => ["posts"],
-  postsList: () => ["posts", "list"],
-  postDetails: (id: string) => ["posts", "details", id],
-})
-
-export const { useServerActionUtils, useServerAction } =
-  setupServerActionHooks(ActionKeyFactory)
+export const ActionKeyFactory = {
+  getRandomNumber: () => ["getRandomNumber"] as const,
+  posts: () => ["posts"] as const,
+  postsList: () => ["posts", "list"] as const,
+  postDetails: (id: string) => ["posts", "details", id] as const,
+}

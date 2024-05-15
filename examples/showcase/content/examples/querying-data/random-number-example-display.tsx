@@ -7,20 +7,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { useServerAction } from "@/lib/server-action-hooks"
+import { useQueryCustom } from "@/lib/hooks/react-query-custom"
+import { useEffect, useState } from "react"
 import { getRandomNumber } from "./actions"
 
 export default function RandomNumberDisplay() {
-  const queryAction = useServerAction(getRandomNumber, {
-    input: {
-      min: 0,
-      max: 10,
-    },
-    actionKey: ["getRandomNumber"],
-    refetchInterval: 3000,
-  })
+  const [max, setMax] = useState(100)
 
-  console.log("isLoading", queryAction.isLoading)
+  useEffect(() => {
+    const it = setInterval(() => {
+      // set max to a random number between 1 and 100
+      setMax(Math.floor(Math.random() * 100) + 1)
+    }, 5000)
+
+    return () => clearInterval(it)
+  }, [])
+
+  const queryAction = useQueryCustom({
+    queryFn: () =>
+      getRandomNumber({
+        min: 0,
+        max,
+      }),
+    queryKey: ["getRandomNumber", max],
+  })
 
   return (
     <Card className="not-prose">
@@ -34,7 +44,6 @@ export default function RandomNumberDisplay() {
         <p>Random number:</p>
         {queryAction.isLoading ? "loading..." : ""}
         {queryAction.isRefetching ? "refetching..." : ""}
-        {queryAction.isExecuting ? "executing..." : ""}
         {queryAction.isSuccess && (
           <>{JSON.stringify(queryAction.data.number)}</>
         )}
