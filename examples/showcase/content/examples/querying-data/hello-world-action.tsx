@@ -17,15 +17,12 @@ export default function HelloWorld() {
   const [input, setInput] = useState("")
   const debouncedInput = useDebounce(input, 300)
 
-  const { isLoading, data } = useServerActionQuery(helloWorldAction, {
+  const data = useServerActionQuery(helloWorldAction, {
     input: {
       message: debouncedInput,
     },
     queryKey: ["hello", "world", debouncedInput],
     enabled: Boolean(debouncedInput),
-    initialData: {
-      result: "124124",
-    },
     refetchOnWindowFocus: false,
     retry: false,
   })
@@ -44,7 +41,7 @@ export default function HelloWorld() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        {isLoading ? "loading..." : data.result}
+        {data.data?.result}
       </CardContent>
     </Card>
   )

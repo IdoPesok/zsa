@@ -6,6 +6,8 @@ import {
   GetNextPageParamFunction,
   InfiniteData,
   QueryKey,
+  UseInfiniteQueryResult,
+  UseQueryResult,
 } from "@tanstack/react-query"
 import {
   SAWError,
@@ -25,6 +27,10 @@ export const setupServerActionHooks = (args: {
   const useServerActionInfiniteQuery = <
     TPageParam extends unknown,
     THandler extends TAnyZodSafeFunctionHandler,
+    TInitialData extends
+      | undefined
+      | inferServerActionReturnData<THandler>
+      | (() => inferServerActionReturnData<THandler>),
   >(
     action: THandler,
     options: Omit<
@@ -37,7 +43,7 @@ export const setupServerActionHooks = (args: {
           TPageParam
         >
       >[0],
-      "getNextPageParam"
+      "getNextPageParam" | "initialData"
     > & {
       input: (args: {
         pageParam: TPageParam
@@ -46,12 +52,15 @@ export const setupServerActionHooks = (args: {
         TPageParam,
         inferServerActionReturnData<THandler>
       >
+      initialData?: TInitialData
     },
     queryClient?: Parameters<typeof useInfiniteQuery>[1]
-  ): DefinedUseInfiniteQueryResult<
-    inferServerActionReturnData<THandler>,
-    SAWError
-  > => {
+  ): TInitialData extends undefined
+    ? UseInfiniteQueryResult<inferServerActionReturnData<THandler>, SAWError>
+    : DefinedUseInfiniteQueryResult<
+        inferServerActionReturnData<THandler>,
+        SAWError
+      > => {
     return useInfiniteQuery(
       {
         ...options,
@@ -70,18 +79,30 @@ export const setupServerActionHooks = (args: {
     ) as any
   }
 
-  const useServerActionQuery = <THandler extends TAnyZodSafeFunctionHandler>(
+  const useServerActionQuery = <
+    THandler extends TAnyZodSafeFunctionHandler,
+    TInitialData extends
+      | undefined
+      | inferServerActionReturnData<THandler>
+      | (() => inferServerActionReturnData<THandler>),
+  >(
     action: THandler,
     options: Omit<
       Parameters<
         typeof useQuery<inferServerActionReturnData<THandler>, SAWError>
       >[0],
-      "queryFn"
+      "queryFn" | "initialData"
     > & {
       input: inferServerActionInput<THandler>
+      initialData?: TInitialData
     },
     queryClient?: Parameters<typeof useQuery>[1]
-  ): DefinedUseQueryResult<inferServerActionReturnData<THandler>, SAWError> => {
+  ): TInitialData extends undefined
+    ? UseQueryResult<inferServerActionReturnData<THandler>, SAWError>
+    : DefinedUseQueryResult<
+        inferServerActionReturnData<THandler>,
+        SAWError
+      > => {
     return useQuery(
       {
         ...options,
