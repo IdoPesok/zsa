@@ -5,13 +5,13 @@ import {
   TOnStartFn,
   TOnSuccessFn,
 } from "./callbacks"
-import { SAWError, TSAWError } from "./errors"
+import { TZSAError, ZSAError } from "./errors"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 
 /** The return type of a server action */
 export type TDataOrError<TData> =
   | Promise<[Awaited<TData>, null]>
-  | Promise<[null, TSAWError]>
+  | Promise<[null, TZSAError]>
 
 /** A configuration object for retrying a server action */
 export interface RetryConfig {
@@ -43,7 +43,7 @@ export interface RetryConfig {
    *   (currentAttempt - 1) * 1000,
    * ```
    */
-  delay?: number | ((currentAttempt: number, err: SAWError) => number)
+  delay?: number | ((currentAttempt: number, err: ZSAError) => number)
 }
 
 /** A function type for a handler that does not have an input */
@@ -243,7 +243,7 @@ export class ZodSafeFunction<
   /** Check if the timeout has triggered, if so, throw a SAWError */
   public checkTimeoutStatus(timeoutStatus: TimeoutStatus) {
     if (timeoutStatus.isTimeout) {
-      throw new SAWError(
+      throw new ZSAError(
         "TIMEOUT",
         `Exceeded timeout of ${this.$internals.timeout} ms`
       )
@@ -258,7 +258,7 @@ export class ZodSafeFunction<
    */
   public getRetryDelay($err: unknown) {
     try {
-      const err = $err instanceof SAWError ? $err : new SAWError("ERROR", $err)
+      const err = $err instanceof ZSAError ? $err : new ZSAError("ERROR", $err)
 
       const config = this.$internals.retryConfig
       if (!config) return -1
@@ -428,7 +428,7 @@ export class ZodSafeFunction<
 
   /** set a handler function for errors */
   public onError(
-    fn: (err: SAWError) => any
+    fn: (err: ZSAError) => any
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
@@ -506,7 +506,7 @@ export class ZodSafeFunction<
       if (this.$internals.onOutputParseError) {
         await this.$internals.onOutputParseError(safe.error)
       }
-      throw new SAWError("OUTPUT_PARSE_ERROR", safe.error)
+      throw new ZSAError("OUTPUT_PARSE_ERROR", safe.error)
     }
     return safe.data
   }
@@ -589,9 +589,9 @@ export class ZodSafeFunction<
   }
 
   /** helper function to handle errors with timeout checkpoints */
-  public async handleError(err: any): Promise<[null, TSAWError]> {
+  public async handleError(err: any): Promise<[null, TZSAError]> {
     const customError =
-      err instanceof SAWError ? err : new SAWError("ERROR", err)
+      err instanceof ZSAError ? err : new ZSAError("ERROR", err)
 
     if (
       this.$internals.onErrorFromProcedureFn &&
@@ -657,7 +657,7 @@ export class ZodSafeFunction<
       if (this.$internals.onInputParseError) {
         await this.$internals.onInputParseError(safe.error)
       }
-      throw new SAWError("INPUT_PARSE_ERROR", safe.error)
+      throw new ZSAError("INPUT_PARSE_ERROR", safe.error)
     }
 
     return safe.data
@@ -666,7 +666,7 @@ export class ZodSafeFunction<
   public getTimeoutErrorPromise = (timeoutMs: number) =>
     new Promise((_, reject) => {
       setTimeout(() => {
-        reject(new SAWError("TIMEOUT", `Exceeded timeout of ${timeoutMs} ms`))
+        reject(new ZSAError("TIMEOUT", `Exceeded timeout of ${timeoutMs} ms`))
       }, timeoutMs)
     })
 

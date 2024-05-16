@@ -2,7 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
 import {
   createServerActionsKeyFactory,
   setupServerActionHooks,
-} from "zsa-react-query"
+} from "../../../../packages/zsa-react-query/dist/index.cjs"
 
 export const QueryKeyFactory = createServerActionsKeyFactory({
   getUser: () => ["getUser"],
@@ -11,14 +11,21 @@ export const QueryKeyFactory = createServerActionsKeyFactory({
   getRandomNumber: () => ["getRandomNumber"],
 })
 
-const { useServerActionQuery, useServerActionMutation } =
-  setupServerActionHooks({
-    hooks: {
-      useQuery: useQuery,
-      useMutation: useMutation,
-      useInfiniteQuery: useInfiniteQuery,
-    },
-    queryKeyFactory: QueryKeyFactory,
-  })
+const {
+  useServerActionQuery,
+  useServerActionMutation,
+  useServerActionInfiniteQuery,
+} = setupServerActionHooks({
+  hooks: {
+    useQuery: useQuery,
+    useMutation: useMutation,
+    useInfiniteQuery: useInfiniteQuery,
+  },
+  queryKeyFactory: QueryKeyFactory,
+})
 
-export { useServerActionMutation, useServerActionQuery }
+export {
+  useServerActionInfiniteQuery,
+  useServerActionMutation,
+  useServerActionQuery,
+}

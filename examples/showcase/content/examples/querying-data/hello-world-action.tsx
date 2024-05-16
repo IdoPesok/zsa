@@ -8,19 +8,21 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useServerActionQuery } from "@/lib/hooks/server-action-hooks"
+import { useServerActionInfiniteQuery } from "@/lib/hooks/server-action-hooks"
 import { useDebounce } from "@uidotdev/usehooks"
 import { useState } from "react"
-import { helloWorldAction } from "./actions"
+import { myServerAction } from "./actions"
 
 export default function HelloWorld() {
   const [input, setInput] = useState("")
   const debouncedInput = useDebounce(input, 300)
 
-  const data = useServerActionQuery(helloWorldAction, {
-    input: {
+  const data = useServerActionInfiniteQuery(myServerAction, {
+    initialPageParam: 0,
+    input: ({ pageParam }) => ({
       message: debouncedInput,
-    },
+    }),
+    getNextPageParam: ({ result }) => 2,
     queryKey: ["getPosts"],
     enabled: Boolean(debouncedInput),
     refetchOnWindowFocus: false,
@@ -41,7 +43,6 @@ export default function HelloWorld() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        {data.data?.result}
       </CardContent>
     </Card>
   )

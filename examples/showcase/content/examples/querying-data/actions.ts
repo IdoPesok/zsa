@@ -7,7 +7,7 @@ export async function Hello() {
   return "hello"
 }
 
-export const helloWorldAction = createServerAction()
+export const myServerAction = createServerAction()
   .input(
     z.object({
       message: z.string(),

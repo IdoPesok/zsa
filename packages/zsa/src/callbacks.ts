@@ -1,9 +1,9 @@
 import z from "zod"
-import { SAWError } from "./errors"
+import { ZSAError } from "./errors"
 
 /** An error handler function */
 export interface TOnErrorFn {
-  (err: SAWError): any
+  (err: ZSAError): any
 }
 
 /** A start handler function */
@@ -63,7 +63,7 @@ export interface TOnCompleteFn<
           /** The status of the action */
           status: "error"
           /** The error thrown by the handler */
-          error: SAWError
+          error: ZSAError
         }
   ): any
 }
