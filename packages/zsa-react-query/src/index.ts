@@ -9,8 +9,8 @@ import {
   UseQueryResult,
 } from "@tanstack/react-query"
 import {
-  SAWError,
   TAnyZodSafeFunctionHandler,
+  ZSAError,
   inferServerActionInput,
   inferServerActionReturnData,
   inferServerActionReturnType,
@@ -63,7 +63,7 @@ export const setupServerActionHooks = <
       Parameters<
         typeof useInfiniteQuery<
           inferServerActionReturnData<THandler>,
-          SAWError,
+          ZSAError,
           InfiniteData<inferServerActionReturnData<THandler>>,
           TQueryKey,
           TPageParam
@@ -82,10 +82,10 @@ export const setupServerActionHooks = <
     },
     queryClient?: Parameters<typeof useInfiniteQuery>[1]
   ): TInitialData extends undefined
-    ? UseInfiniteQueryResult<inferServerActionReturnData<THandler>, SAWError>
+    ? UseInfiniteQueryResult<inferServerActionReturnData<THandler>, ZSAError>
     : DefinedUseInfiniteQueryResult<
         inferServerActionReturnData<THandler>,
-        SAWError
+        ZSAError
       > => {
     return useInfiniteQuery(
       {
@@ -117,7 +117,7 @@ export const setupServerActionHooks = <
       Parameters<
         typeof useQuery<
           inferServerActionReturnData<THandler>,
-          SAWError,
+          ZSAError,
           inferServerActionReturnData<THandler>,
           TQueryKey
         >
@@ -129,10 +129,10 @@ export const setupServerActionHooks = <
     },
     queryClient?: Parameters<typeof useQuery>[1]
   ): TInitialData extends undefined
-    ? UseQueryResult<inferServerActionReturnData<THandler>, SAWError>
+    ? UseQueryResult<inferServerActionReturnData<THandler>, ZSAError>
     : DefinedUseQueryResult<
         inferServerActionReturnData<THandler>,
-        SAWError
+        ZSAError
       > => {
     return useQuery(
       {
@@ -158,7 +158,7 @@ export const setupServerActionHooks = <
     TNeverThrow extends false
       ? inferServerActionReturnData<THandler>
       : inferServerActionReturnType<THandler>,
-    SAWError,
+    ZSAError,
     inferServerActionInput<THandler>
   >
 
