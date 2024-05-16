@@ -5,7 +5,6 @@ import {
   DefinedUseQueryResult,
   GetNextPageParamFunction,
   InfiniteData,
-  QueryKey,
   UseInfiniteQueryResult,
   UseQueryResult,
 } from "@tanstack/react-query"
@@ -17,12 +16,39 @@ import {
   inferServerActionReturnType,
 } from "zsa"
 
-export const setupServerActionHooks = (args: {
-  useQuery: typeof import("@tanstack/react-query").useQuery
-  useMutation: typeof import("@tanstack/react-query").useMutation
-  useInfiniteQuery: typeof import("@tanstack/react-query").useInfiniteQuery
+type ServerActionsKeyFactory<TKey extends string[]> = {
+  [key: string]: (...args: any[]) => TKey
+}
+
+type ServerActionKeys<TFactory extends ServerActionsKeyFactory<string[]>> =
+  ReturnType<TFactory[keyof TFactory]>
+
+export const createServerActionsKeyFactory = <
+  const TKeys extends string[],
+  const TFactory extends ServerActionsKeyFactory<TKeys>,
+>(
+  factory: TFactory
+) => {
+  return factory
+}
+
+export const setupServerActionHooks = <
+  const TFactory extends
+    | Readonly<ServerActionsKeyFactory<string[]>>
+    | undefined,
+>(args: {
+  hooks: {
+    useQuery: typeof import("@tanstack/react-query").useQuery
+    useMutation: typeof import("@tanstack/react-query").useMutation
+    useInfiniteQuery: typeof import("@tanstack/react-query").useInfiniteQuery
+  }
+  queryKeyFactory?: TFactory
 }) => {
-  const { useQuery, useMutation, useInfiniteQuery } = args
+  const { useQuery, useMutation, useInfiniteQuery } = args.hooks
+
+  type TQueryKey = TFactory extends undefined
+    ? Readonly<unknown[]>
+    : Readonly<ServerActionKeys<Exclude<TFactory, undefined>>>
 
   const useServerActionInfiniteQuery = <
     TPageParam extends unknown,
@@ -39,7 +65,7 @@ export const setupServerActionHooks = (args: {
           inferServerActionReturnData<THandler>,
           SAWError,
           InfiniteData<inferServerActionReturnData<THandler>>,
-          QueryKey,
+          TQueryKey,
           TPageParam
         >
       >[0],
@@ -89,7 +115,12 @@ export const setupServerActionHooks = (args: {
     action: THandler,
     options: Omit<
       Parameters<
-        typeof useQuery<inferServerActionReturnData<THandler>, SAWError>
+        typeof useQuery<
+          inferServerActionReturnData<THandler>,
+          SAWError,
+          inferServerActionReturnData<THandler>,
+          TQueryKey
+        >
       >[0],
       "queryFn" | "initialData"
     > & {

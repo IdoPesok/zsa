@@ -21,7 +21,7 @@ export default function HelloWorld() {
     input: {
       message: debouncedInput,
     },
-    queryKey: ["hello", "world", debouncedInput],
+    queryKey: ["getPosts"],
     enabled: Boolean(debouncedInput),
     refetchOnWindowFocus: false,
     retry: false,

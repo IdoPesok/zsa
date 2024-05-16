@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { QueryKeyFactory } from "@/lib/hooks/server-action-hooks"
 import { useQueryClient } from "@tanstack/react-query"
 
 export default function RandomNumberRefetch() {
@@ -12,7 +13,7 @@ export default function RandomNumberRefetch() {
       <Button
         onClick={() => {
           queryClient.refetchQueries({
-            queryKey: ["getRandomNumber"],
+            queryKey: QueryKeyFactory.getRandomNumber(),
           })
         }}
         className="w-full"
