@@ -1,5 +1,6 @@
 "use client"
 
+import { QueryKeyFactory } from "@/lib/hooks/server-action-hooks"
 import { useQueryClient } from "@tanstack/react-query"
 
 export default function ClientPlaygroundTwo() {
@@ -10,7 +11,7 @@ export default function ClientPlaygroundTwo() {
       <button
         onClick={async () => {
           queryClient.refetchQueries({
-            queryKey: ["posts", "details", "something"],
+            queryKey: QueryKeyFactory.getPosts(),
           })
         }}
       >

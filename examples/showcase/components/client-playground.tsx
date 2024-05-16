@@ -26,7 +26,7 @@ export default function ClientPlayground() {
       query: debouncedInput,
     },
     enabled: Boolean(debouncedInput),
-    queryKey: ["posts", "details", debouncedInput],
+    queryKey: ["getPosts"],
   })
   const { mutateAsync, data: mutateData } = useServerActionMutation(
     generateRandomNumber,
