@@ -19,10 +19,13 @@ export default function TopNav({
   return (
     <div className="fixed w-screen h-fit top-0 bg-background/80 backdrop-blur z-20  overscroll-none">
       <div className="border-b border-muted flex flex-row gap-10 items-center w-full px-10 max-w-screen py-4 sm:justify-start justify-between">
-        <h3 className="whitespace-nowrap font-bold flex gap-3 items-center">
-          <Network className="size-5" />
-          Zod Server Actions
-        </h3>
+        <Link passHref href="/introduction">
+          <h3 className="whitespace-nowrap font-bold flex gap-3 items-center">
+            <Network className="size-5" />
+            ZSA
+          </h3>
+        </Link>
+
         <div className="flex-1 flex-row gap-8 items-center px-4 text-sm font-medium hidden sm:flex">
           <Link
             href="/introduction"
