@@ -27,7 +27,7 @@ const SideNavLink = ({
         className={cn(
           "w-full justify-start gap-3 -ml-3 text-muted-foreground transition-colors duration-200",
           isActive(pathname, href) &&
-          "bg-foreground text-background hover:bg-foreground/80 hover:text-background"
+            "bg-foreground text-background hover:bg-foreground/80 hover:text-background"
         )}
         size={"sm"}
       >

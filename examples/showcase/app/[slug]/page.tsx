@@ -16,7 +16,7 @@ export async function generateMetadata({
   if (!post) notFound()
 
   return {
-    title: `server-actions-wrapper - ${post.metadata.title}`,
+    title: `zsa - ${post.metadata.title}`,
     description: `${post.metadata.summary}`,
     openGraph: {
       title: `${post.metadata.title}`,

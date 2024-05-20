@@ -5,9 +5,10 @@ import {
 } from "zsa-react-query"
 
 export const QueryKeyFactory = createServerActionsKeyFactory({
-  getUser: () => ["getUser"],
   getPosts: () => ["getPosts"],
-  somethingElse: (id: string) => ["somethingElse", id],
+  getFriends: () => ["getFriends"],
+  getPostsAndFriends: () => ["getPosts", "getFriends"],
+  somethingElse: (id: string) => [id],
   getRandomNumber: () => ["getRandomNumber"],
 })
 

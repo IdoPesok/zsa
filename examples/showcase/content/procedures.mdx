@@ -14,7 +14,7 @@ Here is an example of a simple procedure that ensures a user is logged in, and p
 
 ```typescript:actions.ts
 "use server"
-import { createServerActionProcedure } from "server-actions-wrapper" 
+import { createServerActionProcedure } from "zsa"
 
 
 const authedProcedure = createServerActionProcedure() <|highlight|>
@@ -53,7 +53,7 @@ In this example:
 
 1. We create a `authedProcedure` that verifies the user is logged in by calling `getUser()`.
 2. If successful, it returns the user's email and id. If not, it throws an error.
-3. We create an `updateEmail` by chaining `createServerAction()` off the procedure.  Invoking this action will now the procedure's handler before running its own handler, thus ensuring that only authed users can use this server action.
+3. We create an `updateEmail` by chaining `createServerAction()` off the procedure. Invoking this action will now the procedure's handler before running its own handler, thus ensuring that only authed users can use this server action.
 
 ## Chaining procedures
 
@@ -80,7 +80,7 @@ const isAdminProcedure = createServerActionProcedure(authedProcedure) <|highligh
 const deleteUser = isAdminProcedure <|highlight|>
   .createServerAction()
   .input(z.object({
-    userIdToDelete: z.string()  
+    userIdToDelete: z.string()
   })).handler(async ({ input, ctx }) => {
     const { userIdToDelete } = input
     const { user } = ctx // receive the context from the procedures
@@ -130,10 +130,10 @@ Actions using this `ownsPostProcedure` will now always require a `postId` in the
 
 ```typescript:actions.ts
 const updatePostName = ownsPostProcedure <|highlight|>
-  .createServerAction() 
+  .createServerAction()
   .input(z.object({ newPostName: z.string() }))
   .handler(async ({ input, ctx }) => {
-    
+
     console.log({
       // input contains postId and newPostName
       newPostName: input.newPostName, <|highlight|>
@@ -151,9 +151,9 @@ Now, when we call the `updatePostName`, both `postId` and `newPostName` will be 
 
 ```typescript:example.ts
 const [data, err] = await updatePostName({
-  newPostName: "hello world", 
+  newPostName: "hello world",
   postId: "post_id_123", <|highlight|>
 })
 ```
 
-Chaining procedures is a powerful way to pass context into your actions and ensure that certain conditions are met before running the action's handler. 
+Chaining procedures is a powerful way to pass context into your actions and ensure that certain conditions are met before running the action's handler.
