@@ -8,7 +8,7 @@ groupOrder: 100
 
 In some cases, you might want to handle `FormData` directly in your server actions, especially when working with forms in client-side components. `zsa` supports `FormData` as an input type, making it easy to integrate form submissions with your server actions.
 
-## Creating a Server Action with FormData
+## Server Action with FormData
 
 Here's an example of how to create a server action that accepts `FormData`:
 
@@ -35,7 +35,7 @@ export const myFormDataAction = createServerAction()
 
 In this example, the server action `myFormDataAction` is configured to accept `FormData` by specifying the `type: "formData"` option. The `input` schema defines the expected fields and their types.
 
-## Calling the Action from the Client
+## Form data client example
 
 To call this server action from a client component, you can use a standard HTML form with the `action` attribute set to the server action function:
 
