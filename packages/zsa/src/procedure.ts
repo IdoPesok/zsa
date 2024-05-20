@@ -60,7 +60,8 @@ export class CompleteProcedure<
       ? TZodSafeFunctionDefaultOmitted
       : Exclude<TZodSafeFunctionDefaultOmitted, "input" | "onInputParseError">,
     inferServerActionReturnData<THandler>,
-    false
+    false,
+    "json"
   > {
     return new ZodSafeFunction({
       inputSchema: this.$internals.inputSchema,
@@ -87,14 +88,16 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
         z.ZodUndefined,
         TZodSafeFunctionDefaultOmitted,
         inferServerActionReturnData<T["$internals"]["lastHandler"]>,
-        true
+        true,
+        "json"
       >
     : TZodSafeFunction<
         z.ZodUndefined,
         z.ZodUndefined,
         TZodSafeFunctionDefaultOmitted,
         undefined,
-        true
+        true,
+        "json"
       >
 
 /**

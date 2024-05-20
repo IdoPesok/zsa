@@ -54,6 +54,7 @@ export interface TNoInputHandlerFunc<
 > {
   (
     placeholder?: undefined,
+    $overrideArgs?: undefined,
     // very janky but basically in the `getProcedureChainOutput` function
     // we pass the context second
     $ctx?: TProcedureChainOutput,
@@ -69,10 +70,13 @@ export interface THandlerFunc<
   TOutputSchema extends z.ZodType,
   TRet extends any,
   TProcedureChainOutput extends any,
+  TInputType extends InputTypeOptions,
 > {
   (
     /** The input to the handler */
-    args: TInputSchema["_input"],
+    args: TInputType extends "json" ? TInputSchema["_input"] : FormData,
+    /** Override the args */
+    $overrideArgs?: Partial<TInputSchema["_input"]>,
     /** The context of the handler */
     $ctx?: TProcedureChainOutput,
     /** An optional override input schema */
@@ -109,18 +113,20 @@ export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
 export type TAnyZodSafeFunctionHandler =
   | ((
       input: any,
+      overrideArgs?: any,
       ctx?: any,
       $overrideInputSchema?: undefined
     ) => TDataOrError<any>)
   | ((
       placeholder?: undefined,
+      overrideArgs?: undefined,
       ctx?: any,
       $overrideInputSchema?: z.ZodType
     ) => TDataOrError<any>)
 
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
-  extends ZodSafeFunction<any, any, any, any, boolean> {}
+  extends ZodSafeFunction<any, any, any, any, boolean, any> {}
 
 /** A helper type to wrap ZodSafeFunction in an Omit */
 export type TZodSafeFunction<
@@ -129,13 +135,15 @@ export type TZodSafeFunction<
   TOmitted extends string,
   TProcedureChainOutput extends any,
   TIsProcedure extends boolean,
+  TInputType extends InputTypeOptions,
 > = Omit<
   ZodSafeFunction<
     TInputSchema,
     TOutputSchema,
     TOmitted,
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   >,
   TOmitted
 >
@@ -224,12 +232,15 @@ interface TInternals<
   handler?: TAnyZodSafeFunctionHandler | undefined
 }
 
+type InputTypeOptions = "formData" | "json"
+
 export class ZodSafeFunction<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
   TOmitted extends string,
   TProcedureChainOutput extends any,
   TIsProcedure extends boolean,
+  TInputType extends InputTypeOptions,
 > {
   /** The internals of the Zod Safe Function */
   public $internals: TInternals<TInputSchema, TOutputSchema, TIsProcedure>
@@ -298,7 +309,7 @@ export class ZodSafeFunction<
       this.checkTimeoutStatus(timeoutStatus)
 
       const procedureHandler = this.$internals.procedureHandlerChain[i]!
-      const [data, err] = await procedureHandler(args, accData)
+      const [data, err] = await procedureHandler(args, undefined, accData)
       if (err) {
         throw err
       }
@@ -318,7 +329,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     TOmitted | "timeout",
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -334,7 +346,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     TOmitted | "retry",
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -352,8 +365,16 @@ export class ZodSafeFunction<
    * }))
    * ```
    */
-  public input<T extends z.ZodType>(
-    schema: T
+  public input<
+    T extends z.ZodType,
+    TType extends TIsProcedure extends false
+      ? InputTypeOptions
+      : "json" = "json",
+  >(
+    schema: T,
+    opts?: {
+      type?: TType
+    }
   ): TZodSafeFunction<
     TInputSchema extends z.ZodUndefined
       ? T
@@ -361,7 +382,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     "input" | Exclude<TOmitted, "onInputParseError">, // bring back the onInputParseError
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -381,7 +403,8 @@ export class ZodSafeFunction<
     T,
     "output" | Exclude<TOmitted, "onOutputParseError">,
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -400,7 +423,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     "onInputParseError" | TOmitted,
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -418,7 +442,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     "onOutputParseError" | TOmitted,
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -434,7 +459,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     "onError" | TOmitted,
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -450,7 +476,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     TOmitted | "onStart",
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -466,7 +493,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     TOmitted | "onSuccess",
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -482,7 +510,8 @@ export class ZodSafeFunction<
     TOutputSchema,
     TOmitted | "onComplete",
     TProcedureChainOutput,
-    TIsProcedure
+    TIsProcedure,
+    TInputType
   > {
     return new ZodSafeFunction({
       ...this.$internals,
@@ -685,20 +714,43 @@ export class ZodSafeFunction<
   ): TIsProcedure extends false
     ? TInputSchema extends z.ZodUndefined
       ? TNoInputHandlerFunc<TRet, TOutputSchema, TProcedureChainOutput>
-      : THandlerFunc<TInputSchema, TOutputSchema, TRet, TProcedureChainOutput>
+      : THandlerFunc<
+          TInputSchema,
+          TOutputSchema,
+          TRet,
+          TProcedureChainOutput,
+          TInputType
+        >
     : CompleteProcedure<
         TInputSchema,
-        THandlerFunc<TInputSchema, TOutputSchema, TRet, TProcedureChainOutput>
+        THandlerFunc<
+          TInputSchema,
+          TOutputSchema,
+          TRet,
+          TProcedureChainOutput,
+          "json"
+        >
       > {
     const timeoutStatus: TimeoutStatus = {
       isTimeout: false,
     }
 
+    type TArgs = TInputType extends "json" ? TInputSchema["_input"] : FormData
+
     const wrapper = async (
-      args: TInputSchema["_input"],
+      args: TArgs,
+      overrideArgs?: Partial<TInputSchema["_input"]>,
       $ctx?: TProcedureChainOutput,
       $overrideInputSchema?: z.ZodType
     ): Promise<any> => {
+      // if args is formData
+      if (args instanceof FormData) {
+        args = {
+          ...(Object.fromEntries(args.entries()) as any),
+          ...overrideArgs,
+        }
+      }
+
       try {
         await this.handleStart(args, timeoutStatus)
 
@@ -734,7 +786,7 @@ export class ZodSafeFunction<
 
         if (retryDelay >= 0) {
           await new Promise((r) => setTimeout(r, retryDelay))
-          return await wrapper(args, $ctx, $overrideInputSchema)
+          return await wrapper(args, overrideArgs, $ctx, $overrideInputSchema)
         }
 
         return await this.handleError(err)
@@ -743,15 +795,17 @@ export class ZodSafeFunction<
 
     // helper function to run a Promise race between the timeout and the wrapper
     const withTimeout = async (
-      args: TInputSchema["_input"],
+      args: TArgs,
+      overrideArgs?: Partial<TInputSchema["_input"]>,
       ctx?: TProcedureChainOutput,
       $overrideInputSchema?: z.ZodType
     ) => {
       const timeoutMs = this.$internals.timeout
-      if (!timeoutMs) return await wrapper(args, ctx, $overrideInputSchema)
+      if (!timeoutMs)
+        return await wrapper(args, overrideArgs, ctx, $overrideInputSchema)
 
       return await Promise.race([
-        wrapper(args, ctx, $overrideInputSchema),
+        wrapper(args, overrideArgs, ctx, $overrideInputSchema),
         this.getTimeoutErrorPromise(timeoutMs),
       ])
         .then((r) => r)
@@ -767,7 +821,8 @@ export class ZodSafeFunction<
         TInputSchema,
         TOutputSchema,
         TRet,
-        TProcedureChainOutput
+        TProcedureChainOutput,
+        "json"
       > = this.$internals.timeout ? withTimeout : wrapper
 
       return new CompleteProcedure({
@@ -807,7 +862,8 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
   z.ZodUndefined,
   TZodSafeFunctionDefaultOmitted,
   undefined,
-  TIsProcedure
+  TIsProcedure,
+  "json"
 > {
   return new ZodSafeFunction({
     inputSchema: parentProcedure?.$internals.inputSchema || z.undefined(),
@@ -848,7 +904,8 @@ export function createServerAction(): TZodSafeFunction<
   z.ZodUndefined,
   TZodSafeFunctionDefaultOmitted,
   undefined,
-  false
+  false,
+  "json"
 > {
   return new ZodSafeFunction({
     inputSchema: z.undefined(),

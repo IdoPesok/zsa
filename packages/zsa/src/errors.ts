@@ -8,7 +8,7 @@ const ERROR_CODES = {
 } as const
 
 /**
- *  A SAWError is an error that can be thrown by a server action.
+ *  A ZSAError is an error that can be thrown by a server action.
  */
 export class ZSAError extends Error {
   /** the Error object thrown */
@@ -27,7 +27,7 @@ export class ZSAError extends Error {
 }
 
 /**
- * A TSAWError is a SAWError that is thrown by a server action that has a type
+ * A TZSAError is a ZSAError that is thrown by a server action that has a type
  */
 export interface TZSAError extends Error {
   code: keyof typeof ERROR_CODES
