@@ -20,7 +20,7 @@ export default function TopNav({
       <div className="border-b border-muted flex flex-row gap-10 items-center w-full px-10 max-w-screen py-4">
         <h3 className="whitespace-nowrap font-bold flex gap-3 items-center">
           <Coffee className="size-5" />
-          server-actions-wrapper
+          zsa
         </h3>
         <div className="flex-1 flex-row gap-8 items-center px-4  text-sm font-medium">
           <Link
@@ -28,7 +28,7 @@ export default function TopNav({
             className={cn(
               "border-b-2 py-2 border-transparent hover:border-muted text-muted-foreground hover:text-foreground",
               !pathname.includes("/actions/") &&
-              "border-primary hover:border-primary text-foreground"
+                "border-primary hover:border-primary text-foreground"
             )}
           >
             Documentation

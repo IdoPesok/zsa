@@ -1,7 +1,7 @@
-import HelloWorld from "@/content/examples/querying-data/hello-world-action"
-import IncrementExample from "@/content/examples/querying-data/increment-example"
-import RandomNumberExampleDisplay from "@/content/examples/querying-data/random-number-example-display"
-import RandomNumberExampleRefetch from "@/content/examples/querying-data/random-number-example-refetch"
+import IncrementExample from "@/content/examples/introduction/increment-example"
+import HelloWorld from "@/content/examples/react-query/hello-world-action"
+import RandomNumberExampleDisplay from "@/content/examples/refetching-queries/random-number-example-display"
+import RandomNumberExampleRefetch from "@/content/examples/refetching-queries/random-number-example-refetch"
 import { memo } from "react"
 
 function ExampleComponent({ id }: { id: string }) {
