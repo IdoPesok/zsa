@@ -251,7 +251,7 @@ export class ZodSafeFunction<
     this.$internals = internals
   }
 
-  /** Check if the timeout has triggered, if so, throw a SAWError */
+  /** Check if the timeout has triggered, if so, throw a ZSAError */
   public checkTimeoutStatus(timeoutStatus: TimeoutStatus) {
     if (timeoutStatus.isTimeout) {
       throw new ZSAError(
@@ -747,7 +747,7 @@ export class ZodSafeFunction<
       if (args instanceof FormData) {
         args = {
           ...(Object.fromEntries(args.entries()) as any),
-          ...overrideArgs,
+          ...(overrideArgs || {}),
         }
       }
 
