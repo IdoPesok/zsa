@@ -13,7 +13,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "server-actions-wrapper",
+  title: "zsa",
   description: "Build scalable, lightweight server actions.",
 }
 

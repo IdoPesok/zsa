@@ -87,12 +87,17 @@ const authedProcedure = createServerActionProcedure() <|highlight|>
             throw new Error("User not authenticated")
         }
     })
-  
+
 const someFunction = authedProcedure.createServerAction()...
 ```
 
 <Info>
-Note that procedure callbacks will execute *before* their corresponding action callbacks, but will still be called when the action is running. For example, a `onComplete` callback attached to a procedure will execute after the *action* is complete, not when the procedure is complete. Also, if there is also a `onComplete` handler on the action, then the `onComplete` handler on the procedure will run before the `onComplete` handler for the action.
+  Note that procedure callbacks will execute *before* their corresponding action
+  callbacks, but will still be called when the action is running. For example, a
+  `onComplete` callback attached to a procedure will execute after the *action*
+  is complete, not when the procedure is complete. Also, if there is also a
+  `onComplete` handler on the action, then the `onComplete` handler on the
+  procedure will run before the `onComplete` handler for the action.
 </Info>
 
 ## Callback arguments

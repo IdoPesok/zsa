@@ -9,9 +9,7 @@ import { incrementNumberAction } from "./actions"
 export default function IncrementExample() {
   const [counter, setCounter] = useState(0)
 
-  const { isPending, execute, setOptimistic, data } = useServerAction(
-    incrementNumberAction
-  )
+  const { isPending, execute, data } = useServerAction(incrementNumberAction)
 
   return (
     <Card className="not-prose">
@@ -21,19 +19,18 @@ export default function IncrementExample() {
       <CardContent className="flex flex-col gap-4">
         <Button
           onClick={async () => {
-            setOptimistic(10)
             const [data, err] = await execute({
               number: counter,
             })
-
-            setCounter((prev) => prev + 1)
+            if (!err) {
+              setCounter(data)
+            }
           }}
         >
           Invoke action
         </Button>
         <p>Count:</p>
-        <div>{isPending && "saving..."}</div>
-        <div>{data}</div>
+        <div>{isPending ? "saving..." : data}</div>
       </CardContent>
     </Card>
   )

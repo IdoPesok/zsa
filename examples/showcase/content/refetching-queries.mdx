@@ -1,0 +1,171 @@
+---
+title: "Refetching Queries"
+group: "Client Side Querying"
+groupOrder: 1
+---
+
+# Refetching queries
+
+When using server actions to query data, you may need to explicitly refetch that data when it becomes stale. This can be achieved using the [React Query](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys) `useQueryClient` hook.
+
+<Info>
+  For more insight on `queryKey`s and `useQueryClient`, we recommend looking
+  towards the [React Query
+  Docs](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)
+</Info>
+
+## Query Key Factory
+
+In order to maintain typesafety while refetching data, we recommend placing a `QueryKeyFactory` in your `@/lib/hooks/server-actions-hooks.ts`. Here is an example
+
+```typescript:lib/hooks/server-action-hooks.ts
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
+import {
+  createServerActionsKeyFactory,
+  setupServerActionHooks,
+} from "zsa-react-query"
+
+export const QueryKeyFactory = createServerActionsKeyFactory({ <|highlight|>
+  getPosts: () => ["getPosts"],  <|highlight|>
+  getFriends: () => ["getFriends"],  <|highlight|>
+  getPostsAndFriends: () => ["getPosts", "getFriends"],  <|highlight|>
+  somethingElse: (id: string) => ["somethingElse", id],  <|highlight|>
+  getRandomNumber: () => ["getRandomNumber"], <|highlight|>
+})  <|highlight|>
+
+const {
+  useServerActionQuery,
+  useServerActionMutation,
+  useServerActionInfiniteQuery,
+} = setupServerActionHooks({
+  hooks: {
+    useQuery: useQuery,
+    useMutation: useMutation,
+    useInfiniteQuery: useInfiniteQuery,
+  },
+  queryKeyFactory: QueryKeyFactory, <|highlight|>
+})
+
+export {
+  useServerActionInfiniteQuery,
+  useServerActionMutation,
+  useServerActionQuery,
+}
+```
+
+By doing this, your `queryKey`s in all your `zsa-react-query` hooks will now be typesafe.
+
+<Note>
+  [Here is a great blog post](https://tkdodo.eu/blog/effective-react-query-keys)
+  on the value of Query Key Factories in React Query.
+</Note>
+
+Next, we will define a server action that fetches the data. In this example, we'll create an action that simply returns a random number:
+
+```typescript:actions.ts
+"use server"
+
+import { createServerAction } from "zsa"
+import z from "zod"
+
+export const getRandomNumber = createServerAction()
+  .input(
+    z
+      .object({
+        min: z.number(),
+        max: z.number(),
+      })
+  )
+  .handler(async ({ input, ctx }) => {
+    await new Promise((r) => setTimeout(r, 500))
+    return {
+      number: Math.floor(Math.random() * (input.max - input.min)) + input.min,
+    }
+  })
+```
+
+This action takes a `min` and `max` value as input, validates that `min` is less than `max`, and returns a random number between those values after a simulated .5-second delay.
+
+Next, use the `useServerActionQuery` hook to call the action in a client component:
+
+```typescript:random-number-display.tsx
+"use client"
+
+import { useServerActionQuery } from "@/lib/hooks/server-action-hooks"
+import { getRandomNumber } from "./actions"
+
+export default function RandomNumberDisplay() {
+  const { isLoading, isRefetching, isSuccess, data } = useServerActionQuery(getRandomNumber, {
+    input: {
+      min: 0,
+      max: 100,
+    },
+    queryKey: ['getRandomNumber'], //this is now typesafe due to our QueryKeyFactory <|highlight|>
+  })
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Random number</CardTitle>
+        <CardDescription>
+          This fetches a random number upon mounting
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p>Random number:</p>
+        {isSuccess && (  <|highlight|>
+          <>{JSON.stringify(data.number)}</>  <|highlight|>
+        )}  <|highlight|>
+        {isLoading ? " loading..." : ""}  <|highlight|>
+        {isRefetching ? " refetching..." : ""}  <|highlight|>
+
+      </CardContent>
+    </Card>
+  )
+}
+
+```
+
+The `useServerActionQuery` hook is called with the `getRandomNumber` action and an options object containing the `input` values and a `queryKey`. The component displays the random number returned by the action.
+
+## Refetching example
+
+To manually refetch the data, use the `useQueryClient` hook in another component:
+
+```typescript:random-number-refetch.tsx
+"use client"
+import { QueryKeyFactory } from "@/lib/hooks/server-action-hooks"
+import { useQueryClient } from "@tanstack/react-query"
+
+export default function RandomNumberRefetch() {
+  const queryClient = useQueryClient()  <|highlight|>
+
+  return (
+    <Card className="p-4 w-full ">
+      <Button
+        onClick={() => {
+          queryClient.refetchQueries({  <|highlight|>
+            queryKey: QueryKeyFactory.getRandomNumber(), //return the same query key as defined in our factory <|highlight|>
+          })  <|highlight|>
+        }}
+        className="w-full"
+      >
+        refetch
+      </Button>
+    </Card>
+  )
+}
+
+```
+
+This component renders a button that, when clicked, calls the `refetch` function with the same `queryKey` used in the `RandomNumberDisplay` component. This will cause the server action to be re-executed and the data to be refreshed.
+
+<ExampleComponent id="random-number-example-display" />
+
+Refetch Button:
+
+<ExampleComponent id="random-number-example-refetch" />
+
+By using the `useQueryClient` hook in conjunction with a `QueryKeyFactory`, you can easily refetch data when needed in your application.
+
+For more info on how `queryKey`s work, check out the [React Query Docs](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)
