@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { Clapperboard, Coffee, GithubIcon, Network, TwitterIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import SideNavDrawer from "./side-nav-drawer"
 
 export default function TopNav({
   docPosts,
@@ -35,17 +36,19 @@ export default function TopNav({
           </Link>
         </div>
         <div className="flex justify-end gap-2 items-center">
+          <SideNavDrawer docPosts={docPosts} />
           <Link
             href="https://github.com/IdoPesok/zsa"
             passHref
             target="_blank"
             rel="noopener"
+            className="hidden sm:flex"
           >
             <Button size={"icon"} variant={"outline"}>
               <GithubIcon className="h-4 w-4" />
             </Button>
           </Link>
-          <ThemeToggle />
+          <ThemeToggle className="hidden sm:flex" />
         </div>
       </div>
     </div>

@@ -39,8 +39,10 @@ const SideNavLink = ({
 
 export default function SideNav({
   docPosts,
+  className
 }: {
-  docPosts: ReturnType<typeof getDocPosts>
+  docPosts: ReturnType<typeof getDocPosts>,
+  className?: string
 }) {
   const pathname = usePathname()
   let lastSeenGroup = ""
@@ -68,7 +70,7 @@ export default function SideNav({
 
   return (
     <div
-      className="flex-none w-[200px] hidden fixed top-[122px] z-10 lg:flex flex-col gap-2 -ml-3 pl-3 overflow-y-auto"
+      className={cn("flex-none w-[200px] hidden fixed top-[122px] z-10 lg:flex flex-col gap-2 -ml-3 pl-3 overflow-y-auto", className)}
       style={{
         maxHeight: "calc(100vh - 180px)",
       }}
