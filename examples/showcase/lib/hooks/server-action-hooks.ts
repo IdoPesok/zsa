@@ -2,7 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
 import {
   createServerActionsKeyFactory,
   setupServerActionHooks,
-} from "../../../../packages/zsa-react-query/dist/index.cjs"
+} from "zsa-react-query"
 
 export const QueryKeyFactory = createServerActionsKeyFactory({
   getUser: () => ["getUser"],
