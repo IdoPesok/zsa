@@ -70,7 +70,7 @@ export function DocPageOutline({
   if (!headingElements || !headingElements.length) return null
 
   return (
-    <div className="flex-col gap-4 hidden xl:flex justify-start items-start fixed w-[220px] overflow-x-hidden truncate">
+    <div className="flex-col gap-4 hidden xl:flex justify-start items-start fixed w-[220px] overflow-x-hidden truncate mt-24">
       {[...headingElements].map((element) => {
         const id = element.id
         return (

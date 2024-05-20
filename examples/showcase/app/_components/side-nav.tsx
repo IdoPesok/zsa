@@ -21,13 +21,13 @@ const SideNavLink = ({
   const pathname = usePathname()
 
   return (
-    <Link href={href}>
+    <Link href={href} >
       <Button
         variant={"ghost"}
         className={cn(
           "w-full justify-start gap-3 -ml-3 text-muted-foreground transition-colors duration-200",
           isActive(pathname, href) &&
-            "bg-foreground text-background hover:bg-foreground/80 hover:text-background"
+          "bg-foreground text-background hover:bg-foreground/80 hover:text-background"
         )}
         size={"sm"}
       >
@@ -68,7 +68,7 @@ export default function SideNav({
 
   return (
     <div
-      className="flex-none w-[200px] hidden fixed top-[122px] z-10 md:flex lg:flex flex-col gap-2 -ml-3 pl-3 overflow-y-auto"
+      className="flex-none w-[200px] hidden fixed top-[122px] z-10 lg:flex flex-col gap-2 -ml-3 pl-3 overflow-y-auto"
       style={{
         maxHeight: "calc(100vh - 180px)",
       }}
