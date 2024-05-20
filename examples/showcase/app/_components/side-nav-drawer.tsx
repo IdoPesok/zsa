@@ -34,7 +34,7 @@ export default function SideNavDrawer({
             <DrawerContent >
                 <div className="mx-auto m-10 w-full max-w-sm">
 
-                    <div className="p-4 pb-0" onClick={() => setOpen(false)}>
+                    <div className="px-8 pb-0" onClick={() => setOpen(false)}>
                         <SideNav docPosts={docPosts} className="relative contents py-20" />
                     </div>
                 </div>
