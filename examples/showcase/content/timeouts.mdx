@@ -6,7 +6,7 @@ groupOrder: 5
 
 # Timeouts
 
-When you need to limit the execution time of a server action, you can configure a `timeout` (in milliseconds). If the action runs longer than the specified timeout, it will throw a `SAWError`.
+When you need to limit the execution time of a server action, you can configure a `timeout` (in milliseconds). If the action runs longer than the specified timeout, it will throw a `ZSAError`.
 
 ## Timeouts on Actions
 
@@ -28,7 +28,7 @@ export const helloWorldAction = createServerAction()
     })
 ```
 
-In this example, if the `helloWorldAction` takes more than 1 second to complete, it will throw a `SAWError`.
+In this example, if the `helloWorldAction` takes more than 1 second to complete, it will throw a `ZSAError`.
 
 ## Timeouts on Procedures
 

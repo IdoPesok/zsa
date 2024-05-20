@@ -1,3 +1,4 @@
+import FormDataExample from "@/content/examples/form-data/form-data-example"
 import IncrementExample from "@/content/examples/introduction/increment-example"
 import HelloWorld from "@/content/examples/react-query/hello-world-action"
 import RandomNumberExampleDisplay from "@/content/examples/refetching-queries/random-number-example-display"
@@ -14,6 +15,8 @@ function ExampleComponent({ id }: { id: string }) {
       return <HelloWorld />
     case "increment-example":
       return <IncrementExample />
+    case "form-data":
+      return <FormDataExample />
     default:
       return <div className="p-4 border rounded">{id}</div>
   }

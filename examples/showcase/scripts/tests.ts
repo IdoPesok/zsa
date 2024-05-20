@@ -1,45 +1,40 @@
 import { z } from "zod"
-import { createServerAction, createServerActionProcedure } from "zsa"
+import { createServerActionProcedure } from "zsa"
 
 const main = async () => {
-  const isAuth = createServerActionProcedure().handler(async () => {
-    return {
-      user: {
-        id: 123,
-      },
-    }
-  })
-
-  const ownsPost = createServerActionProcedure(isAuth)
+  const procedure = createServerActionProcedure()
     .input(z.object({ postId: z.string() }))
-    .handler(async ({ ctx, input }) => {
+    .handler(async ({ input }) => {
       return {
-        user: ctx.user,
-        post: {
-          id: input.postId,
+        user: {
+          id: 123,
+          name: input.postId,
         },
       }
     })
 
-  const updatePostTitle = ownsPost
+  const myAction = procedure
     .createServerAction()
-    .handler(async ({ ctx, input }) => {
-      return ctx
+    .input(z.object({ name: z.string(), email: z.string() }), {
+      type: "formData",
+    })
+    .handler(async ({ input, ctx }) => {
+      return {
+        user: {
+          id: 123,
+          name: input.name,
+        },
+      }
     })
 
-  const test = createServerAction().handler(async ({ input }) => {
-    return {
-      user: {
-        id: 123,
-      },
-    }
+  const formData = new FormData()
+
+  formData.append("name", "test")
+  formData.append("email", "test@example.com")
+
+  await myAction(formData, {
+    postId: "hello world",
   })
-
-  console.log(
-    await updatePostTitle({
-      postId: "124124124",
-    })
-  )
 }
 
 main()
