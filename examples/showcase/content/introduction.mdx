@@ -104,18 +104,22 @@ export default function IncrementExample() {
             <CardContent className="flex flex-col gap-4">
                 <Button
                 onClick={async () => {
-                    const [data, err] = await execute({
-                    number: counter,
-                    })
-                    if (!err) {
-                    setCounter(data);
+                    const [data, err] = await execute({ <|highlight|>
+                        number: counter, <|highlight|>
+                    }) <|highlight|>
+
+                    if (err) {
+                        // handle error
+                        return
                     }
+
+                    setCounter(data);
                 }}
                 >
                 Invoke action
                 </Button>
                 <p>Count:</p>
-                <div>{isPending ? "saving..." : data}</div>
+                <div>{isPending ? "saving..." : data}</div> <|highlight|>
             </CardContent>
         </Card>
     );

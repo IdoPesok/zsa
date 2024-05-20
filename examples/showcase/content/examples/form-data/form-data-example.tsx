@@ -9,7 +9,7 @@ export default function FormDataExample() {
   return (
     <Card className="not-prose">
       <CardHeader>
-        <CardTitle>Increment Number</CardTitle>
+        <CardTitle>Form Example</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <form action={myFormDataAction} className="flex flex-col gap-4">

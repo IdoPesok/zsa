@@ -22,9 +22,13 @@ export default function IncrementExample() {
             const [data, err] = await execute({
               number: counter,
             })
-            if (!err) {
-              setCounter(data)
+
+            if (err) {
+              alert("got error : (")
+              return
             }
+
+            setCounter(data)
           }}
         >
           Invoke action

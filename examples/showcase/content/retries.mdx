@@ -23,7 +23,7 @@ export const retryExample = createServerAction()
         maxAttempts: 3 <|highlight|>
     }) <|highlight|>
     .handler(async () => {
-        //throw an error 50% of the time
+        // throw an error 50% of the time
         if (Math.random() > 0.5) {
             throw new Error("Random error")
         }

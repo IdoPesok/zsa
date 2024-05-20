@@ -8,6 +8,10 @@ groupOrder: 5
 
 When you need to limit the execution time of a server action, you can configure a `timeout` (in milliseconds). If the action runs longer than the specified timeout, it will throw a `ZSAError`.
 
+<Warning>
+Timeout does not use Signals, meaning your action may keep running in the background after the allowed time. A timeout will guarantee that an error will be returned after the specified duration.
+</Warning>
+
 ## Timeouts on Actions
 
 To set a timeout on an individual action, use the `timeout` method:
