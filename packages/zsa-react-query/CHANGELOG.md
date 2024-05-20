@@ -1,5 +1,14 @@
 # server-actions-wrapper
 
+## 0.0.2
+
+### Patch Changes
+
+- b142dd6: Added README
+- Updated dependencies [b592762]
+- Updated dependencies [b142dd6]
+  - zsa@0.1.0
+
 ## 0.0.1
 
 ### Patch Changes

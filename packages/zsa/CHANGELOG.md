@@ -1,5 +1,15 @@
 # server-actions-wrapper
 
+## 0.1.0
+
+### Minor Changes
+
+- b592762: Added form data type to input
+
+### Patch Changes
+
+- b142dd6: Added README
+
 ## 0.0.1
 
 ### Patch Changes
