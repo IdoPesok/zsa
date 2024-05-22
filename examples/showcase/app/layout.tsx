@@ -13,7 +13,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Zod Server Actions",
+  title: "ZSA",
   description: "Build scalable, lightweight server actions.",
 }
 
@@ -39,11 +39,12 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <TooltipProvider delayDuration={0}>
-              <div className="flex flex-col gap-6">
+
+              <div className="flex flex-col gap-6 overflow-hidden">
                 <TopNav docPosts={docPosts} />
-                <div className="flex flex-row gap-10 mx-10 px-4 max-w-screen-xl w-full pt-2 pb-4">
+                <div className="flex flex-row gap-10 mx-2 sm:mx-10 px-4 max-w-screen-xl w-full pt-2 pb-4">
                   <SideNav docPosts={docPosts} />
-                  <div className="flex-1 overflow-hidden max-w-full lg:pl-[270px] md:pl-[270px] xl:flex flex-row gap-10 justify-end">
+                  <div className="flex-1 overflow-hidden max-w-full lg:pl-[270px] xl:flex flex-row gap-10 justify-end">
                     {children}
                   </div>
                 </div>

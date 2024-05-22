@@ -108,7 +108,7 @@ export default function MarkdownContainer(props: MDXRemoteProps) {
   }
 
   return (
-    <div className="prose break-words leading-7 dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 pb-10">
+    <div className="prose break-words leading-7 dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 pb-10 mt-24">
       <MDXRemote {...props} components={components} />
     </div>
   )
