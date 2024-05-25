@@ -307,7 +307,8 @@ export class ZodSafeFunction<
    */
   public async getProcedureChainOutput(
     args: TInputSchema["_input"],
-    timeoutStatus: TimeoutStatus
+    timeoutStatus: TimeoutStatus,
+    request: Request | undefined
   ): Promise<TProcedureChainOutput> {
     let accData = undefined
 
@@ -317,6 +318,7 @@ export class ZodSafeFunction<
       const procedureHandler = this.$internals.procedureHandlerChain[i]!
       const [data, err] = await procedureHandler(args, undefined, {
         ctx: accData,
+        request,
       })
       if (err) {
         throw err
@@ -774,7 +776,12 @@ export class ZodSafeFunction<
 
         // run the procedure chain to get the context
         const ctx =
-          opts?.ctx || (await this.getProcedureChainOutput(args, timeoutStatus))
+          opts?.ctx ||
+          (await this.getProcedureChainOutput(
+            args,
+            timeoutStatus,
+            opts?.request
+          ))
 
         // parse the input data
         const input = await this.parseInputData(
