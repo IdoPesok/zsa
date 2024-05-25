@@ -12,6 +12,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
+      isTransitionPending: boolean
     }
   | {
       // pending state (optimistic)
@@ -22,6 +23,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
+      isTransitionPending: boolean
     }
   | {
       // idle state
@@ -32,6 +34,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "idle"
+      isTransitionPending: boolean
     }
   | {
       // error state
@@ -42,6 +45,7 @@ export type TServerActionResult<
       error: unknown
       isSuccess: false
       status: "error"
+      isTransitionPending: boolean
     }
   | {
       isPending: false
@@ -51,4 +55,5 @@ export type TServerActionResult<
       error: undefined
       isSuccess: true
       status: "success"
+      isTransitionPending: boolean
     }
