@@ -7,7 +7,7 @@ import {
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
-import { TServerActionResult } from "./results.js"
+import { TServerActionResult } from "./results"
 
 const getEmptyResult = () => ({
   isError: false,

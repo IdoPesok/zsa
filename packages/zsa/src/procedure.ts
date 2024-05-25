@@ -9,6 +9,7 @@ import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   TDataOrError,
+  THandlerOpts,
   TZodSafeFunction,
   TZodSafeFunctionDefaultOmitted,
   ZodSafeFunction,
@@ -147,15 +148,13 @@ export const chainServerActionProcedures = <
 
   const newLastHandler = async (
     input?: any,
-    ctx?: any,
-    $overrideInputSchema?: z.ZodType
+    overrideArgs?: undefined,
+    opts?: THandlerOpts<any>
   ) =>
-    await second.$internals.lastHandler(
-      input,
-      ctx,
-      // now we need to override the input schema
-      $overrideInputSchema || inputSchema
-    )
+    await second.$internals.lastHandler(input, overrideArgs, {
+      ctx: opts?.ctx,
+      overrideInputSchema: opts?.overrideInputSchema || inputSchema,
+    })
 
   return new CompleteProcedure({
     inputSchema,

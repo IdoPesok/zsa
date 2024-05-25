@@ -11,7 +11,7 @@
     "format:check": "turbo run format:check",
     "postinstall": "manypkg check",
     "publish-packages": "npm run build && changeset version && changeset publish",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next && rm -rf packages/*/dist"
   },
   "engines": {
     "node": ">=18"

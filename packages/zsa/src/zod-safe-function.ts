@@ -46,6 +46,19 @@ export interface RetryConfig {
   delay?: number | ((currentAttempt: number, err: ZSAError) => number)
 }
 
+export interface THandlerOpts<TProcedureChainOutput extends any> {
+  /** The context of the handler */
+  ctx?: TProcedureChainOutput
+  /** Override the input schema */
+  overrideInputSchema?: z.ZodType
+  /** return the input schema */
+  returnInputSchema?: boolean
+  /** return the output schema */
+  returnOutputSchema?: boolean
+  /** an associated request object */
+  request?: Request
+}
+
 /** A function type for a handler that does not have an input */
 export interface TNoInputHandlerFunc<
   TRet extends any,
@@ -55,10 +68,7 @@ export interface TNoInputHandlerFunc<
   (
     placeholder?: undefined,
     $overrideArgs?: undefined,
-    // very janky but basically in the `getProcedureChainOutput` function
-    // we pass the context second
-    $ctx?: TProcedureChainOutput,
-    $overrideInputSchema?: undefined
+    $opts?: THandlerOpts<TProcedureChainOutput>
   ): TDataOrError<
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
@@ -77,10 +87,8 @@ export interface THandlerFunc<
     args: TInputType extends "json" ? TInputSchema["_input"] : FormData,
     /** Override the args */
     $overrideArgs?: Partial<TInputSchema["_input"]>,
-    /** The context of the handler */
-    $ctx?: TProcedureChainOutput,
-    /** An optional override input schema */
-    $overrideInputSchema?: z.ZodType
+    /** Options for the handler */
+    $opts?: THandlerOpts<TProcedureChainOutput>
   ): TDataOrError<
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
@@ -114,14 +122,12 @@ export type TAnyZodSafeFunctionHandler =
   | ((
       input: any,
       overrideArgs?: any,
-      ctx?: any,
-      $overrideInputSchema?: undefined
+      opts?: THandlerOpts<any>
     ) => TDataOrError<any>)
   | ((
       placeholder?: undefined,
       overrideArgs?: undefined,
-      ctx?: any,
-      $overrideInputSchema?: z.ZodType
+      opts?: THandlerOpts<any>
     ) => TDataOrError<any>)
 
 /** A helper type to hold any zod safe function */
@@ -309,7 +315,9 @@ export class ZodSafeFunction<
       this.checkTimeoutStatus(timeoutStatus)
 
       const procedureHandler = this.$internals.procedureHandlerChain[i]!
-      const [data, err] = await procedureHandler(args, undefined, accData)
+      const [data, err] = await procedureHandler(args, undefined, {
+        ctx: accData,
+      })
       if (err) {
         throw err
       }
@@ -710,6 +718,8 @@ export class ZodSafeFunction<
       input: TInputSchema["_output"]
       /** the final context of the action */
       ctx: TProcedureChainOutput
+      /** a request object if the action is run from an Open API route `createOpenApiServerActionRouter` */
+      request?: Request
     }) => TRet
   ): TIsProcedure extends false
     ? TInputSchema extends z.ZodUndefined
@@ -740,8 +750,7 @@ export class ZodSafeFunction<
     const wrapper = async (
       args: TArgs,
       overrideArgs?: Partial<TInputSchema["_input"]>,
-      $ctx?: TProcedureChainOutput,
-      $overrideInputSchema?: z.ZodType
+      opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
       // if args is formData
       if (args instanceof FormData) {
@@ -749,6 +758,12 @@ export class ZodSafeFunction<
           ...(Object.fromEntries(args.entries()) as any),
           ...(overrideArgs || {}),
         }
+      }
+
+      if (opts?.returnInputSchema) {
+        return this.$internals.inputSchema
+      } else if (opts?.returnOutputSchema) {
+        return this.$internals.outputSchema
       }
 
       try {
@@ -759,13 +774,13 @@ export class ZodSafeFunction<
 
         // run the procedure chain to get the context
         const ctx =
-          $ctx || (await this.getProcedureChainOutput(args, timeoutStatus))
+          opts?.ctx || (await this.getProcedureChainOutput(args, timeoutStatus))
 
         // parse the input data
         const input = await this.parseInputData(
           args,
           timeoutStatus,
-          $overrideInputSchema
+          opts?.overrideInputSchema
         )
 
         // timeout checkpoint
@@ -774,6 +789,7 @@ export class ZodSafeFunction<
         const data = await fn({
           input,
           ctx,
+          request: opts?.request,
         })
 
         const parsed = await this.parseOutputData(data, timeoutStatus)
@@ -786,7 +802,7 @@ export class ZodSafeFunction<
 
         if (retryDelay >= 0) {
           await new Promise((r) => setTimeout(r, retryDelay))
-          return await wrapper(args, overrideArgs, $ctx, $overrideInputSchema)
+          return await wrapper(args, overrideArgs, opts)
         }
 
         return await this.handleError(err)
@@ -797,15 +813,13 @@ export class ZodSafeFunction<
     const withTimeout = async (
       args: TArgs,
       overrideArgs?: Partial<TInputSchema["_input"]>,
-      ctx?: TProcedureChainOutput,
-      $overrideInputSchema?: z.ZodType
+      opts?: THandlerOpts<TProcedureChainOutput>
     ) => {
       const timeoutMs = this.$internals.timeout
-      if (!timeoutMs)
-        return await wrapper(args, overrideArgs, ctx, $overrideInputSchema)
+      if (!timeoutMs) return await wrapper(args, overrideArgs, opts)
 
       return await Promise.race([
-        wrapper(args, overrideArgs, ctx, $overrideInputSchema),
+        wrapper(args, overrideArgs, opts),
         this.getTimeoutErrorPromise(timeoutMs),
       ])
         .then((r) => r)
