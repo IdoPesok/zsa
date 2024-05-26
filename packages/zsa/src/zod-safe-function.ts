@@ -657,7 +657,10 @@ export class ZodSafeFunction<
     return [
       null,
       {
-        data: JSON.stringify(customError.data),
+        data:
+          typeof customError.data === "string"
+            ? customError.data
+            : JSON.stringify(customError.data),
         name: customError.name,
         stack: JSON.stringify(customError.stack),
         message: JSON.stringify(customError.message),
