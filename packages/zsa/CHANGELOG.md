@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.1
+
+### Patch Changes
+
+- 45955d9: Fix string errors to not be stringified
+
 ## 0.1.0
 
 ### Minor Changes
