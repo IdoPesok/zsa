@@ -308,11 +308,9 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
   }
 }
 
-export function setupApiHandler<
-  THandler extends TAnyZodSafeFunctionHandler,
->(
+export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
   path: string,
-  action: THandler,
+  action: THandler
 ) {
   const parseRequest = async (
     request: NextRequest
@@ -342,7 +340,6 @@ export function setupApiHandler<
     }
 
     const params: Record<string, string> = {}
-
 
     // parse the params from the path
     if (path.includes("{")) {
