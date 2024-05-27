@@ -22,10 +22,7 @@ export interface ApiRouteHandler {
   (request: NextRequest): Promise<Response>
 }
 
-export interface OpenApiAction<
-  TSegment extends string,
-  THandler extends TAnyZodSafeFunctionHandler,
-> {
+export interface OpenApiAction<THandler extends TAnyZodSafeFunctionHandler> {
   enabled?: boolean
   method: OpenApiMethod
   path: string
@@ -44,22 +41,13 @@ export interface OpenApiAction<
     string,
     OpenAPIV3.HeaderObject | OpenAPIV3.ReferenceObject
   >
-  action: TAnyZodSafeFunctionHandler
-}
-
-const createPath = (pathPrefix: string | undefined, path: string) => {
-  const tmp = pathPrefix ? `${pathPrefix}${path}` : path
-  if (tmp.endsWith("/") && tmp !== "/") {
-    return tmp.slice(0, -1)
-  }
-
-  return tmp
+  action: THandler
 }
 
 class OpenApiServerActionRouter {
   $INTERNALS: {
     pathPrefix?: string | undefined
-    actions: OpenApiAction<any, any>[]
+    actions: OpenApiAction<any>[]
   }
 
   constructor(opts?: { pathPrefix?: string }) {
@@ -79,83 +67,102 @@ class OpenApiServerActionRouter {
     }
   }
 
-  get<TSegment extends string, THandler extends TAnyZodSafeFunctionHandler>(
+  get<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<TSegment, THandler>, "path" | "method" | "action">
+    args?: Omit<OpenApiAction<THandler>, "path" | "method" | "action">
   ) {
     this.$INTERNALS.actions.push({
       ...args,
       method: "GET",
-      path: createPath(this.$INTERNALS.pathPrefix, path),
+      path: this.$createPath(path, "GET"),
       action,
     })
     return this
   }
 
-  post<TSegment extends string, THandler extends TAnyZodSafeFunctionHandler>(
+  post<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<TSegment, THandler>, "path" | "action" | "method">
+    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
   ) {
     this.$INTERNALS.actions.push({
       ...args,
       method: "POST",
-      path: createPath(this.$INTERNALS.pathPrefix, path),
+      path: this.$createPath(path, "POST"),
       action,
     })
     return this
   }
 
-  delete<TSegment extends string, THandler extends TAnyZodSafeFunctionHandler>(
+  delete<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<TSegment, THandler>, "path" | "action" | "method">
+    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
   ) {
     this.$INTERNALS.actions.push({
       ...args,
       method: "DELETE",
-      path: createPath(this.$INTERNALS.pathPrefix, path),
+      path: this.$createPath(path, "DELETE"),
       action,
     })
     return this
   }
 
-  put<TSegment extends string, THandler extends TAnyZodSafeFunctionHandler>(
+  put<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<TSegment, THandler>, "path" | "action" | "method">
+    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
   ) {
     this.$INTERNALS.actions.push({
       ...args,
       method: "PUT",
-      path: createPath(this.$INTERNALS.pathPrefix, path),
+      path: this.$createPath(path, "PUT"),
       action,
     })
     return this
   }
 
-  patch<TSegment extends string, THandler extends TAnyZodSafeFunctionHandler>(
+  patch<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<TSegment, THandler>, "path" | "action" | "method">
+    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
   ) {
     this.$INTERNALS.actions.push({
       ...args,
       method: "PATCH",
-      path: createPath(this.$INTERNALS.pathPrefix, path),
+      path: this.$createPath(path, "PATCH"),
       action,
     })
     return this
+  }
+
+  $createPath = (path: string, method: OpenApiMethod) => {
+    const tmp = this.$INTERNALS.pathPrefix
+      ? `${this.$INTERNALS.pathPrefix}${path}`
+      : path
+    if (tmp.endsWith("/") && tmp !== "/") {
+      return tmp.slice(0, -1)
+    }
+
+    for (const action of this.$INTERNALS.actions) {
+      // regex replace all {param} with {param}
+      const tmpClean = tmp.replace(/\{[^}]+\}/g, "{param}") + method
+      const actionPathClean =
+        action.path.replace(/\{[^}]+\}/g, "{param}") + action.method
+
+      if (tmpClean === actionPathClean) {
+        throw new Error(`Duplicate path [${method}]: ${tmp} and ${action.path}`)
+      }
+    }
+
+    return tmp
   }
 }
 
 export type TOpenApiServerActionRouter = OpenApiServerActionRouter
 
-export const createOpenApiServerActionRouter = <
-  T extends string,
-  THandlers extends TAnyZodSafeFunctionHandler,
->(args?: {
+export const createOpenApiServerActionRouter = (args?: {
   pathPrefix?: `/${string}`
 }): OpenApiServerActionRouter => {
   return new OpenApiServerActionRouter(args)
