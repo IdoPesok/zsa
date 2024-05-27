@@ -69,7 +69,7 @@ const router = createOpenApiServerActionRouter({   <|highlight|>
         tags: ["replies"],
     })
 
-export const { GET, POST, PUT } = createRouteHandlers(router)
+export const { GET, POST, PUT } = createRouteHandlers(router) <|highlight|>
 ```
 
 Ensure that your `pathPrefix` matches the prefix to your `/[[...openapi]]/route.ts` path.
@@ -114,12 +114,10 @@ If you hit this endpoint, you should have access to your API documentation in OA
 Additionally, if you only want to expose a single server action as an endpoint, you can use `setupApiHandler`. This is good when you want to create adhoc route heandlers. For example:
 
 ```typescript:api/adhoc-example/route.ts
-"use server"
-
-import { setupApiHandler } from "zsa-openapi";
+import { setupApiHandler } from "zsa-openapi"; <|highlight|>
 import { getReply } from "./actions";
 
-export const { GET } = setupApiHandler("/posts/{postId}/replies/{replyId}", getReply)
+export const { GET } = setupApiHandler("/posts/{postId}/replies/{replyId}", getReply) <|highlight|>
 ```
 
 ## Authentication
