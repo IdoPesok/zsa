@@ -55,9 +55,35 @@ if (err) {
 }
 ```
 
+Call the server action from the client:
+
+```typescript
+"use client"
+
+import { incrementNumberAction } from "./actions";
+import { useServerAction } from "zsa-react";
+
+export default function IncrementExample() {
+    return (
+        // ...
+        <Button
+            onClick={async () => {
+                const [data, err] = await incrementNumberAction({ number: counter });
+                // ...
+            }}
+        >
+            Invoke action
+        </Button>
+        // ...
+    );
+}
+```
+
 Call the server action from the client using our hook:
 
 ```typescript
+"use client"
+
 import { incrementNumberAction } from "./actions";
 import { useServerAction } from "zsa-react";
 
