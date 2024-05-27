@@ -31,11 +31,8 @@ const updatePost = createServerAction()
 const createPost = updatePost
 const getPosts = createPost
 
-const router = createOpenApiServerActionRouter({
+export const router = createOpenApiServerActionRouter({
   pathPrefix: "/api",
-  defaults: {
-    tags: ["posts"],
-  },
 })
   .get("/", getPosts, {
     tags: ["posts"],
@@ -43,20 +40,12 @@ const router = createOpenApiServerActionRouter({
   .post("/posts", createPost, {
     tags: ["posts"],
   })
-
-const routerTwo = createOpenApiServerActionRouter({
-  pathPrefix: "/hello/123412",
-  defaults: {
+  .put("/posts/{postId}", updatePost, {
     tags: ["posts"],
-  },
-})
-  .put("/posts/{postId}", updatePost, {})
+  })
   .get("/posts/{postId}/replies/{replyId}", getReply, {
+    tags: ["replies"],
     protect: true,
   })
-
-const merged = createOpenApiServerActionRouter({
-  extend: [router, routerTwo],
-})
 
 export const { GET, POST, PUT } = createRouteHandlers(router)
