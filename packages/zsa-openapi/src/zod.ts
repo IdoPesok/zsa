@@ -1,3 +1,15 @@
+/**
+ * ATTRIBUTION
+ *
+ * This helper functions are from the awesome library trpc-openapi.
+ *
+ * Github: https://github.com/jlalmes/trpc-openapi
+ * File: https://github.com/jlalmes/trpc-openapi/blob/master/src/utils/zod.ts
+ * Author: https://twitter.com/jlalmes
+ *
+ * If you are using tRPC, check it out!
+ */
+
 import { z } from "zod"
 
 export const instanceofZodType = (type: any): type is z.ZodTypeAny => {

@@ -1,3 +1,14 @@
+/**
+ * ATTRIBUTION
+ *
+ * This file is a modified version of functions from the awesome library trpc-openapi.
+ *
+ * Github: https://github.com/jlalmes/trpc-openapi
+ * Author: https://twitter.com/jlalmes
+ *
+ * If you are using tRPC, check it out!
+ */
+
 import { OpenAPIV3 } from "openapi-types"
 import { z } from "zod"
 import { ZSAError } from "zsa"

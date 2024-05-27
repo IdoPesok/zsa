@@ -6,6 +6,7 @@ import {
   TOnSuccessFn,
 } from "./callbacks"
 import { TZSAError, ZSAError } from "./errors"
+import { NextRequest } from "./next-request"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 
 /** The return type of a server action */
@@ -56,7 +57,7 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   /** return the output schema */
   returnOutputSchema?: boolean
   /** an associated request object */
-  request?: Request
+  request?: NextRequest
 }
 
 /** A function type for a handler that does not have an input */
@@ -308,7 +309,7 @@ export class ZodSafeFunction<
   public async getProcedureChainOutput(
     args: TInputSchema["_input"],
     timeoutStatus: TimeoutStatus,
-    request: Request | undefined
+    request: NextRequest | undefined
   ): Promise<TProcedureChainOutput> {
     let accData = undefined
 
@@ -721,7 +722,7 @@ export class ZodSafeFunction<
       /** the final context of the action */
       ctx: TProcedureChainOutput
       /** a request object if the action is run from an Open API route `createOpenApiServerActionRouter` */
-      request?: Request
+      request?: NextRequest
     }) => TRet
   ): TIsProcedure extends false
     ? TInputSchema extends z.ZodUndefined

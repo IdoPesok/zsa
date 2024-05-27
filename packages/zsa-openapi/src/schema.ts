@@ -1,3 +1,15 @@
+/**
+ * ATTRIBUTION
+ *
+ * This file is from the awesome library trpc-openapi.
+ *
+ * Github: https://github.com/jlalmes/trpc-openapi
+ * File: https://github.com/jlalmes/trpc-openapi/blob/master/src/generator/schema.ts
+ * Author: https://twitter.com/jlalmes
+ *
+ * If you are using tRPC, check it out!
+ */
+
 import { OpenAPIV3 } from "openapi-types"
 import { z } from "zod"
 import zodToJsonSchema from "zod-to-json-schema"
@@ -17,7 +29,6 @@ import {
 const zodSchemaToOpenApiSchemaObject = (
   zodSchema: z.ZodType
 ): OpenAPIV3.SchemaObject => {
-  // FIXME: https://github.com/StefanTerdell/zod-to-json-schema/issues/35
   return zodToJsonSchema(zodSchema, {
     target: "openApi3",
     $refStrategy: "none",

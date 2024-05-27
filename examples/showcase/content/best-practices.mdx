@@ -1,7 +1,7 @@
 ---
 title: "Best Practices"
-group: "Getting Started"
-groupOrder: 9
+group: "Goodies"
+groupOrder: 1
 ---
 
 # Best practices
@@ -26,8 +26,12 @@ In order to ensure that `zsa` is used to its full potential, we've collected a f
      const [, err] = await action();
 
      if (err) {
-       toast(err.data);
+      // handle error
+      toast(err.data);
+      return;
      }
+
+     // ...
      ```
 
 3. **Creating actions from procedures**:

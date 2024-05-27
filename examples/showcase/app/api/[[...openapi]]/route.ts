@@ -20,17 +20,17 @@ const getReply = createServerAction()
   })
 
 const updatePost = createServerAction()
-  .input(z.object({ test: z.string() }))
+  .input(z.object({ postId: z.string() }))
   .handler(async ({ input }) => {
     // Sleep for .5 seconds
     await new Promise((resolve) => setTimeout(resolve, 1000))
     // Update the message
-    return input.test
+    return input.postId
   })
 
 const createPost = updatePost
 
-const router = createOpenApiServerActionRouter({
+export const router = createOpenApiServerActionRouter({
   pathPrefix: "/api",
 })
   .get("/", createPost, {
@@ -44,6 +44,7 @@ const router = createOpenApiServerActionRouter({
   })
   .post("/posts/{postId}/replies/{replyId}", getReply, {
     tags: ["replies"],
+    protect: true,
   })
 
 export const { GET, POST, PUT } = createRouteHandlers(router)

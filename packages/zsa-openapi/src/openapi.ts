@@ -22,6 +22,9 @@ export interface ApiRouteHandler {
   (request: NextRequest): Promise<Response>
 }
 
+/**
+ * Store OpenAPI information alongside a server action
+ */
 export interface OpenApiAction<THandler extends TAnyZodSafeFunctionHandler> {
   enabled?: boolean
   method: OpenApiMethod
@@ -42,6 +45,47 @@ export interface OpenApiAction<THandler extends TAnyZodSafeFunctionHandler> {
     OpenAPIV3.HeaderObject | OpenAPIV3.ReferenceObject
   >
   action: THandler
+}
+
+/**
+ *  Helper function to create a path safely
+ */
+const createPath = (args: {
+  path: string
+  method: OpenApiMethod
+  pathPrefix?: string | undefined
+  actions: OpenApiAction<any>[]
+}) => {
+  const { path, method, pathPrefix, actions } = args
+
+  const tmp = pathPrefix ? `${pathPrefix}${path}` : path
+  if (tmp.endsWith("/") && tmp !== "/") {
+    return tmp.slice(0, -1)
+  }
+
+  if (tmp.includes(" ")) {
+    throw new Error(`Path [${method}]: ${tmp} contains a space`)
+  }
+
+  if (tmp.includes("?")) {
+    throw new Error(
+      `Path [${method}]: ${tmp} contains a question mark. Do not include query params in the path`
+    )
+  }
+
+  // check for duplicates
+  for (const action of actions) {
+    // regex replace all {param} with {param}
+    const tmpClean = tmp.replace(/\{[^}]+\}/g, "{param}") + `<${method}>`
+    const actionPathClean =
+      action.path.replace(/\{[^}]+\}/g, "{param}") + `<${action.method}>`
+
+    if (tmpClean === actionPathClean) {
+      throw new Error(`Duplicate path [${method}]: ${tmp} and ${action.path}`)
+    }
+  }
+
+  return tmp
 }
 
 class OpenApiServerActionRouter {
@@ -67,6 +111,16 @@ class OpenApiServerActionRouter {
     }
   }
 
+  /**
+   * Add a server action to the router as a GET route
+   *
+   * @example
+   * ```ts
+   * router.get("/posts", getPostsAction, {
+   *   tags: ["posts"],
+   * })
+   * ```
+   */
   get<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
@@ -75,12 +129,27 @@ class OpenApiServerActionRouter {
     this.$INTERNALS.actions.push({
       ...args,
       method: "GET",
-      path: this.$createPath(path, "GET"),
+      path: createPath({
+        path,
+        method: "GET",
+        actions: this.$INTERNALS.actions,
+        pathPrefix: this.$INTERNALS.pathPrefix,
+      }),
       action,
     })
     return this
   }
 
+  /**
+   * Add a server action to the router as a POST route
+   *
+   * @example
+   * ```ts
+   * router.post("/posts", createPostAction, {
+   *   tags: ["posts"],
+   * })
+   * ```
+   */
   post<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
@@ -89,12 +158,27 @@ class OpenApiServerActionRouter {
     this.$INTERNALS.actions.push({
       ...args,
       method: "POST",
-      path: this.$createPath(path, "POST"),
+      path: createPath({
+        path,
+        method: "POST",
+        actions: this.$INTERNALS.actions,
+        pathPrefix: this.$INTERNALS.pathPrefix,
+      }),
       action,
     })
     return this
   }
 
+  /**
+   * Add a server action to the router as a DELETE route
+   *
+   * @example
+   * ```ts
+   * router.delete("/posts/{postId}", deletePostAction, {
+   *   tags: ["posts"],
+   * })
+   * ```
+   */
   delete<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
@@ -103,12 +187,27 @@ class OpenApiServerActionRouter {
     this.$INTERNALS.actions.push({
       ...args,
       method: "DELETE",
-      path: this.$createPath(path, "DELETE"),
+      path: createPath({
+        path,
+        method: "DELETE",
+        actions: this.$INTERNALS.actions,
+        pathPrefix: this.$INTERNALS.pathPrefix,
+      }),
       action,
     })
     return this
   }
 
+  /**
+   * Add a server action to the router as a PUT route
+   *
+   * @example
+   * ```ts
+   * router.put("/posts/{postId}", updatePostAction, {
+   *   tags: ["posts"],
+   * })
+   * ```
+   */
   put<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
@@ -117,12 +216,27 @@ class OpenApiServerActionRouter {
     this.$INTERNALS.actions.push({
       ...args,
       method: "PUT",
-      path: this.$createPath(path, "PUT"),
+      path: createPath({
+        path,
+        method: "PUT",
+        actions: this.$INTERNALS.actions,
+        pathPrefix: this.$INTERNALS.pathPrefix,
+      }),
       action,
     })
     return this
   }
 
+  /**
+   * Add a server action to the router as a PATCH route
+   *
+   * @example
+   * ```ts
+   * router.patch("/posts/{postId}", updatePostAction, {
+   *   tags: ["posts"],
+   * })
+   * ```
+   */
   patch<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
@@ -131,43 +245,91 @@ class OpenApiServerActionRouter {
     this.$INTERNALS.actions.push({
       ...args,
       method: "PATCH",
-      path: this.$createPath(path, "PATCH"),
+      path: createPath({
+        path,
+        method: "PATCH",
+        actions: this.$INTERNALS.actions,
+        pathPrefix: this.$INTERNALS.pathPrefix,
+      }),
       action,
     })
     return this
   }
 
-  $createPath = (path: string, method: OpenApiMethod) => {
-    const tmp = this.$INTERNALS.pathPrefix
-      ? `${this.$INTERNALS.pathPrefix}${path}`
-      : path
-    if (tmp.endsWith("/") && tmp !== "/") {
-      return tmp.slice(0, -1)
+  /**
+   * Add all server actions to the router as GET, POST, DELETE, PUT, and PATCH routes
+   *
+   * @example
+   * ```ts
+   * router.all("/posts", createPostAction, {
+   *   tags: ["posts"],
+   * })
+   * ```
+   */
+  all<THandler extends TAnyZodSafeFunctionHandler>(
+    path: `/${string}`,
+    action: THandler,
+    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
+  ) {
+    for (const func of [
+      this.get,
+      this.post,
+      this.delete,
+      this.put,
+      this.patch,
+    ]) {
+      func.call(this, path, action, args)
     }
-
-    for (const action of this.$INTERNALS.actions) {
-      // regex replace all {param} with {param}
-      const tmpClean = tmp.replace(/\{[^}]+\}/g, "{param}") + method
-      const actionPathClean =
-        action.path.replace(/\{[^}]+\}/g, "{param}") + action.method
-
-      if (tmpClean === actionPathClean) {
-        throw new Error(`Duplicate path [${method}]: ${tmp} and ${action.path}`)
-      }
-    }
-
-    return tmp
+    return this
   }
 }
 
 export type TOpenApiServerActionRouter = OpenApiServerActionRouter
 
+/**
+ * Create a router and add server actions to it
+ *
+ * @example
+ * ```ts
+ * const router = createOpenApiServerActionRouter()
+ *   .get("/posts", getPostsAction)
+ *   .post("/posts", createPostAction)
+ *   .delete("/posts/{postId}", deletePostAction)
+ *   .put("/posts/{postId}", updatePostAction)
+ *   .patch("/posts/{postId}", updatePostAction)
+ * ```
+ */
 export const createOpenApiServerActionRouter = (args?: {
+  /**
+   * The path prefix for the router
+   *
+   * @example
+   * ```tsx
+   * const router = createOpenApiServerActionRouter({ pathPrefix: "/api" })
+   *   .get("/posts", getPostsAction)
+   * ```
+   *
+   * This will match the path `/api/posts`
+   */
   pathPrefix?: `/${string}`
 }): OpenApiServerActionRouter => {
   return new OpenApiServerActionRouter(args)
 }
 
+/**
+ * Setup API route handlers for Next JS given an OpenAPI server action router
+ *
+ * @example
+ * ```ts
+ * const router = createOpenApiServerActionRouter()
+ *   .get("/posts", getPostsAction)
+ *   .post("/posts", createPostAction)
+ *   .delete("/posts/{postId}", deletePostAction)
+ *   .put("/posts/{postId}", updatePostAction)
+ *   .patch("/posts/{postId}", updatePostAction)
+ * export const { GET, POST, PUT, DELETE, PATCH } = createRouteHandlers(router)
+ * ```
+ */
 export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
   const parseRequest = async (
     request: NextRequest
@@ -315,130 +477,36 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
   }
 }
 
+/**
+ * Create an API route handler for Next JS given a server action
+ *
+ * Exports `GET`, `POST`, `PUT`, `DELETE`, and `PATCH` functions.
+ *
+ * @example
+ * ```ts
+ * export const { GET } = setupApiHandler("/posts", getPostsAction)
+ * ```
+ *
+ * @example
+ * ```ts
+ * export const { POST } = setupApiHandler("/posts", createPostAction)
+ * ```
+ *
+ * @example
+ * ```ts
+ * export const { PUT } = setupApiHandler("/posts/{postId}", updatePostAction)
+ * ```
+ */
 export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
-  path: string,
+  path: `/${string}`,
   action: THandler
 ) {
-  const parseRequest = async (
-    request: NextRequest
-  ): Promise<{
-    input: Record<string, any> | undefined
-    params: Record<string, string>
-    searchParams: Record<string, string>
-    action: TAnyZodSafeFunctionHandler
-    body: Record<string, any> | undefined
-  }> => {
-    // get the search params
-    const searchParams = request.nextUrl.searchParams
-    const searchParamsJson = Object.fromEntries(searchParams.entries())
+  const router = createOpenApiServerActionRouter()
+    .get(path, action)
+    .post(path, action)
+    .delete(path, action)
+    .put(path, action)
+    .patch(path, action)
 
-    const headers = new Headers(request.headers)
-    let data: Object | undefined = undefined
-
-    // if it has a body
-    if (acceptsRequestBody(request.method)) {
-      if (headers.get("content-type") === FORM_DATA_CONTENT_TYPE) {
-        // if its form data
-        data = await request.formData()
-      } else if (headers.get("content-type") === JSON_CONTENT_TYPE) {
-        // if its json
-        data = await request.json()
-      }
-    }
-
-    const params: Record<string, string> = {}
-
-    // parse the params from the path
-    if (path.includes("{")) {
-      let basePathSplit = path.split("/")
-      let pathSplit = (
-        request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
-      ).split("/")
-
-      if (basePathSplit.length !== pathSplit.length) {
-        return {} as any
-      }
-
-      // copy over the params
-      for (let i = 0; i < basePathSplit.length; i++) {
-        const basePathPart = basePathSplit[i]
-        const pathPart = pathSplit[i]
-
-        if (!basePathPart || !pathPart) {
-          continue
-        }
-
-        if (basePathPart.startsWith("{") && basePathPart.endsWith("}")) {
-          const foundPathPartName = basePathPart.slice(1, -1)
-          params[foundPathPartName] = pathPart
-        }
-      }
-    }
-
-    // form the final input to be sent to the action
-    const final = {
-      ...searchParamsJson,
-      ...(data || {}),
-      ...params,
-    }
-
-    if (!action) {
-      throw new Error("No matching action found")
-    }
-
-    if (Object.keys(final).length === 0) {
-      return {
-        input: undefined,
-        params: {},
-        searchParams: {},
-        action: action,
-        body: undefined,
-      }
-    }
-
-    return {
-      input: final,
-      params,
-      searchParams: searchParamsJson,
-      action: action,
-      body: data,
-    }
-  }
-
-  const notFound = () => {
-    return new Response("", {
-      status: 404,
-    })
-  }
-
-  const handler: ApiRouteHandler = async (request: NextRequest) => {
-    const parsedData = await parseRequest(request)
-    if (!parsedData) return notFound()
-
-    try {
-      const [data, err] = await parsedData.action(parsedData.input, undefined, {
-        request: request,
-      })
-
-      if (err) {
-        throw err
-      }
-
-      return new Response(JSON.stringify(data))
-    } catch (error: unknown) {
-      let status = getErrorStatusFromZSAError(error)
-
-      return new Response(JSON.stringify({ error }), {
-        status,
-      })
-    }
-  }
-
-  return {
-    GET: handler,
-    POST: handler,
-    DELETE: handler,
-    PUT: handler,
-    PATCH: handler,
-  }
+  return createRouteHandlers(router)
 }
