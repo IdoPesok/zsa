@@ -1,3 +1,4 @@
+import DocsPage from "@/content/examples/docs/swagger-docs"
 import FormDataExample from "@/content/examples/form-data/form-data-example"
 import IncrementExample from "@/content/examples/introduction/increment-example"
 import HelloWorld from "@/content/examples/react-query/hello-world-action"
@@ -20,6 +21,8 @@ function ExampleComponent({ id }: { id: string }) {
       return <FormDataExample />
     case "use-form-state":
       return <UseFormStateExample />
+    case "docs":
+      return <DocsPage />
     default:
       return <div className="p-4 border rounded">{id}</div>
   }

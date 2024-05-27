@@ -88,7 +88,7 @@ We recommend that all methods in your `createOpenApiServerActionRouter` are conf
 
 `zsa-openapi` allows you to take your RESTful API router and automatically generate valid, industry-standard OpenAPI documentation (OAS-compliant structure).
 
-To do this in Next.js, start by creating an endpoint at `/doc/route.ts`:
+To do this in Next.js, start by creating an endpoint at `/docs/page.ts`:
 
 ```typescript:docs/page.tsx
 import SwaggerUI from "swagger-ui-react" <|highlight|>
@@ -107,9 +107,9 @@ export default async function DocsPage() {
 }
 ```
 
-If you hit this endpoint, you should have access to your API documentation in OAS-compliant structure. Here is an example of the outputted structured docs: [Swagger Editor](/docs).
+If you hit this endpoint, you should have access to your API documentation in OAS-compliant structure. Here is an example of the outputted structured docs: Swagger Editor.
 
-<img src="/swagger.png" alt="swagger" />
+<ExampleComponent id="docs" />
 
 ## Single endpoints
 
