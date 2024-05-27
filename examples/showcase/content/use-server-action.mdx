@@ -8,6 +8,57 @@ groupOrder: 0
 
 `useServerAction` is a custom React hook provided by ZSA that allows you to easily execute server actions from your client components. It handles the execution, loading states, optimistic updates, and error handling for you.
 
+## Basic Example
+
+```typescript:increment-example.tsx
+"use client"
+
+import { incrementNumberAction } from "./actions";
+import { useServerAction } from "zsa-react";
+import { useState } from "react";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "ui";
+
+export default function IncrementExample() {
+    const [counter, setCounter] = useState(0);
+    const { isPending, execute, data } = useServerAction(incrementNumberAction); <|highlight|>
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Increment Number</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+                <Button
+                onClick={async () => {
+                    const [data, err] = await execute({ <|highlight|>
+                        number: counter, <|highlight|>
+                    }) <|highlight|>
+
+                    if (err) {
+                        // handle error
+                        return
+                    }
+
+                    setCounter(data);
+                }}
+                >
+                Invoke action
+                </Button>
+                <p>Count:</p>
+                <div>{isPending ? "saving..." : data}</div> <|highlight|>
+            </CardContent>
+        </Card>
+    );
+}
+```
+
+- `useServerAction` allows you to use this server action from within your client components.
+- `execute` executes the server action endpoint with the typesafe input directly from `onClick`.
+
+Here is the result:
+
+<ExampleComponent id="increment-example" />
+
 ## Usage
 
 ```tsx
