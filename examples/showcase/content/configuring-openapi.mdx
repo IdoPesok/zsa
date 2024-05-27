@@ -98,7 +98,7 @@ import { router } from "../api/[[...openapi]]/route"
 
 export default async function DocsPage() {
   const spec = await generateOpenApiDocument(router, {
-    title: "tRPC OpenAPI",
+    title: "ZSA OpenAPI",
     version: "1.0.0",
     baseUrl: "http://localhost:3000",
   })
@@ -108,6 +108,8 @@ export default async function DocsPage() {
 ```
 
 If you hit this endpoint, you should have access to your API documentation in OAS-compliant structure. Here is an example of the outputted structured docs: [Swagger Editor](/docs).
+
+<img src="/swagger.png" alt="swagger" />
 
 ## Single endpoints
 

@@ -5,7 +5,7 @@ import { router } from "../api/[[...openapi]]/route"
 
 export default async function DocsPage() {
   const spec = await generateOpenApiDocument(router, {
-    title: "tRPC OpenAPI",
+    title: "ZSA OpenAPI",
     version: "1.0.0",
     baseUrl: "http://localhost:3000",
   })
