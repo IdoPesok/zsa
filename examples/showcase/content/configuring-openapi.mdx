@@ -54,18 +54,18 @@ import { createOpenApiServerActionRouter, createRouteHandlers } from "zsa-openap
 import { createPost, updatePost, getReply, getPosts } from "./actions"
 
 const router = createOpenApiServerActionRouter({   <|highlight|>
-    pathPrefix: "/api", 
-})
-    .get("/posts", getPosts, {   <|highlight|>
+    pathPrefix: "/api", <|highlight|>
+}) <|highlight|>
+    .get("/posts", getPosts, {
         tags: ["posts"],
     })
-    .post("/posts", createPost, {   <|highlight|>
+    .post("/posts", createPost, {
         tags: ["posts"],
     })
-    .put("/posts/{postId}", updatePost, {   <|highlight|>
+    .put("/posts/{postId}", updatePost, {
         tags: ["posts"],
     })
-    .get("/posts/{postId}/replies/{replyId}", getReply, {   <|highlight|>
+    .get("/posts/{postId}/replies/{replyId}", getReply, {
         tags: ["replies"],
     })
 
@@ -163,3 +163,79 @@ export const getReplyWithHeaders = createServerAction()
 ```
 
 In this example, the request object represents the incoming HTTP request. You can access various properties and methods of the request object, such as headers, to retrieve information from the request.
+
+Sure! Here's how you can add information about `extend` and `defaults` to the docs:
+
+## Extending Routers
+
+The `createOpenApiServerActionRouter` function allows you to extend routers by combining multiple routers together. This is useful when you have separate files for different resource types, such as posts and users, and want to combine their routes in the final `route.ts` file.
+
+Here's an example of how you can extend routers:
+
+```typescript:/api/[[...openapi]]/posts.ts
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+import { createPost, updatePost, deletePost } from "./postActions";
+
+export const postsRouter = createOpenApiServerActionRouter()
+  .post("/posts", createPost)
+  .put("/posts/{postId}", updatePost)
+  .delete("/posts/{postId}", deletePost);
+```
+
+```typescript:/api/[[...openapi]]/users.ts
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+import { createUser, updateUser, deleteUser } from "./userActions";
+
+export const usersRouter = createOpenApiServerActionRouter()
+  .post("/users", createUser)
+  .put("/users/{userId}", updateUser)
+  .delete("/users/{userId}", deleteUser);
+```
+
+```typescript:/api/[[...openapi]]/route.ts
+import { createOpenApiServerActionRouter, createRouteHandlers } from "zsa-openapi";
+import { postsRouter } from "./posts";
+import { usersRouter } from "./users";
+
+const router = createOpenApiServerActionRouter({
+  pathPrefix: "/api",
+  extend: [postsRouter, usersRouter], <|highlight|>
+});
+
+export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
+```
+
+In this example, we have separate files for posts and users routes. Each file creates its own router using `createOpenApiServerActionRouter`. Then, in the final `route.ts` file, we create a new router and use the `extend` option to combine the `postsRouter` and `usersRouter`. This way, all the routes from both routers will be included in the final router.
+
+## Defaults
+
+The `createOpenApiServerActionRouter` function also allows you to specify default OpenAPI specs that will be applied to all actions in the router. This can be useful when you want to set common properties for all your actions.
+
+Here's an example of how you can use `defaults`:
+
+```typescript:route.ts
+import { createOpenApiServerActionRouter, createRouteHandlers } from "zsa-openapi";
+import { getPosts, createPost, updatePost, deletePost } from "./postActions";
+
+const router = createOpenApiServerActionRouter({
+  pathPrefix: "/api",
+  defaults: { <|highlight|>
+    tags: ["Posts"], <|highlight|>
+    headers: [ <|highlight|>
+      { <|highlight|>
+        name: "Authorization", <|highlight|>
+        description: "Bearer token for authentication", <|highlight|>
+        required: true, <|highlight|>
+      }, <|highlight|>
+    ], <|highlight|>
+  }, <|highlight|>
+})
+  .get("/posts", getPosts)
+  .post("/posts", createPost)
+  .put("/posts/{postId}", updatePost)
+  .delete("/posts/{postId}", deletePost);
+
+export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
+```
+
+In this example, we use the `defaults` option to specify common properties for all actions in the router. We set the `tags` to `["Posts"]` and define a required `Authorization` header. These defaults will be applied to all actions in the router, so you don't have to specify them individually for each action.

@@ -47,6 +47,12 @@ export interface OpenApiAction<THandler extends TAnyZodSafeFunctionHandler> {
   action: THandler
 }
 
+type TOpenApiSpecs = Omit<OpenApiAction<any>, "path" | "action" | "method">
+
+const standardizePath = (path: string, method: string) => {
+  return path.replace(/\{[^}]+\}/g, "{param}") + `<${method}>`
+}
+
 /**
  *  Helper function to create a path safely
  */
@@ -76,9 +82,8 @@ const createPath = (args: {
   // check for duplicates
   for (const action of actions) {
     // regex replace all {param} with {param}
-    const tmpClean = tmp.replace(/\{[^}]+\}/g, "{param}") + `<${method}>`
-    const actionPathClean =
-      action.path.replace(/\{[^}]+\}/g, "{param}") + `<${action.method}>`
+    const tmpClean = standardizePath(tmp, method)
+    const actionPathClean = standardizePath(action.path, action.method)
 
     if (tmpClean === actionPathClean) {
       throw new Error(`Duplicate path [${method}]: ${tmp} and ${action.path}`)
@@ -92,9 +97,14 @@ class OpenApiServerActionRouter {
   $INTERNALS: {
     pathPrefix?: string | undefined
     actions: OpenApiAction<any>[]
+    defaults?: TOpenApiSpecs
   }
 
-  constructor(opts?: { pathPrefix?: string }) {
+  constructor(opts?: {
+    pathPrefix?: string
+    actions?: OpenApiAction<any>[]
+    defaults?: TOpenApiSpecs
+  }) {
     let pathPrefix = opts?.pathPrefix
 
     if (pathPrefix?.endsWith("/") && pathPrefix !== "/") {
@@ -105,9 +115,21 @@ class OpenApiServerActionRouter {
       pathPrefix = ""
     }
 
+    if (opts?.actions) {
+      const seen = new Set<string>()
+      for (const action of opts.actions) {
+        const p = standardizePath(action.path, action.method)
+        if (seen.has(p)) {
+          throw new Error(`Duplicate path [${action.method}]: ${p}`)
+        }
+        seen.add(p)
+      }
+    }
+
     this.$INTERNALS = {
       pathPrefix,
-      actions: [],
+      actions: opts?.actions || [],
+      defaults: opts?.defaults,
     }
   }
 
@@ -124,9 +146,10 @@ class OpenApiServerActionRouter {
   get<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<THandler>, "path" | "method" | "action">
+    args?: TOpenApiSpecs
   ) {
     this.$INTERNALS.actions.push({
+      ...(this.$INTERNALS.defaults || {}),
       ...args,
       method: "GET",
       path: createPath({
@@ -153,9 +176,10 @@ class OpenApiServerActionRouter {
   post<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
+    args?: TOpenApiSpecs
   ) {
     this.$INTERNALS.actions.push({
+      ...(this.$INTERNALS.defaults || {}),
       ...args,
       method: "POST",
       path: createPath({
@@ -182,9 +206,10 @@ class OpenApiServerActionRouter {
   delete<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
+    args?: TOpenApiSpecs
   ) {
     this.$INTERNALS.actions.push({
+      ...(this.$INTERNALS.defaults || {}),
       ...args,
       method: "DELETE",
       path: createPath({
@@ -211,9 +236,10 @@ class OpenApiServerActionRouter {
   put<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
+    args?: TOpenApiSpecs
   ) {
     this.$INTERNALS.actions.push({
+      ...(this.$INTERNALS.defaults || {}),
       ...args,
       method: "PUT",
       path: createPath({
@@ -240,9 +266,10 @@ class OpenApiServerActionRouter {
   patch<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
+    args?: TOpenApiSpecs
   ) {
     this.$INTERNALS.actions.push({
+      ...(this.$INTERNALS.defaults || {}),
       ...args,
       method: "PATCH",
       path: createPath({
@@ -269,7 +296,7 @@ class OpenApiServerActionRouter {
   all<THandler extends TAnyZodSafeFunctionHandler>(
     path: `/${string}`,
     action: THandler,
-    args?: Omit<OpenApiAction<THandler>, "path" | "action" | "method">
+    args?: TOpenApiSpecs
   ) {
     for (const func of [
       this.get,
@@ -312,8 +339,32 @@ export const createOpenApiServerActionRouter = (args?: {
    * This will match the path `/api/posts`
    */
   pathPrefix?: `/${string}`
+  /**
+   * Add default OpenAPI specs to all actions
+   */
+  defaults?: TOpenApiSpecs
+  /**
+   * Extend the router with other routers
+   */
+  extend?: OpenApiServerActionRouter | Array<OpenApiServerActionRouter>
 }): OpenApiServerActionRouter => {
-  return new OpenApiServerActionRouter(args)
+  let actions: OpenApiAction<any>[] = []
+
+  if (args && args.extend) {
+    let extend: Array<OpenApiServerActionRouter> = Array.isArray(args.extend)
+      ? args.extend
+      : [args.extend]
+    for (const router of extend) {
+      for (const action of router.$INTERNALS.actions) {
+        actions.push(action)
+      }
+    }
+  }
+
+  return new OpenApiServerActionRouter({
+    ...args,
+    actions,
+  })
 }
 
 /**
