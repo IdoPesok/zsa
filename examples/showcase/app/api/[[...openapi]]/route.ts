@@ -33,21 +33,18 @@ const createPost = updatePost
 const router = createOpenApiServerActionRouter({
   pathPrefix: "/api",
 })
-
-router.get("/", createPost, {
+.get("/", createPost, {
   tags: ["posts"],
 })
-
-router.post("/posts", createPost, {
+.post("/posts", createPost, {
   tags: ["posts"],
 })
-
-router.put("/posts/{postId}", updatePost, {
+.put("/posts/{postId}", updatePost, {
   tags: ["posts"],
 })
-
-router.post("/posts/{postId}/replies/{replyId}", getReply, {
+.post("/posts/{postId}/replies/{replyId}", getReply, {
   tags: ["replies"],
 })
+
 
 export const { GET, POST, PUT } = createRouteHandlers(router)

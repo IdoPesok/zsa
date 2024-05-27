@@ -1,0 +1,159 @@
+---
+title: "Configuring OpenAPI"
+group: "REST API"
+groupOrder: 0
+---
+
+# Configuring OpenAPI
+
+To expose your server actions as RESTful endpoints in your application, we recommend using `zsa-openapi`. This ensures adherence to OpenAPI standards.
+
+## RESTful Endpoints
+
+All server actions that you create can be exposed as RESTful endpoints using `zsa-openapi`. To get started, run:
+
+```bash:terminal
+npm i zsa-openapi
+```
+
+Next, define your desired server actions.
+
+```typescript:actions.ts
+"use server"
+
+import { z } from "zod"
+import { createServerAction } from "zsa"
+
+export const createPost = createServerAction()
+    .input(z.object({ message: z.string() }))
+    .handler(async ({ input }) => {
+        // add your logic here
+    })
+
+export const updatePost = createServerAction()
+    .input(z.object({ postId: z.string(), message: z.string() }))
+    .handler(async ({ input }) => {
+        // add your logic here
+    })
+
+export const getReply = createServerAction()
+    .input(z.object({ postId: z.string(), replyId: z.string(), message: z.string() }))
+    .handler(async ({ input }) => {
+        // add your logic here
+    })
+```
+
+Now that you have your server actions, create an OpenAPI router and expose these actions as endpoints in your application. To do this in your Next.js application, create a route at `/api/[[...openapi]]/route.ts`:
+
+```typescript:api/[[...openapi]]/route.ts
+import { createOpenApiServerActionRouter, createRouteHandlers } from "zsa-openapi"
+import { createPost, updatePost, getReply } from "./actions"
+
+const router = createOpenApiServerActionRouter({   <|highlight|>
+    pathPrefix: "/api", 
+})
+    .post("/posts", createPost, {   <|highlight|>
+        tags: ["posts"],
+    })
+    .put("/posts/{postId}", updatePost, {   <|highlight|>
+        tags: ["posts"],
+    })
+    .post("/posts/{postId}/replies/{replyId}", getReply, {   <|highlight|>
+        tags: ["replies"],
+    })
+
+export const { GET, POST, PUT } = createRouteHandlers(router)
+```
+
+Ensure that your `pathPrefix` matches the prefix to your `/[[...openapi]]/route.ts` path.
+
+You can now hit your server actions at the configured paths. Your server actions will take the path parameters defined in your router as input to the action.
+
+<Note>
+Anything not defined as a path parameter but required in the server action input will be required in the query parameters for that endpoint. 
+</Note>
+
+<Warning>
+We recommend that all methods in your `createOpenApiServerActionRouter` are configured directly in a singular file rather than across multiple files. If you export the route handlers in one file and chain your routes (`router.get`) in another file, these routes will not be accessible. They must be consolidated into your `api/[[...openapi]]/route.ts` file. 
+</Warning>
+
+## Generating OpenAPI Documentation
+
+`zsa-openapi` allows you to take your RESTful API router and automatically generate valid, industry-standard OpenAPI documentation (OAS-compliant structure).
+
+To do this in Next.js, start by creating an endpoint at `/doc/route.ts`:
+
+```typescript:doc/route.ts
+import { type NextRequest } from "next/server"
+import { generateOpenApiDocument } from "zsa-openapi"
+import { router } from "./your-route-here"
+
+export const GET = async (request: NextRequest) => {
+    return new Response(
+        JSON.stringify(
+            await generateOpenApiDocument(router, {  <|highlight|>
+                title: "tRPC OpenAPI",  <|highlight|>
+                version: "1.0.0",  <|highlight|>
+                baseUrl: "http://localhost:3000",  <|highlight|>
+            })  <|highlight|>
+        )
+    )
+}
+```
+
+If you hit this endpoint, you should have access to your API documentation in OAS-compliant structure. Here is an example of the outputted structured docs: [Swagger Editor](https://editor.swagger.io/).
+
+## Single endpoints
+
+Additionally, if you only want to expose a single server action as an endpoint, you can use `setupApiHandler`. This is good when you want to create adhoc route heandlers. For example:
+
+```typescript:api/adhoc-example/route.ts
+"use server"
+
+import { setupApiHandler } from "zsa-openapi";
+import { getReply } from "./actions";
+
+export const { GET } = setupApiHandler("/posts/{postId}/replies/{replyId}", getReply)
+```
+
+## Accessing the request object
+
+If you expose your server actions using `createOpenApiServerActionRouter` or `setupApiHandler`, then the `request` object will automatically be available in your defined actions. For example:
+
+```typescript:actions.ts
+"use server"
+
+import { z } from "zod"
+import { createServerAction } from "zsa"
+
+export const getReplyWithHeaders = createServerAction()
+    .input(
+        z.object({ postId: z.string(), replyId: z.string(), message: z.string() })
+    )
+    .handler(async ({ input, request }) => {
+        if (request) {
+            // authenticate with headers
+            const apiKey = request.headers.get("authorization")?.split(" ")[1]
+
+            if (!apiKey || apiKey !== "123") {
+                throw new Error("NOT_AUTHORIZED")
+            }
+
+            return {
+                user: {
+                    id: 123,
+                    name: "test",
+                },
+            }
+        } else {
+            // authenticate with cookies
+            const user = await auth()
+
+            return {
+                user
+            }
+        }
+    })
+```
+
+In this example, the request object represents the incoming HTTP request. You can access various properties and methods of the request object, such as headers, to retrieve information from the request.

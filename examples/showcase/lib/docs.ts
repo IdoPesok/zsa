@@ -101,7 +101,7 @@ export function getDocPosts() {
     })
   })
 
-  const groupOrder = ["Getting Started", "Client Side Querying"]
+  const groupOrder = ["Getting Started", "Client Side Querying", "REST API"]
 
   const values = Object.values(groups)
   values.sort((a, b) => {

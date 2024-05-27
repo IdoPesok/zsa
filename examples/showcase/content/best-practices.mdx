@@ -1,0 +1,48 @@
+---
+title: "Best Practices"
+group: "Getting Started"
+groupOrder: 9
+---
+
+# Best practices
+
+In order to ensure that `zsa` is used to its full potential, we've collected a few "best" practices. We hope to grow this list as more developers discover new ways of using `zsa`.
+
+1. **Naming multiple calls**:
+   - If you need to call multiple server actions, you can name the resulting destructured array based on the action's functionality.
+     ```typescript:example.ts
+     const [categories, err1] = await categoriesAction();
+     // ...
+     const [places, err2] = await placesAction();
+     ```
+
+2. **Simple error messages**:
+   - When handling errors from server actions, throw the error message directly as a string from the server side:
+     ```typescript:action.ts
+     ...throw "User not found"; //this is within an action
+     ```
+   - On the client side, you can access the error message using `err.data` and display it using a toast or any other preferred method:
+     ```typescript
+     const [, err] = await action();
+
+     if (err) {
+       toast(err.data);
+     }
+     ```
+
+3. **Creating actions from procedures**:
+   - When creating server actions from procedures, create the procedure first and then chain the `createServerAction()` method:
+     ```typescript:good-example.ts
+     const procedure = createServerActionProcedure()/* ... */.createServerAction();
+
+     const action1 = procedure.input(/* ... */);
+     const action2 = procedure.input(/* ... */);
+     ```
+   - Instead of:
+     ```typescript:bad-example.ts
+     const action1 = procedure.createServerAction().input(/* ... */);
+     const action2 = procedure.createServerAction().input(/* ... */);
+     ```
+
+
+By following these best practices, you can ensure a cleaner and more maintainable codebase when using `zsa`.

@@ -307,3 +307,134 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
     PATCH: handler,
   }
 }
+
+export function setupApiHandler<
+  THandler extends TAnyZodSafeFunctionHandler,
+>(
+  path: string,
+  action: THandler,
+) {
+  const parseRequest = async (
+    request: NextRequest
+  ): Promise<{
+    input: Record<string, any> | undefined
+    params: Record<string, string>
+    searchParams: Record<string, string>
+    action: TAnyZodSafeFunctionHandler
+    body: Record<string, any> | undefined
+  }> => {
+    // get the search params
+    const searchParams = request.nextUrl.searchParams
+    const searchParamsJson = Object.fromEntries(searchParams.entries())
+
+    const headers = new Headers(request.headers)
+    let data: Object | undefined = undefined
+
+    // if it has a body
+    if (acceptsRequestBody(request.method)) {
+      if (headers.get("content-type") === FORM_DATA_CONTENT_TYPE) {
+        // if its form data
+        data = await request.formData()
+      } else if (headers.get("content-type") === JSON_CONTENT_TYPE) {
+        // if its json
+        data = await request.json()
+      }
+    }
+
+    const params: Record<string, string> = {}
+
+
+    // parse the params from the path
+    if (path.includes("{")) {
+      let basePathSplit = path.split("/")
+      let pathSplit = (
+        request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
+      ).split("/")
+
+      if (basePathSplit.length !== pathSplit.length) {
+        return {} as any
+      }
+
+      // copy over the params
+      for (let i = 0; i < basePathSplit.length; i++) {
+        const basePathPart = basePathSplit[i]
+        const pathPart = pathSplit[i]
+
+        if (!basePathPart || !pathPart) {
+          continue
+        }
+
+        if (basePathPart.startsWith("{") && basePathPart.endsWith("}")) {
+          const foundPathPartName = basePathPart.slice(1, -1)
+          params[foundPathPartName] = pathPart
+        }
+      }
+    }
+
+    // form the final input to be sent to the action
+    const final = {
+      ...searchParamsJson,
+      ...(data || {}),
+      ...params,
+    }
+
+    if (!action) {
+      throw new Error("No matching action found")
+    }
+
+    if (Object.keys(final).length === 0) {
+      return {
+        input: undefined,
+        params: {},
+        searchParams: {},
+        action: action,
+        body: undefined,
+      }
+    }
+
+    return {
+      input: final,
+      params,
+      searchParams: searchParamsJson,
+      action: action,
+      body: data,
+    }
+  }
+
+  const notFound = () => {
+    return new Response("", {
+      status: 404,
+    })
+  }
+
+  const handler: ApiRouteHandler = async (request: NextRequest) => {
+    const parsedData = await parseRequest(request)
+    if (!parsedData) return notFound()
+
+    try {
+      const [data, err] = await parsedData.action(parsedData.input, undefined, {
+        request: request,
+      })
+
+      if (err) {
+        throw err
+      }
+
+      return new Response(JSON.stringify(data))
+    } catch (error: unknown) {
+      let status = getErrorStatusFromZSAError(error)
+
+      return new Response(JSON.stringify({ error }), {
+        status,
+      })
+    }
+  }
+
+  return {
+    GET: handler,
+    POST: handler,
+    DELETE: handler,
+    PUT: handler,
+    PATCH: handler,
+  }
+}
