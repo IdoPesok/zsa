@@ -21,6 +21,7 @@
   "packageManager": "npm@10.2.3",
   "workspaces": [
     "examples/*",
+    "tests/*",
     "packages/*"
   ],
   "dependencies": {

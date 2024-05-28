@@ -87,7 +87,13 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
         T["$internals"]["inputSchema"],
         z.ZodUndefined,
         TZodSafeFunctionDefaultOmitted,
-        inferServerActionReturnData<T["$internals"]["lastHandler"]>,
+        inferServerActionReturnData<
+          T["$internals"]["lastHandler"]
+        > extends infer TData
+          ? TData extends void
+            ? undefined
+            : TData
+          : never,
         true,
         "json"
       >

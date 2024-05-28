@@ -5,7 +5,7 @@ import {
   createServerAction,
   createServerActionProcedure,
 } from "zsa"
-import { TEST_USER_ADMIN_ID, auth, getPostById } from "./data"
+import { TEST_DATA, auth, getPostById } from "./data"
 
 export const publicAction = createServerAction()
 
@@ -20,14 +20,14 @@ export const protectedAction = protectedProcedure.createServerAction()
 const isAdminProcedure = createServerActionProcedure(
   protectedProcedure
 ).handler(async ({ ctx }) => {
-  if (ctx.auth.id !== TEST_USER_ADMIN_ID) {
+  if (ctx.auth.id !== TEST_DATA.admin.id) {
     throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
   }
 
   return {
     auth: {
       ...ctx.auth,
-      isAdmin: true,
+      isAdmin: true as const,
     },
   }
 })
@@ -40,7 +40,7 @@ const ownsPostProcedure = createServerActionProcedure(protectedProcedure)
     const post = getPostById(input.postId)
 
     if (!post || post.id === "notTestUserAuthor") {
-      throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+      throw new ZSAError("NOT_AUTHORIZED", TEST_DATA.errors.doesNotOwnPost)
     }
 
     return {
@@ -58,3 +58,13 @@ const ownsPostIsAdminProcedure = chainServerActionProcedures(
 
 export const ownsPostIsAdminAction =
   ownsPostIsAdminProcedure.createServerAction()
+
+const rateLimitedProcedure = createServerActionProcedure(
+  createServerActionProcedure().handler(async () => {
+    return
+  })
+).handler(async () => {
+  return
+})
+
+export const rateLimitedAction = rateLimitedProcedure.createServerAction()

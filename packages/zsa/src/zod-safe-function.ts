@@ -665,10 +665,18 @@ export class ZodSafeFunction<
       })
     }
 
+    // the error will get returned to the action level
+    if (this.$internals.isProcedure) {
+      return [null, customError as any]
+    }
+
     return [
       null,
       {
-        data: JSON.stringify(customError.data),
+        data:
+          typeof customError.data === "string"
+            ? customError.data
+            : JSON.stringify(customError.data),
         name: customError.name,
         stack: JSON.stringify(customError.stack),
         message: JSON.stringify(customError.message),
@@ -755,14 +763,6 @@ export class ZodSafeFunction<
       overrideArgs?: Partial<TInputSchema["_input"]>,
       opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
-      // if args is formData
-      if (args instanceof FormData) {
-        args = {
-          ...(Object.fromEntries(args.entries()) as any),
-          ...(overrideArgs || {}),
-        }
-      }
-
       if (opts?.returnInputSchema) {
         return this.$internals.inputSchema
       } else if (opts?.returnOutputSchema) {
@@ -770,6 +770,14 @@ export class ZodSafeFunction<
       }
 
       try {
+        // if args is formData
+        if (args instanceof FormData) {
+          args = {
+            ...(Object.fromEntries(args.entries()) as any),
+            ...(overrideArgs || {}),
+          }
+        }
+
         await this.handleStart(args, timeoutStatus)
 
         if (!this.$internals.inputSchema && !this.$internals.isChained)
@@ -777,12 +785,13 @@ export class ZodSafeFunction<
 
         // run the procedure chain to get the context
         const ctx =
-          opts?.ctx ||
-          (await this.getProcedureChainOutput(
-            args,
-            timeoutStatus,
-            opts?.request
-          ))
+          this.$internals.isProcedure && opts
+            ? (opts.ctx as TProcedureChainOutput)
+            : await this.getProcedureChainOutput(
+                args,
+                timeoutStatus,
+                opts?.request
+              )
 
         // parse the input data
         const input = await this.parseInputData(
