@@ -176,6 +176,12 @@ export const retryProcedure = createServerActionProcedure()
 
 export const retryAction = retryProcedure.createServerAction()
 
+/**
+ * Retry Action
+ *
+ * This action has a retry mechanism set with exponential backoff
+ */
+
 export const exponentialRetryProcedure = createServerActionProcedure()
   .retry({
     maxAttempts: TEST_DATA.retries.maxAttempts,
@@ -188,3 +194,39 @@ export const exponentialRetryProcedure = createServerActionProcedure()
 
 export const exponentialRetryAction =
   exponentialRetryProcedure.createServerAction()
+
+/**
+ * Faulty Output
+ *
+ * This action has an output schema that will throw an error
+ */
+
+export const faultyOutputProcedure = createServerActionProcedure()
+  .output(
+    z.object({
+      number: z.number().refine((n) => n > 0),
+    })
+  )
+  .handler(async () => {
+    return {
+      number: 0,
+    }
+  })
+
+/**
+ * Input Number
+ *
+ * This action has an input schema that takes a number > 0
+ */
+
+export const inputNumberProcedure = createServerActionProcedure()
+  .input(
+    z.object({
+      number: z.number().refine((n) => n > 0),
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      number: input.number,
+    }
+  })

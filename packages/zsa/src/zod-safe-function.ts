@@ -285,6 +285,11 @@ export class ZodSafeFunction<
     try {
       const err = $err instanceof ZSAError ? $err : new ZSAError("ERROR", $err)
 
+      // don't retry on timeouts
+      if (err.code === "TIMEOUT") {
+        return -1
+      }
+
       // if there is no retry config, return -1
       const config = this.$internals.retryConfig
       if (!config) return -1

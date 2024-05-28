@@ -1,10 +1,13 @@
 "use server"
 
 import { sleep } from "lib/utils"
+import { z } from "zod"
 import { createServerAction } from "zsa"
 import { TEST_DATA } from "./data"
 import {
   adminAction,
+  faultyOutputProcedure,
+  inputNumberProcedure,
   ownsPostAction,
   ownsPostIsAdminAction,
   protectedAction,
@@ -94,3 +97,50 @@ export const helloWorldExponentialRetryAction = publicAction
 export const helloWorldRetryProcedureAction = retryAction.handler(async () => {
   return "hello world" as const
 })
+
+export const faultyOutputInProcedureAction = faultyOutputProcedure
+  .createServerAction()
+  .handler(async () => {
+    return
+  })
+
+export const faultyOutputAction = publicAction
+  .output(
+    z.object({
+      number: z.number().refine((n) => n > 0),
+    })
+  )
+  .handler(async () => {
+    return {
+      number: 0,
+    }
+  })
+
+export const transformedOutputAction = publicAction
+  .output(
+    z.object({
+      number: z.number().transform((n) => 100),
+    })
+  )
+  .handler(async () => {
+    return {
+      number: 1,
+    }
+  })
+
+export const inputNumberAction = inputNumberProcedure
+  .createServerAction()
+  .handler(async ({ input }) => {
+    return input
+  })
+
+export const inputLargeNumberAction = inputNumberProcedure
+  .createServerAction()
+  .input(
+    z.object({
+      number: z.number().refine((n) => n > 100),
+    })
+  )
+  .handler(async ({ input }) => {
+    return input
+  })

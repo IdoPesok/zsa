@@ -4,6 +4,8 @@
 import { cookies } from "next/headers"
 import {
   faultyAction,
+  faultyOutputAction,
+  faultyOutputInProcedureAction,
   getAdminGreetingAction,
   getPostByIdAction,
   getPostByIdIsAdminAction,
@@ -16,6 +18,9 @@ import {
   helloWorldRetryAction,
   helloWorldRetryProcedureAction,
   helloWorldTimeoutAction,
+  inputLargeNumberAction,
+  inputNumberAction,
+  transformedOutputAction,
   undefinedAction,
 } from "server/actions"
 import { RetryState, TEST_DATA } from "server/data"
@@ -314,6 +319,61 @@ describe("actions", () => {
       expect(err?.code).toEqual(TEST_DATA.errors.timeout)
       expect(end - start).toBeGreaterThanOrEqual(TEST_DATA.timeout)
       expect(end - start).toBeLessThanOrEqual(TEST_DATA.timeout + 50)
+    })
+  })
+
+  describe("output", () => {
+    it("returns the transformed output", async () => {
+      const [data, err] = await transformedOutputAction()
+      expect(data).toEqual({ number: 100 })
+      expect(err).toBeNull()
+    })
+
+    it("throws when the output in the procedure is invalid", async () => {
+      const [data, err] = await faultyOutputInProcedureAction()
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.outputParse)
+    })
+
+    it("throws when the output in the action is invalid", async () => {
+      const [data, err] = await faultyOutputAction()
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.outputParse)
+    })
+  })
+
+  describe("input", () => {
+    it("returns the input number", async () => {
+      const [data, err] = await inputNumberAction({ number: 100 })
+      expect(data).toEqual({ number: 100 })
+      expect(err).toBeNull()
+    })
+
+    it("throws when the input number is invalid", async () => {
+      const [data, err] = await inputNumberAction({ number: 0 })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+    })
+
+    it("throws when the input number is not large", async () => {
+      const [data, err] = await inputLargeNumberAction({ number: 100 })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+    })
+
+    it("returns the input large number", async () => {
+      const [data, err] = await inputLargeNumberAction({ number: 200 })
+      expect(data).toEqual({ number: 200 })
+      expect(err).toBeNull()
+    })
+
+    it("throws when the input is invalid", async () => {
+      let [data, err] = await inputNumberAction({ notValid: 0 } as any)
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+      ;[data, err] = await inputLargeNumberAction({ notValid: 0 } as any)
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
     })
   })
 })

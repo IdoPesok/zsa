@@ -30,6 +30,8 @@ export const TEST_DATA = {
   },
   errors: {
     notAuthorized: "NOT_AUTHORIZED",
+    outputParse: "OUTPUT_PARSE_ERROR",
+    inputParse: "INPUT_PARSE_ERROR",
     timeout: "TIMEOUT",
     string: "STRING_ERROR",
     doesNotOwnPost: "DOES_NOT_OWN_POST",
