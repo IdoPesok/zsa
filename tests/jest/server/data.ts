@@ -28,6 +28,9 @@ export const TEST_DATA = {
   session: {
     admin: "admin",
   },
+  authorization: {
+    token: "123",
+  },
   errors: {
     notAuthorized: "NOT_AUTHORIZED",
     outputParse: "OUTPUT_PARSE_ERROR",

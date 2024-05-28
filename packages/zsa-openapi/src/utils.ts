@@ -1,5 +1,3 @@
-import { ZSAError } from "zsa"
-
 export const acceptsRequestBody = (method: string) => {
   if (method === "GET" || method === "DELETE") {
     return false
@@ -28,7 +26,9 @@ export const getPathRegExp = (path: string) => {
 }
 
 export const getErrorStatusFromZSAError = (error: unknown) => {
-  if (!(error instanceof ZSAError)) {
+  if (!error || typeof error !== "object") return 500
+
+  if (!("code" in error)) {
     return 500
   }
 
@@ -45,5 +45,7 @@ export const getErrorStatusFromZSAError = (error: unknown) => {
       return 401
     case "TIMEOUT":
       return 408
+    default:
+      return 500
   }
 }

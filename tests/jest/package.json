@@ -2,16 +2,17 @@
   "name": "zsa-tests",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch"
   },
   "dependencies": {
     "next": "latest",
+    "node-mocks-http": "^1.14.1",
     "react": "^18.3.1",
     "react-dom": "^18.2.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "zsa": "*",
+    "zsa-openapi": "*"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "6.1.5",

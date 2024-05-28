@@ -144,3 +144,42 @@ export const inputLargeNumberAction = inputNumberProcedure
   .handler(async ({ input }) => {
     return input
   })
+
+export const multiplyAction = publicAction
+  .input(
+    z.object({
+      number2: z.coerce.number(),
+      number1: z.coerce.number(),
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 * input.number2,
+    }
+  })
+
+export const protectedMultiplyAction = protectedAction
+  .input(
+    z.object({
+      number2: z.coerce.number(),
+      number1: z.coerce.number(),
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 * input.number2,
+    }
+  })
+
+export const divideAction = publicAction
+  .input(
+    z.object({
+      number1: z.coerce.number(),
+      number2: z.coerce.number().refine((n) => n !== 0),
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 / input.number2,
+    }
+  })

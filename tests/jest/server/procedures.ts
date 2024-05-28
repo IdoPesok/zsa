@@ -22,11 +22,23 @@ export const publicAction = createServerAction()
  * This action is protected by a session cookie
  */
 
-const protectedProcedure = createServerActionProcedure().handler(async () => {
-  return {
-    auth: auth(),
+const protectedProcedure = createServerActionProcedure().handler(
+  async ({ request }) => {
+    if (request) {
+      const authToken = request.headers.get("authorization")
+      if (authToken !== TEST_DATA.authorization.token) {
+        throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+      }
+      return {
+        auth: TEST_DATA.user,
+      }
+    }
+
+    return {
+      auth: auth(),
+    }
   }
-})
+)
 
 export const protectedAction = protectedProcedure.createServerAction()
 
