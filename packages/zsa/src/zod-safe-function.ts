@@ -119,17 +119,17 @@ const DefaultOmitted = {
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
 
 /** A combination of both a no input handler and a handler */
-export type TAnyZodSafeFunctionHandler =
+export type TAnyZodSafeFunctionHandler<TData extends any = any> =
   | ((
       input: any,
       overrideArgs?: any,
       opts?: THandlerOpts<any>
-    ) => TDataOrError<any>)
+    ) => TDataOrError<TData>)
   | ((
       placeholder?: undefined,
       overrideArgs?: undefined,
       opts?: THandlerOpts<any>
-    ) => TDataOrError<any>)
+    ) => TDataOrError<TData>)
 
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction

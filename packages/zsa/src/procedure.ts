@@ -8,7 +8,6 @@ import {
 import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
-  TDataOrError,
   THandlerOpts,
   TZodSafeFunction,
   TZodSafeFunctionDefaultOmitted,
@@ -124,11 +123,11 @@ export const createServerActionProcedure = <
  */
 export const chainServerActionProcedures = <
   T2 extends TAnyCompleteProcedure,
-  TContext extends NonNullable<Parameters<T2["$internals"]["lastHandler"]>[1]>,
-  T1 extends CompleteProcedure<
-    any,
-    (input: any, ctx: any) => TDataOrError<TContext>
-  >,
+  TOpts extends Parameters<T2["$internals"]["lastHandler"]>[2],
+  TContext extends TOpts extends { ctx?: any }
+    ? NonNullable<TOpts["ctx"]>
+    : never,
+  T1 extends CompleteProcedure<any, TAnyZodSafeFunctionHandler<TContext>>,
 >(
   first: T1,
   second: T2
