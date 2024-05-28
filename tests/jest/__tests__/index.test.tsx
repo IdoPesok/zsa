@@ -10,9 +10,15 @@ import {
   getUserGreetingAction,
   getUserIdAction,
   helloWorldAction,
+  helloWorldExponentialRetryAction,
+  helloWorldProcedureTimeoutAction,
+  helloWorldProtectedTimeoutAction,
+  helloWorldRetryAction,
+  helloWorldRetryProcedureAction,
+  helloWorldTimeoutAction,
   undefinedAction,
 } from "server/actions"
-import { TEST_DATA } from "server/data"
+import { RetryState, TEST_DATA } from "server/data"
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(),
@@ -199,6 +205,115 @@ describe("actions", () => {
       const [data, err] = await undefinedAction()
       expect(data).toBeUndefined()
       expect(err).toBeNull()
+    })
+  })
+
+  describe("retries", () => {
+    let state: RetryState
+
+    beforeEach(() => {
+      state = {
+        id: "retryCookie",
+        attemptNumber: 1,
+      }
+      ;(cookies as jest.Mock).mockReturnValue({
+        get: (v: string) => ({
+          value: JSON.stringify(state),
+        }),
+        set: (k: string, v: string) => {
+          state = JSON.parse(v)
+        },
+      })
+    })
+
+    it("returns a retry error", async () => {
+      const [data, err] = await helloWorldRetryAction()
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+    })
+
+    it("returns a retry error with exponential delay", async () => {
+      const start = Date.now()
+      const [data, err] = await helloWorldExponentialRetryAction()
+      const end = Date.now()
+
+      let expectedDelay = 0
+      for (let i = 0; i < TEST_DATA.retries.maxAttempts - 1; i++) {
+        expectedDelay += TEST_DATA.retries.delay * Math.pow(2, i)
+      }
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(end - start).toBeGreaterThanOrEqual(expectedDelay)
+      expect(end - start).toBeLessThanOrEqual(expectedDelay + 50)
+    })
+
+    it("returns a retry error from the procedure", async () => {
+      const start = Date.now()
+      const [data, err] = await helloWorldRetryProcedureAction({
+        passOnAttempt: 100000,
+      })
+      const end = Date.now()
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(state.attemptNumber).toEqual(TEST_DATA.retries.maxAttempts + 1)
+
+      expect(end - start).toBeGreaterThanOrEqual(
+        TEST_DATA.retries.delay * (TEST_DATA.retries.maxAttempts - 1)
+      )
+      expect(end - start).toBeLessThanOrEqual(
+        TEST_DATA.retries.delay * (TEST_DATA.retries.maxAttempts - 1) + 50
+      )
+    })
+
+    it("does not return a retry error after 2 attempts from the procedure", async () => {
+      const [data, err] = await helloWorldRetryProcedureAction({
+        passOnAttempt: TEST_DATA.retries.maxAttempts - 1,
+      })
+
+      expect(err).toBeNull()
+      expect(data).not.toBeNull()
+      expect(state.attemptNumber).toEqual(TEST_DATA.retries.maxAttempts - 1)
+    })
+  })
+
+  describe("timeout", () => {
+    it("returns timeout error", async () => {
+      const start = Date.now()
+      const [data, err] = await helloWorldTimeoutAction()
+      const end = Date.now()
+
+      expect(data).toBeNull()
+      expect(err?.code).toEqual(TEST_DATA.errors.timeout)
+      expect(end - start).toBeGreaterThanOrEqual(TEST_DATA.timeout)
+      expect(end - start).toBeLessThanOrEqual(TEST_DATA.timeout + 50)
+    })
+
+    it("returns timeout error for procedure", async () => {
+      const start = Date.now()
+      const [data, err] = await helloWorldProcedureTimeoutAction()
+      const end = Date.now()
+
+      expect(data).toBeNull()
+      expect(err?.code).toEqual(TEST_DATA.errors.timeout)
+      expect(end - start).toBeGreaterThanOrEqual(TEST_DATA.timeout)
+      expect(end - start).toBeLessThanOrEqual(TEST_DATA.timeout + 50)
+    })
+
+    it("returns timeout error for protected action", async () => {
+      ;(cookies as jest.Mock).mockReturnValue({
+        get: jest.fn().mockReturnValue({ value: TEST_DATA.session.admin }),
+      })
+
+      const start = Date.now()
+      const [data, err] = await helloWorldProtectedTimeoutAction()
+      const end = Date.now()
+
+      expect(data).toBeNull()
+      expect(err?.code).toEqual(TEST_DATA.errors.timeout)
+      expect(end - start).toBeGreaterThanOrEqual(TEST_DATA.timeout)
+      expect(end - start).toBeLessThanOrEqual(TEST_DATA.timeout + 50)
     })
   })
 })

@@ -1,6 +1,9 @@
 import { cookies } from "next/headers"
 import { ZSAError } from "zsa"
 
+/**
+ * An object containing test data for use in tests to prevent magic strings
+ */
 export const TEST_DATA = {
   user: {
     id: 123,
@@ -27,8 +30,14 @@ export const TEST_DATA = {
   },
   errors: {
     notAuthorized: "NOT_AUTHORIZED",
+    timeout: "TIMEOUT",
     string: "STRING_ERROR",
     doesNotOwnPost: "DOES_NOT_OWN_POST",
+  },
+  timeout: 2000,
+  retries: {
+    maxAttempts: 3,
+    delay: 1000,
   },
 } as const
 
@@ -49,4 +58,9 @@ export const auth = () => {
 
 export const getPostById = (id: keyof typeof TEST_DATA.posts) => {
   return TEST_DATA.posts[id]
+}
+
+export interface RetryState {
+  id: "retryCookie"
+  attemptNumber: number
 }

@@ -132,7 +132,7 @@ export const chainServerActionProcedures = <
   TOpts extends Parameters<T2["$internals"]["lastHandler"]>[2],
   TContext extends TOpts extends { ctx?: any }
     ? NonNullable<TOpts["ctx"]>
-    : never,
+    : undefined,
   T1 extends CompleteProcedure<any, TAnyZodSafeFunctionHandler<TContext>>,
 >(
   first: T1,
@@ -157,7 +157,7 @@ export const chainServerActionProcedures = <
     opts?: THandlerOpts<any>
   ) =>
     await second.$internals.lastHandler(input, overrideArgs, {
-      ctx: opts?.ctx,
+      ...opts,
       overrideInputSchema: opts?.overrideInputSchema || inputSchema,
     })
 

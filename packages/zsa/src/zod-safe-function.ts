@@ -9,9 +9,15 @@ import { TZSAError, ZSAError } from "./errors"
 import { NextRequest } from "./next-request"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 
+/** Replace void with undefined */
+type TReplaceVoidWithUndefined<T extends Promise<any>> =
+  Awaited<T> extends void | any
+    ? Promise<Exclude<Awaited<T>, void> | undefined>
+    : T
+
 /** The return type of a server action */
-export type TDataOrError<TData> =
-  | Promise<[Awaited<TData>, null]>
+export type TDataOrError<TData extends Promise<any>> =
+  | Promise<[Awaited<TReplaceVoidWithUndefined<TData>>, null]>
   | Promise<[null, TZSAError]>
 
 /** A configuration object for retrying a server action */
@@ -58,6 +64,8 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   returnOutputSchema?: boolean
   /** an associated request object */
   request?: NextRequest
+  /** the number of attempts the handler has made */
+  attempts?: number
 }
 
 /** A function type for a handler that does not have an input */
@@ -119,7 +127,9 @@ const DefaultOmitted = {
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
 
 /** A combination of both a no input handler and a handler */
-export type TAnyZodSafeFunctionHandler<TData extends any = any> =
+export type TAnyZodSafeFunctionHandler<
+  TData extends Promise<any> = Promise<any>,
+> =
   | ((
       input: any,
       overrideArgs?: any,
@@ -193,9 +203,6 @@ interface TInternals<
    * The retry configuration of the handler
    */
   retryConfig?: RetryConfig | undefined
-
-  /** The number of atttempts the handler has made */
-  attempts?: number | undefined
 
   /** A function to run when the handler errors */
   onErrorFn?: TOnErrorFn | undefined
@@ -274,24 +281,22 @@ export class ZodSafeFunction<
    *
    * If there should be no retry, returns -1
    */
-  public getRetryDelay($err: unknown) {
+  public getRetryDelay($err: unknown, currentAttempt: number) {
     try {
       const err = $err instanceof ZSAError ? $err : new ZSAError("ERROR", $err)
 
+      // if there is no retry config, return -1
       const config = this.$internals.retryConfig
       if (!config) return -1
 
-      this.$internals.attempts = this.$internals.attempts
-        ? this.$internals.attempts + 1
-        : 1
+      // if this is a procedure, the action should retry
+      if (this.$internals.isProcedure) return -1
 
-      const attempts = this.$internals.attempts || 0
-
-      const shouldRetry = attempts < config.maxAttempts
+      const shouldRetry = currentAttempt < config.maxAttempts
 
       let retryDelay = 0
       if (typeof config.delay === "function") {
-        retryDelay = config.delay(attempts + 1, err)
+        retryDelay = config.delay(currentAttempt, err)
       } else if (typeof config.delay === "number") {
         retryDelay = config.delay
       }
@@ -815,11 +820,14 @@ export class ZodSafeFunction<
 
         return [parsed, null]
       } catch (err) {
-        const retryDelay = this.getRetryDelay(err)
+        const retryDelay = this.getRetryDelay(err, opts?.attempts || 1)
 
         if (retryDelay >= 0) {
           await new Promise((r) => setTimeout(r, retryDelay))
-          return await wrapper(args, overrideArgs, opts)
+          return await wrapper(args, overrideArgs, {
+            ...(opts || {}),
+            attempts: (opts?.attempts || 1) + 1,
+          })
         }
 
         return await this.handleError(err)
