@@ -9,7 +9,9 @@ import { incrementNumberAction } from "./actions"
 export default function IncrementExample() {
   const [counter, setCounter] = useState(0)
 
-  const { isPending, execute, data } = useServerAction(incrementNumberAction)
+  const { isPending, execute, data, error } = useServerAction(
+    incrementNumberAction
+  )
 
   return (
     <Card className="not-prose">

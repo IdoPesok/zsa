@@ -9,8 +9,10 @@ import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   THandlerOpts,
-  TZodSafeFunction,
   TZodSafeFunctionDefaultOmitted,
+} from "./types"
+import {
+  TZodSafeFunction,
   ZodSafeFunction,
   createZodSafeFunction,
   inferServerActionReturnData,
@@ -133,7 +135,7 @@ export const chainServerActionProcedures = <
   TContext extends TOpts extends { ctx?: any }
     ? NonNullable<TOpts["ctx"]>
     : undefined,
-  T1 extends CompleteProcedure<any, TAnyZodSafeFunctionHandler<TContext>>,
+  T1 extends CompleteProcedure<any, TAnyZodSafeFunctionHandler<any, TContext>>,
 >(
   first: T1,
   second: T2

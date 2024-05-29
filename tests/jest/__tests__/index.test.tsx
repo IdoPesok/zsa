@@ -353,12 +353,18 @@ describe("actions", () => {
       const [data, err] = await inputNumberAction({ number: 0 })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+      expect(err?.fieldErrors?.number).not.toBeUndefined()
+      expect(err?.formattedErrors?.number?._errors).not.toBeUndefined()
+      expect(err?.formErrors).toHaveLength(0)
     })
 
     it("throws when the input number is not large", async () => {
       const [data, err] = await inputLargeNumberAction({ number: 100 })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+      expect(err?.fieldErrors?.number).not.toBeUndefined()
+      expect(err?.formattedErrors?.number?._errors).not.toBeUndefined()
+      expect(err?.formErrors).toHaveLength(0)
     })
 
     it("returns the input large number", async () => {
@@ -374,6 +380,9 @@ describe("actions", () => {
       ;[data, err] = await inputLargeNumberAction({ notValid: 0 } as any)
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+      expect(err?.fieldErrors?.number).not.toBeUndefined()
+      expect(err?.formattedErrors?.number?._errors).not.toBeUndefined()
+      expect(err?.formErrors).toHaveLength(0)
     })
   })
 })

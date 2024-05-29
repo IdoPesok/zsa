@@ -519,7 +519,7 @@ export const createRouteHandlers = <
         isSuccess: false
         status: number
         data: null
-        error: TZSAError
+        error: TZSAError<any>
       }
 
   type THandlerRet = TRet extends "Response" ? Response : TResult

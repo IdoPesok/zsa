@@ -1,4 +1,9 @@
-import { TAnyZodSafeFunctionHandler, inferServerActionReturnData } from "zsa"
+import {
+  TAnyZodSafeFunctionHandler,
+  TZSAError,
+  inferInputSchemaFromHandler,
+  inferServerActionReturnData,
+} from "zsa"
 
 export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
@@ -42,7 +47,7 @@ export type TServerActionResult<
       isOptimistic: false
       data: undefined
       isError: true
-      error: unknown
+      error: TZSAError<inferInputSchemaFromHandler<TServerAction>>
       isSuccess: false
       status: "error"
       isTransitionPending: boolean

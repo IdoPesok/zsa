@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 /** An enum of error codes */
 const ERROR_CODES = {
   INPUT_PARSE_ERROR: "INPUT_PARSE_ERROR",
@@ -33,13 +35,41 @@ export class ZSAError extends Error {
     super()
     this.data = data
     this.code = code
+
+    if (data instanceof Error) {
+      this.message = data.message
+      this.stack = data.stack
+      this.name = data.name
+      this.cause = data.cause
+    }
+
+    if (!this.message && typeof this.data === "string") {
+      this.message = this.data
+    }
   }
 }
 
 /**
  * A TZSAError is a ZSAError that is thrown by a server action that has a type
  */
-export interface TZSAError extends Error {
-  code: keyof typeof ERROR_CODES
-  data: string
-}
+export type TZSAError<TInputSchema extends z.ZodType> = Error &
+  (
+    | {
+        code: Exclude<keyof typeof ERROR_CODES, "INPUT_PARSE_ERROR">
+        message?: string
+        stack: string
+        data: string
+        fieldErrors?: undefined
+        formErrors?: undefined
+        formattedErrors?: undefined
+      }
+    | {
+        message?: string
+        stack: string
+        code: "INPUT_PARSE_ERROR"
+        data: string
+        fieldErrors: z.inferFlattenedErrors<TInputSchema>["fieldErrors"]
+        formErrors: z.inferFlattenedErrors<TInputSchema>["formErrors"]
+        formattedErrors: z.inferFormattedError<TInputSchema>
+      }
+  )

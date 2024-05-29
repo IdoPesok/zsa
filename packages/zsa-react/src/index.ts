@@ -3,7 +3,9 @@
 import { useCallback, useRef, useState, useTransition } from "react"
 import {
   TAnyZodSafeFunctionHandler,
+  TZSAError,
   ZSAError,
+  inferInputSchemaFromHandler,
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
@@ -26,7 +28,9 @@ export const useServerAction = <
 >(
   serverAction: TServerAction,
   opts?: {
-    onError?: (args: { err: ZSAError }) => void
+    onError?: (args: {
+      err: TZSAError<inferInputSchemaFromHandler<TServerAction>>
+    }) => void
     onSuccess?: (args: { data: Awaited<ReturnType<TServerAction>>[0] }) => void
     onStart?: () => void
 
@@ -40,7 +44,7 @@ export const useServerAction = <
 ) => {
   type TResult = {
     isError: boolean
-    error: undefined | unknown
+    error: undefined | TZSAError<inferInputSchemaFromHandler<TServerAction>>
     data: undefined | inferServerActionReturnData<TServerAction>
   }
 
@@ -105,7 +109,7 @@ export const useServerAction = <
       if (err) {
         if (opts?.onError) {
           opts.onError({
-            err,
+            err: err as any,
           })
         }
 
@@ -142,7 +146,7 @@ export const useServerAction = <
           if (oldResult.status === "filled") {
             setResult(oldResult.result)
           } else {
-            setResult({ error: err, isError: true, data: undefined })
+            setResult({ error: err as any, isError: true, data: undefined })
           }
 
           // clear the old data
@@ -273,7 +277,7 @@ export const useServerAction = <
       isPending: false,
       data: undefined,
       isError: true,
-      error: result.error,
+      error: result.error as any,
       isOptimistic: false,
       isSuccess: false,
       status: "error",
