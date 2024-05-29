@@ -9,7 +9,9 @@ import { incrementNumberAction } from "./actions"
 export default function IncrementExample() {
   const [counter, setCounter] = useState(0)
 
-  const { isPending, execute, data } = useServerAction(incrementNumberAction)
+  const { isPending, execute, data, error, isError } = useServerAction(
+    incrementNumberAction
+  )
 
   return (
     <Card className="not-prose">
@@ -35,6 +37,9 @@ export default function IncrementExample() {
         </Button>
         <p>Count:</p>
         <div>{isPending ? "saving..." : data}</div>
+        {isError && error.code === "INPUT_PARSE_ERROR" && (
+          <div>{error.fieldErrors.number}</div>
+        )}
       </CardContent>
     </Card>
   )
