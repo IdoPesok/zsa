@@ -186,8 +186,12 @@ export const useServerAction = <
   )
 
   const execute = useCallback(
-    async (input: Parameters<TServerAction>[0]) => {
-      return await internalExecute(input)
+    async (
+      ...opts: Parameters<TServerAction>[0] extends undefined
+        ? []
+        : [Parameters<TServerAction>[0]]
+    ) => {
+      return await internalExecute(opts[0])
     },
     [internalExecute]
   )

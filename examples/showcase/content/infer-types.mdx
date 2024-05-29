@@ -26,6 +26,24 @@ type MyActionReturnData = inferServerActionReturnData<typeof myAction>
 //   ^? number
 ```
 
+## Infer Server Action Error
+
+Use `inferServerActionError` to infer the error type of a server action. This will be the type of the `error` in the `[data, error]` tuple.
+
+```typescript
+import { inferServerActionError } from "zsa"
+
+const myAction = createServerAction()
+  .input(z.object({ num: z.number() }))
+  .output(z.number())
+  .handler(async ({ input }) => {
+    return input.num + 1
+  })
+
+type MyActionError = inferServerActionError<typeof myAction>
+//   ^? TZSAError<z.ZodType<number>>
+```
+
 ## Infer Server Action Return Type
 
 Use `inferServerActionReturnType` to infer the return type of a server action. This will be a tuple of `[data, error]`.

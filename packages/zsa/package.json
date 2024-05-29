@@ -28,7 +28,7 @@
     "typecheck": "tsc --noEmit",
     "format:write": "prettier --write \"**/*.{ts,tsx,mdx}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,mdx}\" --cache",
-    "build": "tsup src/index.ts --format esm --dts",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },

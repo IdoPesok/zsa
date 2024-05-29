@@ -49,7 +49,7 @@ export const getReply = createServerAction()
 
 Now that you have your server actions, create an OpenAPI router and expose these actions as endpoints in your application. To do this in your Next.js application, create a route at `/api/[[...openapi]]/route.ts`:
 
-```typescript:api/[[...openapi]]/route.ts
+```typescript:app/api/[[...openapi]]/route.ts
 import { createOpenApiServerActionRouter, createRouteHandlers } from "zsa-openapi"
 import { createPost, updatePost, getReply, getPosts } from "./actions"
 
@@ -77,12 +77,8 @@ Ensure that your `pathPrefix` matches the prefix to your `/[[...openapi]]/route.
 You can now hit your server actions at the configured paths. Your server actions will take the path parameters defined in your router as input to the action.
 
 <Note>
-Anything not defined as a path parameter but required in the server action input will be required in the query parameters for that endpoint. 
+Anything not defined as a path parameter but required in the server action input will be required in the query parameters or request body for that endpoint. 
 </Note>
-
-<Warning>
-We recommend that all methods in your `createOpenApiServerActionRouter` are configured directly in a singular file rather than across multiple files. If you export the route handlers in one file and chain your routes (`router.get`) in another file, these routes will not be accessible. They must be consolidated into your `api/[[...openapi]]/route.ts` file. 
-</Warning>
 
 ## OpenAPI Documentation
 
@@ -90,7 +86,7 @@ We recommend that all methods in your `createOpenApiServerActionRouter` are conf
 
 To do this in Next.js, start by creating an endpoint at `/docs/page.ts`:
 
-```typescript:docs/page.tsx
+```typescript:app/docs/page.tsx
 import SwaggerUI from "swagger-ui-react" <|highlight|>
 import "swagger-ui-react/swagger-ui.css"
 import { generateOpenApiDocument } from "zsa-openapi" <|highlight|>
@@ -115,7 +111,7 @@ If you hit this endpoint, you should have access to your API documentation in OA
 
 Additionally, if you only want to expose a single server action as an endpoint, you can use `setupApiHandler`. This is good when you want to create adhoc route heandlers. For example:
 
-```typescript:api/adhoc-example/route.ts
+```typescript:app/api/adhoc-example/route.ts
 import { setupApiHandler } from "zsa-openapi"; <|highlight|>
 import { getReply } from "./actions";
 
@@ -170,7 +166,16 @@ The `createOpenApiServerActionRouter` function allows you to extend routers by c
 
 Here's an example of how you can extend routers:
 
-```typescript:/api/[[...openapi]]/posts.ts
+<Note>
+Pay attention to the recommended file structure
+
+- `app/api/[[...openapi]]/_router/posts.ts` - this is the router for posts
+- `app/api/[[...openapi]]/_router/users.ts` - this is the router for users
+- `app/api/[[...openapi]]/_router/index.ts` - this is the main router that combines all the other routers
+- `app/api/[[...openapi]]/route.ts` - this is the file that exports the main router
+</Note>
+
+```typescript:app/api/[[...openapi]]/_router/posts.ts
 import { createOpenApiServerActionRouter } from "zsa-openapi";
 import { createPost, updatePost, deletePost } from "./postActions";
 
@@ -180,7 +185,7 @@ export const postsRouter = createOpenApiServerActionRouter()
   .delete("/posts/{postId}", deletePost);
 ```
 
-```typescript:/api/[[...openapi]]/users.ts
+```typescript:app/api/[[...openapi]]/_router/users.ts
 import { createOpenApiServerActionRouter } from "zsa-openapi";
 import { createUser, updateUser, deleteUser } from "./userActions";
 
@@ -190,15 +195,20 @@ export const usersRouter = createOpenApiServerActionRouter()
   .delete("/users/{userId}", deleteUser);
 ```
 
-```typescript:/api/[[...openapi]]/route.ts
-import { createOpenApiServerActionRouter, createRouteHandlers } from "zsa-openapi";
+```typescript:app/api/[[...openapi]]/_router/index.ts
+import { createOpenApiServerActionRouter } from "zsa-openapi";
 import { postsRouter } from "./posts";
 import { usersRouter } from "./users";
 
-const router = createOpenApiServerActionRouter({
-  pathPrefix: "/api",
+export const router = createOpenApiServerActionRouter({
   extend: [postsRouter, usersRouter], <|highlight|>
 });
+
+```
+
+```typescript:app/api/[[...openapi]]/route.ts
+import { createRouteHandlers } from "zsa-openapi";
+import { router } from "./_router";
 
 export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
 ```

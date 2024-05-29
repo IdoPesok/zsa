@@ -739,6 +739,10 @@ export type inferServerActionReturnData<
   TAction extends TAnyZodSafeFunctionHandler,
 > = NonNullable<Awaited<ReturnType<TAction>>[0]>
 
+// helper type to infer the error of a server action
+export type inferServerActionError<TAction extends TAnyZodSafeFunctionHandler> =
+  NonNullable<Awaited<ReturnType<TAction>>[1]>
+
 // helper type to infer the return type of a server action
 export type inferServerActionReturnType<
   TAction extends TAnyZodSafeFunctionHandler,

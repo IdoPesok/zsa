@@ -11,3 +11,7 @@ export const incrementNumberAction = createServerAction()
     await new Promise((resolve) => setTimeout(resolve, 500))
     return input.number + 1
   })
+
+export const plainAction = createServerAction().handler(async () => {
+  return "hello world"
+})

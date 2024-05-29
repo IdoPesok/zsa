@@ -11,11 +11,13 @@ import {
 export type OpenApiMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE"
 
 const FORM_DATA_CONTENT_TYPE = "application/x-www-form-urlencoded"
+const MULTI_PART_CONTENT_TYPE = "multipart/form-data"
 const JSON_CONTENT_TYPE = "application/json"
 
 export type OpenApiContentType =
   | typeof FORM_DATA_CONTENT_TYPE
   | typeof JSON_CONTENT_TYPE
+  | typeof MULTI_PART_CONTENT_TYPE
   | (string & {})
 
 export interface ApiRouteHandler<TRet> {
@@ -411,13 +413,20 @@ export const createRouteHandlers = <
 
       // if it has a body
       if (acceptsRequestBody(request.method)) {
-        if (headers.get("content-type") === FORM_DATA_CONTENT_TYPE) {
-          // if its form data
-          const formData = await request.formData()
-          data = Object.fromEntries(formData.entries())
-        } else if (headers.get("content-type") === JSON_CONTENT_TYPE) {
-          // if its json
-          data = await request.json()
+        try {
+          if (
+            headers.get("content-type")?.startsWith(FORM_DATA_CONTENT_TYPE) ||
+            headers.get("content-type")?.startsWith(MULTI_PART_CONTENT_TYPE)
+          ) {
+            // if its form data
+            const formData = await request.formData()
+            data = Object.fromEntries(formData.entries())
+          } else {
+            // if its json
+            data = await request.json()
+          }
+        } catch (err) {
+          data = undefined
         }
       }
 
