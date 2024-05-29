@@ -1,10 +1,11 @@
 import { mockNextRequest } from "lib/utils"
-import { multiplyAction } from "server/actions"
+import { divideAction, multiplyAction } from "server/actions"
 import { TEST_DATA } from "server/data"
 import { openapiRouter } from "server/router"
 import {
   createOpenApiServerActionRouter,
   createRouteHandlers,
+  setupApiHandler,
 } from "zsa-openapi"
 
 describe("openapi", () => {
@@ -88,7 +89,7 @@ describe("openapi", () => {
     })
   })
 
-  describe("calculationsRouter", () => {
+  describe("createRouteHandlers", () => {
     it("should multiply two numbers [GET]", async () => {
       const { GET } = createRouteHandlers(openapiRouter, {
         responseType: "JSON",
@@ -229,6 +230,53 @@ describe("openapi", () => {
       const { POST } = createRouteHandlers(openapiRouter, {
         responseType: "JSON",
       })
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/divide/100",
+        body: {
+          number2: "0",
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.isError).toBe(true)
+      expect(response.status).toBe(400)
+    })
+  })
+
+  describe("setupApiHandler", () => {
+    it("it should succeed in dividing a number by zero [PUT]", async () => {
+      const { PUT } = setupApiHandler(
+        "/api/calculations/divide/{number1}",
+        divideAction,
+        {
+          responseType: "JSON",
+        }
+      )
+
+      const request = mockNextRequest({
+        method: "PUT",
+        pathname: "/api/calculations/divide/100",
+        body: {
+          number2: "20",
+        },
+      })
+
+      const response = await PUT(request)
+      expect(response.isError).toEqual(false)
+      expect(response.data).toEqual({
+        result: 100 / 20,
+      })
+    })
+    it("it should fail to divide a number by zero [POST]", async () => {
+      const { POST } = setupApiHandler(
+        "/api/calculations/divide/{number1}",
+        divideAction,
+        {
+          responseType: "JSON",
+        }
+      )
 
       const request = mockNextRequest({
         method: "POST",
