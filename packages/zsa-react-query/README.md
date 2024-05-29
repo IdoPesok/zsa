@@ -1,105 +1,32 @@
-# zsa-react-query - React Query Integration for zsa
+# zsa
 
-`zsa-react-query` is a companion library for `zsa` that provides seamless integration with [React Query](https://tanstack.com/query/latest/docs/framework/react/overview) for querying and mutating server actions from client components in Next.js applications.
+`zsa` is a library for building typesafe server actions in Next.js. It provides a simple, scalable developer experience with features like validated inputs/outputs, procedures (middleware) for passing context to server actions, and React Query integration for querying server actions in client components.
 
 ## Installation
 
-Install `zsa-react-query` and its peer dependencies using your preferred package manager:
+Install `zsa` using your preferred package manager:
 
 ```bash
-npm i zsa-react-query @tanstack/react-query
+npm i zsa zsa-react zsa-react-query zsa-openapi zod
 ```
 
-## Setup
+## Features
 
-Wrap your application with a React Query provider:
+- Validated inputs and outputs using Zod schemas
+- Procedures for adding context and authorization to server actions
+- Callbacks for running additional logic based on server action lifecycle
+- Built-in loading states and error handling
+- React Query integration for querying server actions on the client side
+- Support for FormData as input type
+- Retry functionality and timeouts for server actions
+- TypeScript support for a fully typesafe experience
 
-```typescript
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+## Documentation
 
-function ReactQueryProvider({ children }: React.PropsWithChildren) {
-  const [client] = useState(new QueryClient())
+View the full documentation and examples on [zsh.vercel.app](https://zsa.vercel.app/introduction).
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
-}
+## Support
 
-export default ReactQueryProvider
-```
+If you need help with anything, feel free to DM ([@ido_pesok](https://twitter.com/ido_pesok)) on X.
 
-Set up your hooks:
-
-```typescript
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
-import { setupServerActionHooks } from "zsa-react-query"
-
-const {
-  useServerActionQuery,
-  useServerActionMutation,
-  useServerActionInfiniteQuery,
-} = setupServerActionHooks({
-  hooks: {
-    useQuery: useQuery,
-    useMutation: useMutation,
-    useInfiniteQuery: useInfiniteQuery,
-  },
-})
-
-export {
-  useServerActionInfiniteQuery,
-  useServerActionMutation,
-  useServerActionQuery,
-}
-```
-
-## Usage
-
-Query a server action:
-
-```typescript
-import { useServerActionQuery } from "@/lib/hooks/server-action-hooks"
-import { getRandomNumber } from "./actions"
-
-export default function RandomNumberDisplay() {
-  const { isLoading, isRefetching, isSuccess, data } = useServerActionQuery(
-    getRandomNumber,
-    {
-      input: {
-        min: 0,
-        max: 100,
-      },
-      queryKey: ["getRandomNumber"],
-    }
-  )
-
-  // ...
-}
-```
-
-Mutate a server action:
-
-```typescript
-import { useServerActionMutation } from "@/lib/hooks/server-action-hooks"
-import { updateEmail } from "./actions"
-
-export default function UpdateEmailForm() {
-  const { mutate, isLoading } = useServerActionMutation(updateEmail)
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    const newEmail = e.target.email.value
-    mutate({ newEmail })
-  }
-
-  // ...
-}
-```
-
-For more detailed documentation and examples, please refer to the [full documentation](https://zsa.vercel.app).
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request on the [GitHub repository](https://github.com/IdoPesok/zsa).
-
-## License
-
-`zsa-react-query` is released under the [MIT License](https://github.com/IdoPesok/zsa/blob/main/LICENSE).
+## [Contributors](https://github.com/vercel/ai/graphs/contributors)
