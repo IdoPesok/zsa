@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
-import { TAnyZodSafeFunctionHandler } from "zsa"
+import { TAnyZodSafeFunctionHandler, TZSAError } from "zsa"
 import {
   acceptsRequestBody,
   getErrorStatusFromZSAError,
@@ -18,8 +18,8 @@ export type OpenApiContentType =
   | typeof JSON_CONTENT_TYPE
   | (string & {})
 
-export interface ApiRouteHandler {
-  (request: NextRequest): Promise<Response>
+export interface ApiRouteHandler<TRet> {
+  (request: NextRequest): Promise<TRet>
 }
 
 /**
@@ -381,124 +381,154 @@ export const createOpenApiServerActionRouter = (args?: {
  * export const { GET, POST, PUT, DELETE, PATCH } = createRouteHandlers(router)
  * ```
  */
-export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
+export const createRouteHandlers = <
+  TRet extends "Response" | "JSON" = "Response",
+>(
+  router: TOpenApiServerActionRouter,
+  opts?: {
+    responseType?: TRet
+  }
+) => {
   const parseRequest = async (
     request: NextRequest
-  ): Promise<{
+  ): Promise<null | {
     input: Record<string, any> | undefined
     params: Record<string, string>
     searchParams: Record<string, string>
     action: TAnyZodSafeFunctionHandler
     body: Record<string, any> | undefined
   }> => {
-    // get the search params
-    const searchParams = request.nextUrl.searchParams
-    const searchParamsJson = Object.fromEntries(searchParams.entries())
+    try {
+      // get the search params
+      const searchParams = request.nextUrl.searchParams
+      const searchParamsJson =
+        searchParams && "entries" in searchParams
+          ? Object.fromEntries(searchParams.entries())
+          : {}
 
-    const headers = new Headers(request.headers)
-    let data: Object | undefined = undefined
+      const headers = new Headers(request.headers)
+      let data: Object | undefined = undefined
 
-    // if it has a body
-    if (acceptsRequestBody(request.method)) {
-      if (headers.get("content-type") === FORM_DATA_CONTENT_TYPE) {
-        // if its form data
-        data = await request.formData()
-      } else if (headers.get("content-type") === JSON_CONTENT_TYPE) {
-        // if its json
-        data = await request.json()
-      }
-    }
-
-    const params: Record<string, string> = {}
-
-    // find the matching action from the router
-    const foundMatch = router.$INTERNALS.actions.find((action) => {
-      if (action.method !== request.method) {
-        return false
+      // if it has a body
+      if (acceptsRequestBody(request.method)) {
+        if (headers.get("content-type") === FORM_DATA_CONTENT_TYPE) {
+          // if its form data
+          const formData = await request.formData()
+          data = Object.fromEntries(formData.entries())
+        } else if (headers.get("content-type") === JSON_CONTENT_TYPE) {
+          // if its json
+          data = await request.json()
+        }
       }
 
-      if (action.path === request.nextUrl.pathname) {
+      const params: Record<string, string> = {}
+
+      // find the matching action from the router
+      const foundMatch = router.$INTERNALS.actions.find((action) => {
+        if (action.method !== request.method) {
+          return false
+        }
+
+        if (action.path === request.nextUrl.pathname) {
+          return true
+        }
+
+        if (!action.path.includes("{") || !action.path.includes("}"))
+          return false
+
+        const re = pathToRegexp(preparePathForMatching(action.path))
+        const match = re.exec(
+          request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
+        )
+
+        if (!match) return false
+
         return true
-      }
+      })
 
-      if (!action.path.includes("{") || !action.path.includes("}")) return false
+      // parse the params from the path
+      if (foundMatch && foundMatch.path.includes("{")) {
+        let basePathSplit = (foundMatch.path as string).split("/")
+        let pathSplit = (
+          request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
+        ).split("/")
 
-      const re = pathToRegexp(preparePathForMatching(action.path))
-      const match = re.exec(
-        request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
-      )
-
-      if (!match) return false
-
-      return true
-    })
-
-    // parse the params from the path
-    if (foundMatch && foundMatch.path.includes("{")) {
-      let basePathSplit = (foundMatch.path as string).split("/")
-      let pathSplit = (
-        request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
-      ).split("/")
-
-      if (basePathSplit.length !== pathSplit.length) {
-        return {} as any
-      }
-
-      // copy over the params
-      for (let i = 0; i < basePathSplit.length; i++) {
-        const basePathPart = basePathSplit[i]
-        const pathPart = pathSplit[i]
-
-        if (!basePathPart || !pathPart) {
-          continue
+        if (basePathSplit.length !== pathSplit.length) {
+          return {} as any
         }
 
-        if (basePathPart.startsWith("{") && basePathPart.endsWith("}")) {
-          const foundPathPartName = basePathPart.slice(1, -1)
-          params[foundPathPartName] = pathPart
+        // copy over the params
+        for (let i = 0; i < basePathSplit.length; i++) {
+          const basePathPart = basePathSplit[i]
+          const pathPart = pathSplit[i]
+
+          if (!basePathPart || !pathPart) {
+            continue
+          }
+
+          if (basePathPart.startsWith("{") && basePathPart.endsWith("}")) {
+            const foundPathPartName = basePathPart.slice(1, -1)
+            params[foundPathPartName] = pathPart
+          }
         }
       }
-    }
 
-    // form the final input to be sent to the action
-    const final = {
-      ...searchParamsJson,
-      ...(data || {}),
-      ...params,
-    }
+      // form the final input to be sent to the action
+      const final = {
+        ...searchParamsJson,
+        ...(data || {}),
+        ...params,
+      }
 
-    if (!foundMatch) {
-      throw new Error("No matching action found")
-    }
+      if (!foundMatch) {
+        return null
+      }
 
-    if (Object.keys(final).length === 0) {
+      if (Object.keys(final).length === 0) {
+        return {
+          input: undefined,
+          params: {},
+          searchParams: {},
+          action: foundMatch.action,
+          body: undefined,
+        }
+      }
+
       return {
-        input: undefined,
-        params: {},
-        searchParams: {},
+        input: final,
+        params,
+        searchParams: searchParamsJson,
         action: foundMatch.action,
-        body: undefined,
+        body: data,
       }
-    }
-
-    return {
-      input: final,
-      params,
-      searchParams: searchParamsJson,
-      action: foundMatch.action,
-      body: data,
+    } catch (error: unknown) {
+      return null
     }
   }
 
-  const notFound = () => {
-    return new Response("", {
-      status: 404,
-    })
-  }
+  type TResult =
+    | {
+        isError: false
+        isSuccess: true
+        data: unknown
+        status: 200
+        error: null
+      }
+    | {
+        isError: true
+        isSuccess: false
+        status: number
+        data: null
+        error: TZSAError
+      }
 
-  const handler: ApiRouteHandler = async (request: NextRequest) => {
+  type THandlerRet = TRet extends "Response" ? Response : TResult
+
+  const handler: ApiRouteHandler<THandlerRet> = async (
+    request: NextRequest
+  ): Promise<THandlerRet> => {
     const parsedData = await parseRequest(request)
-    if (!parsedData) return notFound()
+    if (!parsedData) return new Response("", { status: 404 }) as THandlerRet
 
     try {
       const [data, err] = await parsedData.action(parsedData.input, undefined, {
@@ -509,13 +539,31 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
         throw err
       }
 
-      return new Response(JSON.stringify(data))
+      if (opts?.responseType === "JSON") {
+        return {
+          isError: false,
+          isSuccess: true,
+          status: 200,
+          data,
+          error: null,
+        } as THandlerRet
+      }
+
+      return new Response(JSON.stringify(data), { status: 200 }) as THandlerRet
     } catch (error: unknown) {
       let status = getErrorStatusFromZSAError(error)
 
-      return new Response(JSON.stringify({ error }), {
-        status,
-      })
+      if (opts?.responseType === "JSON") {
+        return {
+          isError: true,
+          isSuccess: false,
+          status,
+          data: null,
+          error,
+        } as THandlerRet
+      }
+
+      return new Response(JSON.stringify(error), { status }) as THandlerRet
     }
   }
 
@@ -548,9 +596,15 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
  * export const { PUT } = setupApiHandler("/posts/{postId}", updatePostAction)
  * ```
  */
-export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
+export function setupApiHandler<
+  THandler extends TAnyZodSafeFunctionHandler,
+  TResponseType extends "Response" | "JSON" = "Response",
+>(
   path: `/${string}`,
-  action: THandler
+  action: THandler,
+  opts?: {
+    responseType?: TResponseType
+  }
 ) {
   const router = createOpenApiServerActionRouter()
     .get(path, action)
@@ -559,5 +613,5 @@ export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
     .put(path, action)
     .patch(path, action)
 
-  return createRouteHandlers(router)
+  return createRouteHandlers(router, opts)
 }
