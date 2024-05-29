@@ -175,25 +175,35 @@ Pay attention to the recommended file structure
 - `app/api/[[...openapi]]/route.ts` - this is the file that exports the main router
 </Note>
 
+First we create a posts router:
+
 ```typescript:app/api/[[...openapi]]/_router/posts.ts
 import { createOpenApiServerActionRouter } from "zsa-openapi";
 import { createPost, updatePost, deletePost } from "./postActions";
 
-export const postsRouter = createOpenApiServerActionRouter()
-  .post("/posts", createPost)
-  .put("/posts/{postId}", updatePost)
-  .delete("/posts/{postId}", deletePost);
+export const postsRouter = createOpenApiServerActionRouter({
+    pathPrefix: "/api/posts",
+})
+  .post("/", createPost)
+  .put("/{postId}", updatePost)
+  .delete("/{postId}", deletePost);
 ```
+
+Next we create a users router:
 
 ```typescript:app/api/[[...openapi]]/_router/users.ts
 import { createOpenApiServerActionRouter } from "zsa-openapi";
 import { createUser, updateUser, deleteUser } from "./userActions";
 
-export const usersRouter = createOpenApiServerActionRouter()
-  .post("/users", createUser)
-  .put("/users/{userId}", updateUser)
-  .delete("/users/{userId}", deleteUser);
+export const usersRouter = createOpenApiServerActionRouter({
+    pathPrefix: "/api/users",
+})
+  .post("/", createUser)
+  .put("/{userId}", updateUser)
+  .delete("/{userId}", deleteUser);
 ```
+
+We then combine the two routers into a main router:
 
 ```typescript:app/api/[[...openapi]]/_router/index.ts
 import { createOpenApiServerActionRouter } from "zsa-openapi";
@@ -203,8 +213,9 @@ import { usersRouter } from "./users";
 export const router = createOpenApiServerActionRouter({
   extend: [postsRouter, usersRouter], <|highlight|>
 });
-
 ```
+
+Finally, we export the main router:
 
 ```typescript:app/api/[[...openapi]]/route.ts
 import { createRouteHandlers } from "zsa-openapi";
@@ -215,9 +226,72 @@ export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
 
 In this example, we have separate files for posts and users routes. Each file creates its own router using `createOpenApiServerActionRouter`. Then, in the final `route.ts` file, we create a new router and use the `extend` option to combine the `postsRouter` and `usersRouter`. This way, all the routes from both routers will be included in the final router.
 
-## Defaults
+## Attributes
 
-The `createOpenApiServerActionRouter` function also allows you to specify default OpenAPI specs that will be applied to all actions in the router. This can be useful when you want to set common properties for all your actions.
+When defining OpenAPI actions using `createOpenApiServerActionRouter` or `setupApiHandler`, you can specify additional attributes to provide more information about the action. Here are the available attributes:
+
+- `enabled?: boolean`: Determines whether the action is enabled or not. If set to `false`, the action will be excluded from the generated OpenAPI documentation. Defaults to `true`.
+
+- `method: OpenApiMethod`: Specifies the HTTP method for the action. It can be one of the following values: `"GET"`, `"POST"`, `"PATCH"`, `"PUT"`, or `"DELETE"`. This attribute is required.
+
+- `path: string`: Defines the URL path for the action. It should start with a forward slash (`/`) and can include path parameters using curly braces (e.g., `"/posts/{postId}"`). This attribute is required.
+
+- `summary?: string`: Provides a brief summary or title for the action. It is used in the generated OpenAPI documentation.
+
+- `description?: string`: Describes the purpose or functionality of the action in more detail. It is used in the generated OpenAPI documentation.
+
+- `protect?: boolean`: Indicates whether the action requires authentication or authorization. If set to `true`, it implies that the action is protected and may require additional security measures.
+
+- `tags?: string[]`: Assigns tags or categories to the action. Tags are used to group related actions together in the generated OpenAPI documentation.
+
+- `headers?: (OpenAPIV3.ParameterBaseObject & { name: string; in?: "header" })[]`: Defines additional headers that are expected or required for the action. Each header is specified as an object with properties such as `name`, `description`, `required`, etc.
+
+- `contentTypes?: OpenApiContentType[]`: Specifies the supported content types for the request body of the action. It can include values like `"application/json"`, `"multipart/form-data"`, etc.
+
+- `deprecated?: boolean`: Indicates whether the action is deprecated. If set to `true`, it implies that the action should be avoided or is no longer recommended for use.
+
+- `example?: { request?: Record<string, any>; response?: Record<string, any> }`: Provides example request and response payloads for the action. It can be used to illustrate the expected input and output of the action.
+
+- `responseHeaders?: Record<string, OpenAPIV3.HeaderObject | OpenAPIV3.ReferenceObject>`: Defines the headers that are included in the response of the action. Each header is specified as a key-value pair, where the key is the header name and the value is an object describing the header.
+
+These attributes allow you to provide additional information and metadata about your OpenAPI actions, making the generated OpenAPI documentation more comprehensive and informative.
+
+Example:
+
+```typescript
+router.post("/posts", createPost, {
+  summary: "Create a new post",
+  description: "Creates a new post with the provided title and content",
+  tags: ["Posts"],
+  protect: true,
+  headers: [
+    {
+      name: "Authorization",
+      description: "Bearer token for authentication",
+      required: true,
+    },
+  ],
+  contentTypes: ["application/json"],
+  deprecated: false,
+  example: {
+    request: {
+      title: "Example Post",
+      content: "This is an example post",
+    },
+    response: {
+      id: "123",
+      title: "Example Post",
+      content: "This is an example post",
+    },
+  },
+});
+```
+
+In this example, the `createPost` action is defined with various attributes such as `summary`, `description`, `tags`, `protect`, `headers`, `contentTypes`, `deprecated`, and `example`. These attributes provide additional information about the action and are used to generate comprehensive OpenAPI documentation.
+
+## Default Attributes
+
+The `createOpenApiServerActionRouter` function also allows you to specify default OpenAPI attributes that will be applied to all actions in the router. This can be useful when you want to set common properties for all your actions.
 
 Here's an example of how you can use `defaults`:
 
