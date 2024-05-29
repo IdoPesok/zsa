@@ -188,7 +188,9 @@ describe("actions", () => {
         get: () => null,
       })
 
-      const [data, err] = await faultyAction()
+      const [data, err] = await faultyAction({
+        errorType: "string",
+      })
       expect(data).toBeNull()
       expect(err?.code).toEqual(TEST_DATA.errors.notAuthorized)
     })
@@ -198,10 +200,26 @@ describe("actions", () => {
         get: jest.fn().mockReturnValue({ value: TEST_DATA.session.admin }),
       })
 
-      const [data, err] = await faultyAction()
+      const [data, err] = await faultyAction({
+        errorType: "string",
+      })
       expect(data).toBeNull()
-      expect(err?.data).not.toEqual(TEST_DATA.errors.notAuthorized)
+      expect(err?.code).not.toEqual(TEST_DATA.errors.notAuthorized)
       expect(err?.data).toEqual(TEST_DATA.errors.string)
+      expect(err?.message).toEqual(TEST_DATA.errors.string)
+    })
+
+    it("returns an error when input is a class", async () => {
+      ;(cookies as jest.Mock).mockReturnValue({
+        get: jest.fn().mockReturnValue({ value: TEST_DATA.session.admin }),
+      })
+
+      const [data, err] = await faultyAction({
+        errorType: "class",
+      })
+      expect(data).toBeNull()
+      expect(err?.code).not.toEqual(TEST_DATA.errors.notAuthorized)
+      expect(err?.message).toEqual(TEST_DATA.errors.string)
     })
   })
 

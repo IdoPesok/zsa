@@ -46,9 +46,21 @@ export const getPostByIdIsAdminAction = ownsPostIsAdminAction.handler(
   }
 )
 
-export const faultyAction = protectedAction.handler(async () => {
-  throw TEST_DATA.errors.string
-})
+export const faultyAction = protectedAction
+  .input(
+    z.object({
+      errorType: z.enum(["string", "class"]),
+    })
+  )
+  .handler(async ({ input }) => {
+    if (input.errorType === "string") {
+      throw TEST_DATA.errors.string
+    } else {
+      throw new Error(TEST_DATA.errors.string)
+    }
+
+    return "success"
+  })
 
 export const undefinedAction = rateLimitedAction.handler(async ({ ctx }) => {
   return ctx
