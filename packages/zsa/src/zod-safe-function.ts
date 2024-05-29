@@ -11,9 +11,9 @@ import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 
 /** Replace void with undefined */
 type TReplaceVoidWithUndefined<T extends Promise<any>> =
-  Awaited<T> extends void | any
-    ? Promise<Exclude<Awaited<T>, void> | undefined>
-    : T
+  Extract<Awaited<T>, void> extends never
+    ? T
+    : Promise<Exclude<Awaited<T>, void> | undefined>
 
 /** The return type of a server action */
 export type TDataOrError<TData extends Promise<any>> =
