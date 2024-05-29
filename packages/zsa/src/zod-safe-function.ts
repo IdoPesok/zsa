@@ -10,14 +10,14 @@ import { NextRequest } from "./next-request"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 
 /** Replace void with undefined */
-type TReplaceVoidWithUndefined<T extends Promise<any>> =
+type TCleanData<T extends Promise<any>> =
   Extract<Awaited<T>, void> extends never
-    ? T
-    : Promise<Exclude<Awaited<T>, void> | undefined>
+    ? Awaited<T>
+    : Exclude<Awaited<T>, void> | undefined
 
 /** The return type of a server action */
 export type TDataOrError<TData extends Promise<any>> =
-  | Promise<[Awaited<TReplaceVoidWithUndefined<TData>>, null]>
+  | Promise<[TCleanData<TData>, null]>
   | Promise<[null, TZSAError]>
 
 /** A configuration object for retrying a server action */
