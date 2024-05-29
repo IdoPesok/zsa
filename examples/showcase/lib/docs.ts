@@ -104,6 +104,7 @@ export function getDocPosts() {
   const groupOrder = [
     "Getting Started",
     "Client Side Usage",
+    "Errors",
     "REST API",
     "Goodies",
   ]
