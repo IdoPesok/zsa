@@ -20,6 +20,8 @@ import {
   helloWorldTimeoutAction,
   inputLargeNumberAction,
   inputNumberAction,
+  nextNotFoundAction,
+  nextRedirectAction,
   transformedOutputAction,
   undefinedAction,
 } from "server/actions"
@@ -401,6 +403,15 @@ describe("actions", () => {
       expect(err?.fieldErrors?.number).not.toBeUndefined()
       expect(err?.formattedErrors?.number?._errors).not.toBeUndefined()
       expect(err?.formErrors).toHaveLength(0)
+    })
+  })
+
+  describe("next redirect", () => {
+    it("throws the redirect error", async () => {
+      await expect(nextRedirectAction()).rejects.toThrow("NEXT_REDIRECT")
+    })
+    it("throws the not found error", async () => {
+      await expect(nextNotFoundAction()).rejects.toThrow("NEXT_NOT_FOUND")
     })
   })
 })
