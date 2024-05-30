@@ -22,7 +22,9 @@ const updatePost = createServerAction()
     // Sleep for .5 seconds
     await new Promise((resolve) => setTimeout(resolve, 1000))
     // Update the message
-    return input.postId
+    return {
+      postID: input.postId,
+    }
   })
 
 const createPost = updatePost
