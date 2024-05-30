@@ -558,7 +558,7 @@ export const createRouteHandlers = <
         } as THandlerRet
       }
 
-      return new Response(JSON.stringify(data), { status: 200 }) as THandlerRet
+      return Response.json(data) as THandlerRet
     } catch (error: any) {
       let status = getErrorStatusFromZSAError(error)
 
@@ -581,7 +581,7 @@ export const createRouteHandlers = <
         } as THandlerRet
       }
 
-      return new Response(JSON.stringify(error), { status }) as THandlerRet
+      return Response.json(error, { status }) as THandlerRet
     }
   }
 
