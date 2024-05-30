@@ -523,6 +523,10 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
         responseMeta,
       })
 
+      if (data instanceof Response) {
+        return data
+      }
+
       if (err) {
         throw err
       }
