@@ -22,6 +22,7 @@ import {
   inputNumberAction,
   nextNotFoundAction,
   nextRedirectAction,
+  nextRedirectInProcedureAction,
   transformedOutputAction,
   undefinedAction,
 } from "server/actions"
@@ -412,6 +413,11 @@ describe("actions", () => {
     })
     it("throws the not found error", async () => {
       await expect(nextNotFoundAction()).rejects.toThrow("NEXT_NOT_FOUND")
+    })
+    it("throws the redirect error from the procedure", async () => {
+      await expect(nextRedirectInProcedureAction()).rejects.toThrow(
+        "NEXT_REDIRECT"
+      )
     })
   })
 })
