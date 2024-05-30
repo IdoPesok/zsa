@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.1
+
+### Patch Changes
+
+- 412f881: Revert start transition as current implementation causes bugs
+
 ## 0.1.0
 
 ### Minor Changes
