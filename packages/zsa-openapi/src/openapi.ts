@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { type NextRequest } from "next/server"
 import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
 import { TAnyZodSafeFunctionHandler, ZSAResponseMeta } from "zsa"
@@ -540,7 +540,7 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
         responseMeta.headers.set("content-type", "text/plain")
       }
 
-      return new NextResponse(stringifyIfNeeded(data), {
+      return new Response(stringifyIfNeeded(data), {
         status: responseMeta.statusCode,
         headers: responseMeta.headers,
       })
@@ -561,7 +561,7 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
         typeof error === "string" ? "text/plain" : "application/json"
       )
 
-      return new NextResponse(stringifyIfNeeded(error), {
+      return new Response(stringifyIfNeeded(error), {
         status,
         headers: responseMeta.headers,
       })
