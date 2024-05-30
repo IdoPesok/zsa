@@ -556,6 +556,11 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
         throw error
       }
 
+      responseMeta.headers.set(
+        "content-type",
+        typeof error === "string" ? "text/plain" : "application/json"
+      )
+
       return new NextResponse(stringifyIfNeeded(error), {
         status,
         headers: responseMeta.headers,
