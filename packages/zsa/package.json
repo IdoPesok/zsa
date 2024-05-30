@@ -19,9 +19,9 @@
   },
   "sideEffects": false,
   "license": "MIT",
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.mts",
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint .",

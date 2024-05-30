@@ -1,4 +1,9 @@
-import { TAnyZodSafeFunctionHandler, inferServerActionReturnData } from "zsa"
+import {
+  TAnyZodSafeFunctionHandler,
+  TZSAError,
+  inferInputSchemaFromHandler,
+  inferServerActionReturnData,
+} from "zsa"
 
 export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
@@ -12,6 +17,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
+      isTransitionPending: boolean
     }
   | {
       // pending state (optimistic)
@@ -22,6 +28,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
+      isTransitionPending: boolean
     }
   | {
       // idle state
@@ -32,6 +39,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "idle"
+      isTransitionPending: boolean
     }
   | {
       // error state
@@ -39,9 +47,10 @@ export type TServerActionResult<
       isOptimistic: false
       data: undefined
       isError: true
-      error: unknown
+      error: TZSAError<inferInputSchemaFromHandler<TServerAction>>
       isSuccess: false
       status: "error"
+      isTransitionPending: boolean
     }
   | {
       isPending: false
@@ -51,4 +60,5 @@ export type TServerActionResult<
       error: undefined
       isSuccess: true
       status: "success"
+      isTransitionPending: boolean
     }

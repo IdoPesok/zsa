@@ -1,0 +1,100 @@
+---
+title: "Infer Types"
+group: "Goodies"
+groupOrder: 10
+---
+
+# Infer Types
+
+ZSA provides some helpful utility types that allow you to infer the input, return type, return data, and hot return type of a server action.
+
+## Infer Server Action Return Data
+
+Use `inferServerActionReturnData` to infer the return data type of a server action. This will be the type of the `data` in the `[data, error]` tuple.
+
+```typescript
+import { inferServerActionReturnData } from "zsa"
+
+const myAction = createServerAction()
+  .input(z.object({ num: z.number() }))
+  .output(z.number())
+  .handler(async ({ input }) => {
+    return input.num + 1
+  })
+
+type MyActionReturnData = inferServerActionReturnData<typeof myAction>
+//   ^? number
+```
+
+## Infer Server Action Error
+
+Use `inferServerActionError` to infer the error type of a server action. This will be the type of the `error` in the `[data, error]` tuple.
+
+```typescript
+import { inferServerActionError } from "zsa"
+
+const myAction = createServerAction()
+  .input(z.object({ num: z.number() }))
+  .output(z.number())
+  .handler(async ({ input }) => {
+    return input.num + 1
+  })
+
+type MyActionError = inferServerActionError<typeof myAction>
+//   ^? TZSAError<z.ZodType<number>>
+```
+
+## Infer Server Action Return Type
+
+Use `inferServerActionReturnType` to infer the return type of a server action. This will be a tuple of `[data, error]`.
+
+```typescript
+import { inferServerActionReturnType } from "zsa"
+
+const myAction = createServerAction()
+  .input(z.object({ num: z.number() }))
+  .output(z.number())
+  .handler(async ({ input }) => {
+    return input.num + 1
+  })
+
+type MyActionReturnType = inferServerActionReturnType<typeof myAction>
+//   ^? [number, null] | [null, TZSAError]
+```
+
+## Infer Server Action Return Type Hot
+
+Use `inferServerActionReturnTypeHot` to infer the hot (unresolved) return type of a server action. This will be a tuple promise.
+
+```typescript
+import { inferServerActionReturnTypeHot } from "zsa" 
+
+const myAction = createServerAction()
+  .input(z.object({ num: z.number() })) 
+  .output(z.number())
+  .handler(async ({ input }) => {
+    return input.num + 1  
+  })
+
+type MyActionReturnTypeHot = inferServerActionReturnTypeHot<typeof myAction>  
+//   ^? Promise<[number, null] | [null, TZSAError]>
+```
+
+## Infer Server Action Input 
+
+Use `inferServerActionInput` to infer the input type of a server action.
+
+```typescript
+import { inferServerActionInput } from "zsa"
+
+const myAction = createServerAction()
+  .input(z.object({ num: z.number() }))
+  .handler(async ({ input }) => {
+    return input.num + 1
+  })  
+
+type MyActionInput = inferServerActionInput<typeof myAction>
+//   ^? { num: number }  
+```
+
+These utility types make it easy to work with the inputs, outputs, and intermediate types of your server actions in a type-safe way without having to manually specify the types. They cover inferring the input type, return tuple type, just the success return data type, and the hot (promise) return type.

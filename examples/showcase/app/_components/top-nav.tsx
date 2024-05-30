@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { getDocPosts } from "@/lib/docs"
 import { cn } from "@/lib/utils"
-import { Clapperboard, Coffee, GithubIcon, Network, TwitterIcon } from "lucide-react"
+import { GithubIcon, Network } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import SideNavDrawer from "./side-nav-drawer"
@@ -32,7 +32,7 @@ export default function TopNav({
             className={cn(
               "border-b-2 py-2 border-transparent hover:border-muted text-muted-foreground hover:text-foreground",
               !pathname.includes("/actions/") &&
-              "border-primary hover:border-primary text-foreground"
+                "border-primary hover:border-primary text-foreground"
             )}
           >
             Documentation
