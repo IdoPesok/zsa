@@ -172,13 +172,13 @@ import { ZSAResponseMeta } from "zsa-openapi";
 
 const updatePost = createServerAction()
   .input(z.object({ postId: z.string(), content: z.string() }))
-  .handler(async ({ input, responseMeta }) => {
+  .handler(async ({ input, responseMeta }) => { <|highlight|>
     // Update the post logic here
 
-    if (responseMeta) {
-      responseMeta.statusCode = 201; // Set the status code to 201 (Created)
-      responseMeta.headers.set("x-custom-header", "custom-value"); // Set a custom header
-    }
+    if (responseMeta) { <|highlight|>
+      responseMeta.statusCode = 201; // Set the status code to 201 (Created) <|highlight|>
+      responseMeta.headers.set("x-custom-header", "custom-value"); // Set a custom header <|highlight|>
+    } <|highlight|>
 
     return {
       message: "Post updated successfully",
