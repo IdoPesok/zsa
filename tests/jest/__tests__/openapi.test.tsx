@@ -1,5 +1,11 @@
 import { mockNextRequest } from "lib/utils"
-import { divideAction, multiplyAction } from "server/actions"
+import {
+  divideAction,
+  multiplyAction,
+  nextNotFoundAction,
+  nextRedirectAction,
+  nextRedirectInProcedureAction,
+} from "server/actions"
 import { TEST_DATA } from "server/data"
 import { openapiRouter } from "server/router"
 import {
@@ -289,6 +295,39 @@ describe("openapi", () => {
       const response = await POST(request)
       expect(response.isError).toBe(true)
       expect(response.status).toBe(400)
+    })
+  })
+
+  describe("next redirect", () => {
+    it("throws the redirect error", async () => {
+      const { POST } = setupApiHandler("/api", nextRedirectAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api",
+      })
+
+      await expect(POST(request)).rejects.toThrow("NEXT_REDIRECT")
+    })
+    it("throws the not found error", async () => {
+      const { POST } = setupApiHandler("/api", nextNotFoundAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api",
+      })
+
+      await expect(POST(request)).rejects.toThrow("NEXT_NOT_FOUND")
+    })
+    it("throws the redirect error from the procedure", async () => {
+      const { POST } = setupApiHandler("/api", nextRedirectInProcedureAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api",
+      })
+
+      await expect(POST(request)).rejects.toThrow("NEXT_REDIRECT")
     })
   })
 })
