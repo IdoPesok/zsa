@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.0.5
+
+### Patch Changes
+
+- 3b3f294: Use response instead of next response"
+
 ## 0.0.4
 
 ### Patch Changes
