@@ -179,7 +179,11 @@ export const protectedMultiplyAction = protectedAction
       number1: z.coerce.number(),
     })
   )
-  .handler(async ({ input }) => {
+  .handler(async ({ input, responseMeta }) => {
+    if (responseMeta) {
+      responseMeta.statusCode = 201
+    }
+
     return {
       result: input.number1 * input.number2,
     }

@@ -1,7 +1,7 @@
-import { type NextRequest } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
-import { TAnyZodSafeFunctionHandler, TZSAError, ZSAResponseMeta } from "zsa"
+import { TAnyZodSafeFunctionHandler, ZSAResponseMeta } from "zsa"
 import {
   acceptsRequestBody,
   getErrorStatusFromZSAError,
@@ -20,8 +20,8 @@ export type OpenApiContentType =
   | typeof MULTI_PART_CONTENT_TYPE
   | (string & {})
 
-export interface ApiRouteHandler<TRet> {
-  (request: NextRequest): Promise<TRet>
+export interface ApiRouteHandler {
+  (request: NextRequest): Promise<Response>
 }
 
 /**
@@ -383,14 +383,7 @@ export const createOpenApiServerActionRouter = (args?: {
  * export const { GET, POST, PUT, DELETE, PATCH } = createRouteHandlers(router)
  * ```
  */
-export const createRouteHandlers = <
-  TRet extends "Response" | "JSON" = "Response",
->(
-  router: TOpenApiServerActionRouter,
-  opts?: {
-    responseType?: TRet
-  }
-) => {
+export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
   const parseRequest = async (
     request: NextRequest
   ): Promise<null | {
@@ -515,31 +508,14 @@ export const createRouteHandlers = <
     }
   }
 
-  type TResult =
-    | {
-        isError: false
-        isSuccess: true
-        data: unknown
-        status: 200
-        error: null
-      }
-    | {
-        isError: true
-        isSuccess: false
-        status: number
-        data: null
-        error: TZSAError<any>
-      }
-
-  type THandlerRet = TRet extends "Response" ? Response : TResult
-
-  const handler: ApiRouteHandler<THandlerRet> = async (
-    request: NextRequest
-  ): Promise<THandlerRet> => {
+  const handler: ApiRouteHandler = async (request: NextRequest) => {
     const parsedData = await parseRequest(request)
-    if (!parsedData) return new Response("", { status: 404 }) as THandlerRet
+    if (!parsedData) return new Response("", { status: 404 })
 
     const responseMeta = new ZSAResponseMeta()
+
+    const stringifyIfNeeded = (data: any) =>
+      typeof data === "string" ? data : JSON.stringify(data)
 
     try {
       const [data, err] = await parsedData.action(parsedData.input, undefined, {
@@ -549,16 +525,6 @@ export const createRouteHandlers = <
 
       if (err) {
         throw err
-      }
-
-      if (opts?.responseType === "JSON") {
-        return {
-          isError: false,
-          isSuccess: true,
-          status: 200,
-          data,
-          error: null,
-        } as THandlerRet
       }
 
       // set default content type
@@ -574,13 +540,10 @@ export const createRouteHandlers = <
         responseMeta.headers.set("content-type", "text/plain")
       }
 
-      const stringifyIfNeeded = (data: any) =>
-        typeof data === "string" ? data : JSON.stringify(data)
-
-      return new Response(stringifyIfNeeded(data), {
+      return new NextResponse(stringifyIfNeeded(data), {
         status: responseMeta.statusCode,
         headers: responseMeta.headers,
-      }) as THandlerRet
+      })
     } catch (error: any) {
       let status = getErrorStatusFromZSAError(error)
 
@@ -593,17 +556,10 @@ export const createRouteHandlers = <
         throw error
       }
 
-      if (opts?.responseType === "JSON") {
-        return {
-          isError: true,
-          isSuccess: false,
-          status,
-          data: null,
-          error,
-        } as THandlerRet
-      }
-
-      return Response.json(error, { status }) as THandlerRet
+      return new NextResponse(stringifyIfNeeded(error), {
+        status,
+        headers: responseMeta.headers,
+      })
     }
   }
 
@@ -636,15 +592,9 @@ export const createRouteHandlers = <
  * export const { PUT } = setupApiHandler("/posts/{postId}", updatePostAction)
  * ```
  */
-export function setupApiHandler<
-  THandler extends TAnyZodSafeFunctionHandler,
-  TResponseType extends "Response" | "JSON" = "Response",
->(
+export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
   path: `/${string}`,
-  action: THandler,
-  opts?: {
-    responseType?: TResponseType
-  }
+  action: THandler
 ) {
   const router = createOpenApiServerActionRouter()
     .get(path, action)
@@ -653,5 +603,5 @@ export function setupApiHandler<
     .put(path, action)
     .patch(path, action)
 
-  return createRouteHandlers(router, opts)
+  return createRouteHandlers(router)
 }

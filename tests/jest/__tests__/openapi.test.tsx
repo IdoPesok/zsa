@@ -97,9 +97,7 @@ describe("openapi", () => {
 
   describe("createRouteHandlers", () => {
     it("should multiply two numbers [GET]", async () => {
-      const { GET } = createRouteHandlers(openapiRouter, {
-        responseType: "JSON",
-      })
+      const { GET } = createRouteHandlers(openapiRouter)
 
       const request = mockNextRequest({
         method: "GET",
@@ -110,16 +108,18 @@ describe("openapi", () => {
       })
 
       const response = await GET(request)
-      expect(response.isError).toBe(false)
-      expect(response.data).toEqual({
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
         result: 100 * 100,
       })
+
+      expect(response.headers.get("content-type")).toEqual("application/json")
     })
 
     it("should fail to multiply a number and a string [GET]", async () => {
-      const { GET } = createRouteHandlers(openapiRouter, {
-        responseType: "JSON",
-      })
+      const { GET } = createRouteHandlers(openapiRouter)
 
       const request = mockNextRequest({
         method: "GET",
@@ -130,13 +130,11 @@ describe("openapi", () => {
       })
 
       const response = await GET(request)
-      expect(response.isError).toBe(true)
+      expect(response.status).toBe(400)
     })
 
     it("should multiply two numbers [POST]", async () => {
-      const { POST } = createRouteHandlers(openapiRouter, {
-        responseType: "JSON",
-      })
+      const { POST } = createRouteHandlers(openapiRouter)
 
       const request = mockNextRequest({
         method: "POST",
@@ -147,16 +145,16 @@ describe("openapi", () => {
       })
 
       const response = await POST(request)
-      expect(response.isError).toBe(false)
-      expect(response.data).toEqual({
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
         result: 100 * 100,
       })
     })
 
     it("should multiply two numbers in form data [POST]", async () => {
-      const { POST } = createRouteHandlers(openapiRouter, {
-        responseType: "JSON",
-      })
+      const { POST } = createRouteHandlers(openapiRouter)
 
       const request = mockNextRequest({
         method: "POST",
@@ -168,16 +166,16 @@ describe("openapi", () => {
       })
 
       const response = await POST(request)
-      expect(response.isError).toBe(false)
-      expect(response.data).toEqual({
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
         result: 100 * 100,
       })
     })
 
     it("should fail to multiply a number and a string [POST]", async () => {
-      const { POST } = createRouteHandlers(openapiRouter, {
-        responseType: "JSON",
-      })
+      const { POST } = createRouteHandlers(openapiRouter)
 
       const request = mockNextRequest({
         method: "POST",
@@ -188,13 +186,11 @@ describe("openapi", () => {
       })
 
       const response = await POST(request)
-      expect(response.isError).toBe(true)
+      expect(response.status).toBe(400)
     })
 
     it("should succeed after authenticating [POST]", async () => {
-      const { POST } = createRouteHandlers(openapiRouter, {
-        responseType: "JSON",
-      })
+      const { POST } = createRouteHandlers(openapiRouter)
 
       const request = mockNextRequest({
         method: "POST",
@@ -208,16 +204,18 @@ describe("openapi", () => {
       })
 
       const response = await POST(request)
-      expect(response.isError).toBe(false)
-      expect(response.data).toEqual({
+      expect(response.status).toBe(201)
+
+      const json = await response.json()
+      expect(json).toEqual({
         result: 100 * 100,
       })
+
+      expect(response.headers.get("x-test")).toEqual("123")
     })
 
     it("should fail to authenticate [POST]", async () => {
-      const { POST } = createRouteHandlers(openapiRouter, {
-        responseType: "JSON",
-      })
+      const { POST } = createRouteHandlers(openapiRouter)
 
       const request = mockNextRequest({
         method: "POST",
@@ -228,14 +226,11 @@ describe("openapi", () => {
       })
 
       const response = await POST(request)
-      expect(response.isError).toBe(true)
       expect(response.status).toBe(401)
     })
 
     it("it should fail to divide a number by zero [POST]", async () => {
-      const { POST } = createRouteHandlers(openapiRouter, {
-        responseType: "JSON",
-      })
+      const { POST } = createRouteHandlers(openapiRouter)
 
       const request = mockNextRequest({
         method: "POST",
@@ -246,7 +241,6 @@ describe("openapi", () => {
       })
 
       const response = await POST(request)
-      expect(response.isError).toBe(true)
       expect(response.status).toBe(400)
     })
   })
@@ -255,10 +249,7 @@ describe("openapi", () => {
     it("it should succeed in dividing a number by zero [PUT]", async () => {
       const { PUT } = setupApiHandler(
         "/api/calculations/divide/{number1}",
-        divideAction,
-        {
-          responseType: "JSON",
-        }
+        divideAction
       )
 
       const request = mockNextRequest({
@@ -270,18 +261,17 @@ describe("openapi", () => {
       })
 
       const response = await PUT(request)
-      expect(response.isError).toEqual(false)
-      expect(response.data).toEqual({
+      expect(response.status).toEqual(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
         result: 100 / 20,
       })
     })
     it("it should fail to divide a number by zero [POST]", async () => {
       const { POST } = setupApiHandler(
         "/api/calculations/divide/{number1}",
-        divideAction,
-        {
-          responseType: "JSON",
-        }
+        divideAction
       )
 
       const request = mockNextRequest({
@@ -293,7 +283,6 @@ describe("openapi", () => {
       })
 
       const response = await POST(request)
-      expect(response.isError).toBe(true)
       expect(response.status).toBe(400)
     })
   })
