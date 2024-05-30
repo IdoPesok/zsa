@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.2.2
+
+### Patch Changes
+
+- cb93c39: Added responseMeta field
+
 ## 0.2.1
 
 ### Patch Changes
