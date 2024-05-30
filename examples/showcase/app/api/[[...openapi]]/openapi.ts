@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { createServerAction } from "zsa"
+import { createServerAction, createServerActionProcedure } from "zsa"
 import { createOpenApiServerActionRouter } from "zsa-openapi"
 
 const getReply = createServerAction()
@@ -16,15 +16,29 @@ const getReply = createServerAction()
     }
   })
 
-const updatePost = createServerAction()
+const updateProcedure = createServerActionProcedure().handler(
+  ({ responseMeta }) => {
+    if (responseMeta) {
+      responseMeta.statusCode = 201
+      responseMeta.headers.set("x-custom-header", "custom-value")
+    }
+  }
+)
+
+const other = createServerActionProcedure(updateProcedure).handler(
+  ({ responseMeta, ctx }) => {
+    if (responseMeta) {
+      responseMeta.statusCode = 201
+    }
+  }
+)
+
+const updatePost = other
+  .createServerAction()
   .input(z.object({ postId: z.string() }))
-  .handler(async ({ input }) => {
+  .handler(async ({ input, ctx }) => {
     // Sleep for .5 seconds
     await new Promise((resolve) => setTimeout(resolve, 1000))
-    // Update the message
-    return {
-      postID: input.postId,
-    }
   })
 
 const createPost = updatePost

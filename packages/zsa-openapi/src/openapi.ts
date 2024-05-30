@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
-import { TAnyZodSafeFunctionHandler, TZSAError } from "zsa"
+import { TAnyZodSafeFunctionHandler, TZSAError, ZSAResponseMeta } from "zsa"
 import {
   acceptsRequestBody,
   getErrorStatusFromZSAError,
@@ -539,9 +539,12 @@ export const createRouteHandlers = <
     const parsedData = await parseRequest(request)
     if (!parsedData) return new Response("", { status: 404 }) as THandlerRet
 
+    const responseMeta = new ZSAResponseMeta()
+
     try {
       const [data, err] = await parsedData.action(parsedData.input, undefined, {
         request: request,
+        responseMeta,
       })
 
       if (err) {
@@ -558,7 +561,26 @@ export const createRouteHandlers = <
         } as THandlerRet
       }
 
-      return Response.json(data) as THandlerRet
+      // set default content type
+      if (
+        typeof data === "object" &&
+        responseMeta.headers.get("content-type") === null
+      ) {
+        responseMeta.headers.set("content-type", "application/json")
+      } else if (
+        typeof data === "string" &&
+        responseMeta.headers.get("content-type") === null
+      ) {
+        responseMeta.headers.set("content-type", "text/plain")
+      }
+
+      const stringifyIfNeeded = (data: any) =>
+        typeof data === "string" ? data : JSON.stringify(data)
+
+      return new Response(stringifyIfNeeded(data), {
+        status: responseMeta.statusCode,
+        headers: responseMeta.headers,
+      }) as THandlerRet
     } catch (error: any) {
       let status = getErrorStatusFromZSAError(error)
 

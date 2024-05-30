@@ -160,6 +160,45 @@ export const getReplyWithHeaders = createServerAction()
 
 In this example, the request object represents the incoming HTTP request. You can access various properties and methods of the request object, such as headers, to retrieve information from the request.
 
+Certainly! Here's an updated section on `responseMeta` that you can add to your documentation:
+
+## Response Metadata
+
+When defining server actions using `createServerAction`, you can access and modify the response metadata through the `responseMeta` parameter in the action handler. The `responseMeta` object allows you to customize the response headers and status code for the specific action.
+
+Here's an example of how you can use `responseMeta`:
+
+```typescript
+import { createServerAction } from "zsa";
+import { ZSAResponseMeta } from "zsa-openapi";
+
+const updatePost = createServerAction()
+  .input(z.object({ postId: z.string(), content: z.string() }))
+  .handler(async ({ input, responseMeta }) => {
+    // Update the post logic here
+
+    if (responseMeta) {
+      responseMeta.statusCode = 201; // Set the status code to 201 (Created)
+      responseMeta.headers.set("x-custom-header", "custom-value"); // Set a custom header
+    }
+
+    return {
+      message: "Post updated successfully",
+    };
+  });
+```
+
+In this example, the `updatePost` action modifies the response metadata using the `responseMeta` parameter. It sets the status code to `201` (Created) and adds a custom header `x-custom-header` with the value `"custom-value"`.
+
+The `ZSAResponseMeta` class provides the following properties:
+
+- `headers: Headers`: Represents the headers of the response. You can use the `set`, `append`, `delete`, and other methods of the `Headers` class to modify the response headers.
+- `statusCode: number`: Represents the status code of the response. By default, it is set to `200`. You can assign a different status code as needed.
+
+By modifying the `responseMeta` object, you can customize the response metadata for each individual action, allowing you to have fine-grained control over the response behavior.
+
+Using `responseMeta`, you can tailor the response headers and status codes to match your API requirements and provide additional information or instructions to the clients consuming your API endpoints.
+
 ## Extending Routers
 
 The `createOpenApiServerActionRouter` function allows you to extend routers by combining multiple routers together. This is useful when you have separate files for different resource types, such as posts and users, and want to combine their routes in the final `route.ts` file.

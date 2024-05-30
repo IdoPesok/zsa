@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { NextRequest } from "./api"
 import {
   TOnCompleteFn,
   TOnErrorFn,
@@ -6,7 +7,6 @@ import {
   TOnSuccessFn,
 } from "./callbacks"
 import { TZSAError, ZSAError } from "./errors"
-import { NextRequest } from "./next-request"
 
 /** Replace void with undefined */
 type TCleanData<T extends Promise<any>> =
@@ -64,8 +64,10 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   returnInputSchema?: boolean
   /** return the output schema */
   returnOutputSchema?: boolean
-  /** an associated request object */
+  /** an associated request object from OpenAPI handlers */
   request?: NextRequest
+  /** an object containing response metadata for OpenAPI handlers */
+  responseMeta?: ZSAResponseMeta
   /** the number of attempts the handler has made */
   attempts?: number
 }
@@ -237,3 +239,24 @@ export interface TInternals<
 }
 
 export type InputTypeOptions = "formData" | "json"
+
+/**
+ * A class representing a ZSA response meta object
+ */
+export class ZSAResponseMeta {
+  /**
+   * the headers of the response
+   */
+  headers: Headers
+  /**
+   * the status code of the response
+   *
+   * @default 200
+   */
+  statusCode: number
+
+  constructor() {
+    this.statusCode = 200
+    this.headers = new Headers()
+  }
+}
