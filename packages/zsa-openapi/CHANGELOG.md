@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.0.3
+
+### Patch Changes
+
+- 17ffd47: Returns json content type
+
 ## 0.0.2
 
 ### Patch Changes
