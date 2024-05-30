@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.0.2
+
+### Patch Changes
+
+- 4ce404a: Support notFound() and redirect() in openapi routes
+
 ## 0.0.1
 
 ### Patch Changes
