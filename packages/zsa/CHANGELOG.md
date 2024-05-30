@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.2.0
+
+### Minor Changes
+
+- 07daba7: Typed errors that respect the zod input schema, and added a request value if the action was called from an API handler
+
 ## 0.1.1
 
 ### Patch Changes
