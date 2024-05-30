@@ -1,7 +1,7 @@
 import { z } from "zod"
+import { NextRequest } from "./api"
 import { TOnCompleteFn, TOnStartFn, TOnSuccessFn } from "./callbacks"
 import { TZSAError, ZSAError } from "./errors"
-import { NextRequest } from "./next-request"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 import {
   InputTypeOptions,
@@ -13,6 +13,7 @@ import {
   TNoInputHandlerFunc,
   TZodSafeFunctionDefaultOmitted,
   TimeoutStatus,
+  ZSAResponseMeta,
 } from "./types"
 
 /** A helper type to hold any zod safe function */
@@ -110,7 +111,8 @@ export class ZodSafeFunction<
   public async getProcedureChainOutput(
     args: TInputSchema["_input"],
     timeoutStatus: TimeoutStatus,
-    request: NextRequest | undefined
+    request: NextRequest | undefined,
+    responseMeta: ZSAResponseMeta | undefined
   ): Promise<TProcedureChainOutput> {
     let accData = undefined
 
@@ -121,6 +123,7 @@ export class ZodSafeFunction<
       const [data, err] = await procedureHandler(args, undefined, {
         ctx: accData,
         request,
+        responseMeta,
       })
       if (err) {
         throw err
@@ -555,6 +558,8 @@ export class ZodSafeFunction<
       ctx: TProcedureChainOutput
       /** a request object if the action is run from an Open API route `createOpenApiServerActionRouter` */
       request?: NextRequest
+      /** an object containing response metadata for OpenAPI handlers */
+      responseMeta?: ZSAResponseMeta
     }) => TRet
   ): TIsProcedure extends false
     ? TInputSchema extends z.ZodUndefined
@@ -619,7 +624,8 @@ export class ZodSafeFunction<
             : await this.getProcedureChainOutput(
                 args,
                 timeoutStatus,
-                opts?.request
+                opts?.request,
+                opts?.responseMeta
               )
 
         // parse the input data
@@ -636,6 +642,7 @@ export class ZodSafeFunction<
           input,
           ctx,
           request: opts?.request,
+          responseMeta: opts?.responseMeta,
         })
 
         const parsed = await this.parseOutputData(data, timeoutStatus)
@@ -744,7 +751,10 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
 // helper type to infer the return data of a server action
 export type inferServerActionReturnData<
   TAction extends TAnyZodSafeFunctionHandler,
-> = NonNullable<Awaited<ReturnType<TAction>>[0]>
+> =
+  NonNullable<Awaited<ReturnType<TAction>>[0]> extends never
+    ? undefined
+    : NonNullable<Awaited<ReturnType<TAction>>[0]>
 
 // helper type to infer the error of a server action
 export type inferServerActionError<TAction extends TAnyZodSafeFunctionHandler> =

@@ -24,7 +24,11 @@ export const publicAction = createServerAction()
  */
 
 const protectedProcedure = createServerActionProcedure().handler(
-  async ({ request }) => {
+  async ({ request, responseMeta }) => {
+    if (responseMeta) {
+      responseMeta.headers.set("x-test", "123")
+    }
+
     if (request) {
       const authToken = request.headers.get("authorization")
       if (authToken !== TEST_DATA.authorization.token) {
