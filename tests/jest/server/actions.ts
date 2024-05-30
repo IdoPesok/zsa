@@ -15,6 +15,7 @@ import {
   protectedTimeoutAction,
   publicAction,
   rateLimitedAction,
+  redirectAction,
   retryAction,
   timeoutAction,
 } from "./procedures"
@@ -206,3 +207,9 @@ export const nextNotFoundAction = publicAction.handler(async () => {
   notFound()
   return "123"
 })
+
+export const nextRedirectInProcedureAction = redirectAction.handler(
+  async () => {
+    return "123"
+  }
+)

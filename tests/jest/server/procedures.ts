@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 import { z } from "zod"
 import {
   ZSAError,
@@ -242,3 +243,15 @@ export const inputNumberProcedure = createServerActionProcedure()
       number: input.number,
     }
   })
+
+export const redirectProcedure = createServerActionProcedure(
+  // put in a parent procedure because why not
+  createServerActionProcedure().handler(() => {
+    return "123"
+  })
+).handler(async () => {
+  redirect("/123")
+  return "123"
+})
+
+export const redirectAction = redirectProcedure.createServerAction()
