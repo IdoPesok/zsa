@@ -2,6 +2,7 @@ import { createOpenApiServerActionRouter } from "zsa-openapi"
 import {
   divideAction,
   multiplyAction,
+  multiplyActionWithCustomResponse,
   protectedMultiplyAction,
 } from "./actions"
 
@@ -12,6 +13,10 @@ const publicRouter = createOpenApiServerActionRouter({
   },
 })
   .get("/calculations/multiply/{number1}", multiplyAction)
+  .get(
+    "/calculations/multiplyCustomResponse/{number1}",
+    multiplyActionWithCustomResponse
+  )
   .post("/calculations/multiply/{number1}", multiplyAction)
   .all("/calculations/divide/{number1}", divideAction)
 
