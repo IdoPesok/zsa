@@ -1,6 +1,7 @@
 "use server"
 
 import { sleep } from "lib/utils"
+import { notFound, redirect } from "next/navigation"
 import { z } from "zod"
 import { createServerAction } from "zsa"
 import { TEST_DATA } from "./data"
@@ -195,3 +196,13 @@ export const divideAction = publicAction
       result: input.number1 / input.number2,
     }
   })
+
+export const nextRedirectAction = publicAction.handler(async () => {
+  redirect("/123")
+  return "123"
+})
+
+export const nextNotFoundAction = publicAction.handler(async () => {
+  notFound()
+  return "123"
+})

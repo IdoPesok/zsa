@@ -432,6 +432,13 @@ export class ZodSafeFunction<
 
   /** helper function to handle errors with timeout checkpoints */
   public async handleError(err: any): Promise<[null, TZSAError<TInputSchema>]> {
+    // we need to throw any NEXT_REDIRECT errors so that next can
+    // properly handle them.
+
+    if (err.message === "NEXT_REDIRECT" || err.message === "NEXT_NOT_FOUND") {
+      throw err
+    }
+
     const customError =
       err instanceof ZSAError ? err : new ZSAError("ERROR", err)
 
