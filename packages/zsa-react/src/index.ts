@@ -1,13 +1,15 @@
 "use client"
 
-import { useCallback, useRef, useState, useTransition } from "react"
+import { useCallback, useRef, useState } from "react"
 import {
   TAnyZodSafeFunctionHandler,
+  TZSAError,
   ZSAError,
+  inferInputSchemaFromHandler,
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
-import { TServerActionResult } from "./results.js"
+import { TServerActionResult } from "./results"
 
 const getEmptyResult = () => ({
   isError: false,
@@ -26,7 +28,9 @@ export const useServerAction = <
 >(
   serverAction: TServerAction,
   opts?: {
-    onError?: (args: { err: ZSAError }) => void
+    onError?: (args: {
+      err: TZSAError<inferInputSchemaFromHandler<TServerAction>>
+    }) => void
     onSuccess?: (args: { data: Awaited<ReturnType<TServerAction>>[0] }) => void
     onStart?: () => void
 
@@ -40,7 +44,7 @@ export const useServerAction = <
 ) => {
   type TResult = {
     isError: boolean
-    error: undefined | unknown
+    error: undefined | TZSAError<inferInputSchemaFromHandler<TServerAction>>
     data: undefined | inferServerActionReturnData<TServerAction>
   }
 
@@ -56,7 +60,6 @@ export const useServerAction = <
 
   const initialData = opts?.initialData
 
-  const [, startTransition] = useTransition()
   const [result, setResult] = useState<TResult>(
     !initialData
       ? getEmptyResult()
@@ -111,11 +114,9 @@ export const useServerAction = <
       if (err) {
         if (opts?.onError) {
           opts.onError({
-            err,
+            err: err as any,
           })
         }
-
-        setIsExecuting(false)
 
         // calculate if we should retry
         const retryConfig = opts?.retry
@@ -140,20 +141,23 @@ export const useServerAction = <
               isFromRetryId: retryId,
             })
           }, retryDelay)
-        } else {
-          // don't retry => update the result
-          if (oldResult.status === "filled") {
-            setResult(oldResult.result)
-          } else {
-            setResult({ error: err, isError: true, data: undefined })
-          }
-
-          // clear the old data
-          setOldResult({
-            status: "empty",
-            result: undefined,
-          })
+          return [data, err] as any
         }
+
+        setIsExecuting(false)
+
+        // don't retry => update the result
+        if (oldResult.status === "filled") {
+          setResult(oldResult.result)
+        } else {
+          setResult({ error: err as any, isError: true, data: undefined })
+        }
+
+        // clear the old data
+        setOldResult({
+          status: "empty",
+          result: undefined,
+        })
 
         return [data, err] as any
       }
@@ -183,8 +187,12 @@ export const useServerAction = <
   )
 
   const execute = useCallback(
-    async (input: Parameters<TServerAction>[0]) => {
-      return await internalExecute(input)
+    async (
+      ...opts: Parameters<TServerAction>[0] extends undefined
+        ? []
+        : [Parameters<TServerAction>[0]]
+    ) => {
+      return await internalExecute(opts[0])
     },
     [internalExecute]
   )
@@ -267,7 +275,7 @@ export const useServerAction = <
       isPending: false,
       data: undefined,
       isError: true,
-      error: result.error,
+      error: result.error as any,
       isOptimistic: false,
       isSuccess: false,
       status: "error",

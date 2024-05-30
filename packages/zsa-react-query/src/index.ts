@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-query"
 import {
   TAnyZodSafeFunctionHandler,
-  ZSAError,
+  inferServerActionError,
   inferServerActionInput,
   inferServerActionReturnData,
   inferServerActionReturnType,
@@ -63,7 +63,7 @@ export const setupServerActionHooks = <
       Parameters<
         typeof useInfiniteQuery<
           inferServerActionReturnData<THandler>,
-          ZSAError,
+          inferServerActionError<THandler>,
           InfiniteData<inferServerActionReturnData<THandler>>,
           TQueryKey,
           TPageParam
@@ -82,10 +82,13 @@ export const setupServerActionHooks = <
     },
     queryClient?: Parameters<typeof useInfiniteQuery>[1]
   ): TInitialData extends undefined
-    ? UseInfiniteQueryResult<inferServerActionReturnData<THandler>, ZSAError>
+    ? UseInfiniteQueryResult<
+        inferServerActionReturnData<THandler>,
+        inferServerActionError<THandler>
+      >
     : DefinedUseInfiniteQueryResult<
         inferServerActionReturnData<THandler>,
-        ZSAError
+        inferServerActionError<THandler>
       > => {
     return useInfiniteQuery(
       {
@@ -117,7 +120,7 @@ export const setupServerActionHooks = <
       Parameters<
         typeof useQuery<
           inferServerActionReturnData<THandler>,
-          ZSAError,
+          inferServerActionError<THandler>,
           inferServerActionReturnData<THandler>,
           TQueryKey
         >
@@ -129,10 +132,13 @@ export const setupServerActionHooks = <
     },
     queryClient?: Parameters<typeof useQuery>[1]
   ): TInitialData extends undefined
-    ? UseQueryResult<inferServerActionReturnData<THandler>, ZSAError>
+    ? UseQueryResult<
+        inferServerActionReturnData<THandler>,
+        inferServerActionError<THandler>
+      >
     : DefinedUseQueryResult<
         inferServerActionReturnData<THandler>,
-        ZSAError
+        inferServerActionError<THandler>
       > => {
     return useQuery(
       {
@@ -158,7 +164,7 @@ export const setupServerActionHooks = <
     TNeverThrow extends false
       ? inferServerActionReturnData<THandler>
       : inferServerActionReturnType<THandler>,
-    ZSAError,
+    inferServerActionError<THandler>,
     inferServerActionInput<THandler>
   >
 

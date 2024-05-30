@@ -1,0 +1,84 @@
+---
+title: "Calling Directly"
+group: "Client Side Usage"
+groupOrder: -10
+---
+
+# Calling Server Actions Directly
+
+In addition to using the `useServerAction` hook, you can also call server actions directly from your client components. This approach provides a simpler way to execute actions, but you won't have access to the built-in loading states, optimistic updates, and error handling provided by `useServerAction`.
+
+## Usage
+
+```tsx
+import { myServerAction } from "./actions" <|highlight|>
+
+function MyComponent() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+
+  const handleClick = async () => {
+    const [data, err] = await myServerAction({ /* input */ }) <|highlight|>
+
+    if (err) {
+      setError(err)
+    } else {
+      setData(data)
+    }
+  }
+
+  return (
+    <div>
+      <button onClick={handleClick}>Execute</button>
+      {error && <div>Error: {error.message}</div>}
+      {data && <div>Data: {JSON.stringify(data)}</div>}
+    </div>
+  )
+}
+```
+
+## Executing the Action
+
+To call a server action directly, you simply need to import the action and invoke it with the required input. Server actions return a promise that resolves to a tuple containing the result data and any error that occurred.
+
+```ts
+const [data, err] = await myServerAction({ /* input */ })
+```
+
+- If the action is successful, `data` will contain the returned data, and `err` will be `null`.
+- If an error occurs during the execution of the action, `data` will be `null`, and `err` will contain the error object.
+
+You can handle the result of the action based on the presence of `data` or `err`.
+
+<Warning>
+When calling server actions directly, you are responsible for handling the asynchronous nature of the action and updating the component's state accordingly. You won't have access to the automatic loading states and error handling provided by `useServerAction`.
+</Warning>
+
+## Error Handling
+
+If an error occurs during the execution of the server action, you can access the error object in the `err` variable returned by the action. You can then update your component's state or display an error message to the user based on the error.
+
+```ts
+const [data, err] = await myServerAction({ /* input */ })
+
+if (err) {
+  // Handle the error, e.g., update state or display an error message
+  console.error("Server action error:", err)
+}
+```
+
+<Info>
+When handling errors directly, you have full control over how to present and manage the error state in your component.
+</Info>
+
+## Limitations
+
+While calling server actions directly is a straightforward approach, it has some limitations compared to using the `useServerAction` hook:
+
+- You don't have access to the built-in loading states (`isPending`, `isOptimistic`, etc.).
+- You need to manually handle the asynchronous nature of the action and update the component's state accordingly.
+- You don't have the option to configure automatic retries or optimistic updates.
+
+If you require more advanced functionality or a more declarative approach to managing server actions, consider using the `useServerAction` hook instead.
+
+That covers the basics of calling server actions directly in your client components. Remember to handle the asynchronous nature of the actions and manage the component's state appropriately.

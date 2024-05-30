@@ -1,7 +1,6 @@
 {
   "name": "zsa-react-query",
-  "version": "0.0.2",
-  "type": "module",
+  "version": "0.1.0",
   "publishConfig": {
     "access": "public"
   },
@@ -9,19 +8,19 @@
     "dist/**"
   ],
   "exports": {
-    ".": "./dist/index.cjs"
+    ".": "./dist/index.mjs"
   },
   "typesVersions": {
     "*": {
       ".": [
-        "./dist/index.d.cts"
+        "./dist/index.d.mts"
       ]
     }
   },
   "sideEffects": false,
   "license": "MIT",
   "main": "./dist/index.js",
-  "module": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
     "lint": "eslint .",

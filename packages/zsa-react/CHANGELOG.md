@@ -1,5 +1,22 @@
 # server-actions-wrapper
 
+## 0.1.1
+
+### Patch Changes
+
+- 412f881: Revert start transition as current implementation causes bugs
+
+## 0.1.0
+
+### Minor Changes
+
+- 07daba7: Typed Zod errors that respect the input schema
+
+### Patch Changes
+
+- Updated dependencies [07daba7]
+  - zsa@0.2.0
+
 ## 0.0.1
 
 ### Patch Changes

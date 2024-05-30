@@ -8,9 +8,11 @@ import {
 import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
-  TDataOrError,
-  TZodSafeFunction,
+  THandlerOpts,
   TZodSafeFunctionDefaultOmitted,
+} from "./types"
+import {
+  TZodSafeFunction,
   ZodSafeFunction,
   createZodSafeFunction,
   inferServerActionReturnData,
@@ -87,7 +89,13 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
         T["$internals"]["inputSchema"],
         z.ZodUndefined,
         TZodSafeFunctionDefaultOmitted,
-        inferServerActionReturnData<T["$internals"]["lastHandler"]>,
+        inferServerActionReturnData<
+          T["$internals"]["lastHandler"]
+        > extends infer TData
+          ? TData extends void
+            ? undefined
+            : TData
+          : never,
         true,
         "json"
       >
@@ -123,11 +131,11 @@ export const createServerActionProcedure = <
  */
 export const chainServerActionProcedures = <
   T2 extends TAnyCompleteProcedure,
-  TContext extends NonNullable<Parameters<T2["$internals"]["lastHandler"]>[1]>,
-  T1 extends CompleteProcedure<
-    any,
-    (input: any, ctx: any) => TDataOrError<TContext>
-  >,
+  TOpts extends Parameters<T2["$internals"]["lastHandler"]>[2],
+  TContext extends TOpts extends { ctx?: any }
+    ? NonNullable<TOpts["ctx"]>
+    : undefined,
+  T1 extends CompleteProcedure<any, TAnyZodSafeFunctionHandler<any, TContext>>,
 >(
   first: T1,
   second: T2
@@ -147,15 +155,13 @@ export const chainServerActionProcedures = <
 
   const newLastHandler = async (
     input?: any,
-    ctx?: any,
-    $overrideInputSchema?: z.ZodType
+    overrideArgs?: undefined,
+    opts?: THandlerOpts<any>
   ) =>
-    await second.$internals.lastHandler(
-      input,
-      ctx,
-      // now we need to override the input schema
-      $overrideInputSchema || inputSchema
-    )
+    await second.$internals.lastHandler(input, overrideArgs, {
+      ...opts,
+      overrideInputSchema: opts?.overrideInputSchema || inputSchema,
+    })
 
   return new CompleteProcedure({
     inputSchema,

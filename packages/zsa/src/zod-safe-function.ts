@@ -1,128 +1,19 @@
 import { z } from "zod"
-import {
-  TOnCompleteFn,
-  TOnErrorFn,
-  TOnStartFn,
-  TOnSuccessFn,
-} from "./callbacks"
+import { TOnCompleteFn, TOnStartFn, TOnSuccessFn } from "./callbacks"
 import { TZSAError, ZSAError } from "./errors"
+import { NextRequest } from "./next-request"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
-
-/** The return type of a server action */
-export type TDataOrError<TData> =
-  | Promise<[Awaited<TData>, null]>
-  | Promise<[null, TZSAError]>
-
-/** A configuration object for retrying a server action */
-export interface RetryConfig {
-  /** The maximum number of times to retry the action. Inclusive. */
-  maxAttempts: number
-  /**
-   * The delay in milliseconds between each retry attempt.
-   *
-   * Can either be a number (ms) or a function that takes the
-   * current attempt number and the error as arguments and returns a number of ms.
-   *
-   * NOTE: The current attempt starts at 2
-   * (the first attempt errored then the current attempt becomes is 2)
-   *
-   * @example
-   * Exponential backoff
-   * ```ts
-   * delay: (currentAttempt) =>
-   *   Math.min(
-   *     currentAttempt > 2 ? 2 ** currentAttempt * 1000 : 1000,
-   *     30 * 1000
-   *   ),
-   * ```
-   *
-   * @example
-   * Linear backoff
-   * ```ts
-   * delay: (currentAttempt) =>
-   *   (currentAttempt - 1) * 1000,
-   * ```
-   */
-  delay?: number | ((currentAttempt: number, err: ZSAError) => number)
-}
-
-/** A function type for a handler that does not have an input */
-export interface TNoInputHandlerFunc<
-  TRet extends any,
-  TOutputSchema extends z.ZodType,
-  TProcedureChainOutput extends any,
-> {
-  (
-    placeholder?: undefined,
-    $overrideArgs?: undefined,
-    // very janky but basically in the `getProcedureChainOutput` function
-    // we pass the context second
-    $ctx?: TProcedureChainOutput,
-    $overrideInputSchema?: undefined
-  ): TDataOrError<
-    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
-  >
-}
-
-/** A function type for a handler that has an input */
-export interface THandlerFunc<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
-  TRet extends any,
-  TProcedureChainOutput extends any,
-  TInputType extends InputTypeOptions,
-> {
-  (
-    /** The input to the handler */
-    args: TInputType extends "json" ? TInputSchema["_input"] : FormData,
-    /** Override the args */
-    $overrideArgs?: Partial<TInputSchema["_input"]>,
-    /** The context of the handler */
-    $ctx?: TProcedureChainOutput,
-    /** An optional override input schema */
-    $overrideInputSchema?: z.ZodType
-  ): TDataOrError<
-    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
-  >
-}
-
-/** a helper type to hold the status of a timeout */
-interface TimeoutStatus {
-  isTimeout: boolean
-}
-
-/** which keys should be default omitted from the safe zod function */
-const DefaultOmitted = {
-  $internals: 1,
-  handleError: 1,
-  onInputParseError: 1,
-  getTimeoutErrorPromise: 1,
-  getProcedureChainOutput: 1,
-  handleSuccess: 1,
-  handleStart: 1,
-  parseInputData: 1,
-  parseOutputData: 1,
-  onOutputParseError: 1,
-  checkTimeoutStatus: 1,
-  getRetryDelay: 1,
-} as const
-
-export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
-
-/** A combination of both a no input handler and a handler */
-export type TAnyZodSafeFunctionHandler =
-  | ((
-      input: any,
-      overrideArgs?: any,
-      ctx?: any,
-      $overrideInputSchema?: undefined
-    ) => TDataOrError<any>)
-  | ((
-      placeholder?: undefined,
-      overrideArgs?: undefined,
-      ctx?: any,
-      $overrideInputSchema?: z.ZodType
-    ) => TDataOrError<any>)
+import {
+  InputTypeOptions,
+  RetryConfig,
+  TAnyZodSafeFunctionHandler,
+  THandlerFunc,
+  THandlerOpts,
+  TInternals,
+  TNoInputHandlerFunc,
+  TZodSafeFunctionDefaultOmitted,
+  TimeoutStatus,
+} from "./types"
 
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
@@ -147,92 +38,6 @@ export type TZodSafeFunction<
   >,
   TOmitted
 >
-
-/**
- * A data type for the internals of a Zod Safe Function
- */
-interface TInternals<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
-  TIsProcedure extends boolean,
-> {
-  /**
-   *
-   * A chain of handler functions to run before the main handler (if any)
-   *
-   * These would come from the procedure chain
-   *
-   */
-  procedureHandlerChain: TAnyZodSafeFunctionHandler[]
-
-  /** The final input schema of the handler */
-  inputSchema: TInputSchema
-
-  /** The final output schema of the handler */
-  outputSchema: TOutputSchema
-
-  /** A function to run when an input parse error occurs */
-  onInputParseError?: ((err: z.ZodError<TInputSchema>) => any) | undefined
-
-  /** A function to run when the output parse error occurs */
-  onOutputParseError?: ((err: z.ZodError<TOutputSchema>) => any) | undefined
-
-  /**
-   * The timeout of the handler in milliseconds
-   */
-  timeout?: number | undefined
-
-  /**
-   * The retry configuration of the handler
-   */
-  retryConfig?: RetryConfig | undefined
-
-  /** The number of atttempts the handler has made */
-  attempts?: number | undefined
-
-  /** A function to run when the handler errors */
-  onErrorFn?: TOnErrorFn | undefined
-
-  /** A function to run when the handler starts */
-  onStartFn?: TOnStartFn<TInputSchema, TIsProcedure> | undefined
-
-  /** A function to run when the handler succeeds */
-  onSuccessFn?:
-    | TOnSuccessFn<TInputSchema, TOutputSchema, TIsProcedure>
-    | undefined
-
-  /** A function to run when the handler completes (success or error) */
-  onCompleteFn?:
-    | TOnCompleteFn<TInputSchema, TOutputSchema, TIsProcedure>
-    | undefined
-
-  /** The procedure function to run when an error occurs */
-  onErrorFromProcedureFn?: TOnErrorFn | undefined
-
-  /** The procedure function to run when the handler starts */
-  onStartFromProcedureFn?: TOnStartFn<TInputSchema, true> | undefined
-
-  /** The procedure function to run when the handler succeeds */
-  onSuccessFromProcedureFn?:
-    | TOnSuccessFn<TInputSchema, TOutputSchema, true>
-    | undefined
-
-  /** The procedure function to run when the handler completes (success or error) */
-  onCompleteFromProcedureFn?:
-    | TOnCompleteFn<TInputSchema, TOutputSchema, true>
-    | undefined
-
-  /** Boolean indicating if the procedure has a parent */
-  isChained?: boolean | undefined
-
-  /** Boolean indicating if the handler is a procedure */
-  isProcedure?: TIsProcedure | undefined
-
-  /** The handler function */
-  handler?: TAnyZodSafeFunctionHandler | undefined
-}
-
-type InputTypeOptions = "formData" | "json"
 
 export class ZodSafeFunction<
   TInputSchema extends z.ZodType,
@@ -267,24 +72,27 @@ export class ZodSafeFunction<
    *
    * If there should be no retry, returns -1
    */
-  public getRetryDelay($err: unknown) {
+  public getRetryDelay($err: unknown, currentAttempt: number) {
     try {
       const err = $err instanceof ZSAError ? $err : new ZSAError("ERROR", $err)
 
+      // don't retry on timeouts
+      if (err.code === "TIMEOUT") {
+        return -1
+      }
+
+      // if there is no retry config, return -1
       const config = this.$internals.retryConfig
       if (!config) return -1
 
-      this.$internals.attempts = this.$internals.attempts
-        ? this.$internals.attempts + 1
-        : 1
+      // if this is a procedure, the action should retry
+      if (this.$internals.isProcedure) return -1
 
-      const attempts = this.$internals.attempts || 0
-
-      const shouldRetry = attempts < config.maxAttempts
+      const shouldRetry = currentAttempt < config.maxAttempts
 
       let retryDelay = 0
       if (typeof config.delay === "function") {
-        retryDelay = config.delay(attempts + 1, err)
+        retryDelay = config.delay(currentAttempt, err)
       } else if (typeof config.delay === "number") {
         retryDelay = config.delay
       }
@@ -301,7 +109,8 @@ export class ZodSafeFunction<
    */
   public async getProcedureChainOutput(
     args: TInputSchema["_input"],
-    timeoutStatus: TimeoutStatus
+    timeoutStatus: TimeoutStatus,
+    request: NextRequest | undefined
   ): Promise<TProcedureChainOutput> {
     let accData = undefined
 
@@ -309,7 +118,10 @@ export class ZodSafeFunction<
       this.checkTimeoutStatus(timeoutStatus)
 
       const procedureHandler = this.$internals.procedureHandlerChain[i]!
-      const [data, err] = await procedureHandler(args, undefined, accData)
+      const [data, err] = await procedureHandler(args, undefined, {
+        ctx: accData,
+        request,
+      })
       if (err) {
         throw err
       }
@@ -535,6 +347,7 @@ export class ZodSafeFunction<
       if (this.$internals.onOutputParseError) {
         await this.$internals.onOutputParseError(safe.error)
       }
+      safe.error.flatten()
       throw new ZSAError("OUTPUT_PARSE_ERROR", safe.error)
     }
     return safe.data
@@ -618,12 +431,11 @@ export class ZodSafeFunction<
   }
 
   /** helper function to handle errors with timeout checkpoints */
-  public async handleError(err: any): Promise<[null, TZSAError]> {
-
+  public async handleError(err: any): Promise<[null, TZSAError<TInputSchema>]> {
     // we need to throw any NEXT_REDIRECT errors so that next can
     // properly handle them.
-    if (err.message === 'NEXT_REDIRECT') {
-      throw err;
+    if (err.message === "NEXT_REDIRECT") {
+      throw err
     }
 
     const customError =
@@ -661,18 +473,38 @@ export class ZodSafeFunction<
       })
     }
 
+    // the error will get returned to the action level
+    if (this.$internals.isProcedure) {
+      return [null, customError as any]
+    }
+
+    const stringifyIfNeeded = (data: any) =>
+      typeof data === "string" ? data : JSON.stringify(data)
+
+    let formattedErrors
+    let flattenedErrors
+
+    const data = err.data
+    if (
+      data instanceof z.ZodError &&
+      customError.code === "INPUT_PARSE_ERROR"
+    ) {
+      formattedErrors = data.format()
+      flattenedErrors = data.flatten()
+    }
+
     return [
       null,
       {
-        data:
-          typeof customError.data === "string"
-            ? customError.data
-            : JSON.stringify(customError.data),
+        data: stringifyIfNeeded(customError.data),
         name: customError.name,
         stack: JSON.stringify(customError.stack),
-        message: JSON.stringify(customError.message),
+        message: stringifyIfNeeded(customError.message),
         code: customError.code,
-      },
+        fieldErrors: flattenedErrors?.fieldErrors,
+        formErrors: flattenedErrors?.formErrors,
+        formattedErrors: formattedErrors as any,
+      } as any,
     ]
   }
 
@@ -720,10 +552,17 @@ export class ZodSafeFunction<
       input: TInputSchema["_output"]
       /** the final context of the action */
       ctx: TProcedureChainOutput
+      /** a request object if the action is run from an Open API route `createOpenApiServerActionRouter` */
+      request?: NextRequest
     }) => TRet
   ): TIsProcedure extends false
     ? TInputSchema extends z.ZodUndefined
-      ? TNoInputHandlerFunc<TRet, TOutputSchema, TProcedureChainOutput>
+      ? TNoInputHandlerFunc<
+          TRet,
+          TInputSchema,
+          TOutputSchema,
+          TProcedureChainOutput
+        >
       : THandlerFunc<
           TInputSchema,
           TOutputSchema,
@@ -750,18 +589,23 @@ export class ZodSafeFunction<
     const wrapper = async (
       args: TArgs,
       overrideArgs?: Partial<TInputSchema["_input"]>,
-      $ctx?: TProcedureChainOutput,
-      $overrideInputSchema?: z.ZodType
+      opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
-      // if args is formData
-      if (args instanceof FormData) {
-        args = {
-          ...(Object.fromEntries(args.entries()) as any),
-          ...(overrideArgs || {}),
-        }
+      if (opts?.returnInputSchema) {
+        return this.$internals.inputSchema
+      } else if (opts?.returnOutputSchema) {
+        return this.$internals.outputSchema
       }
 
       try {
+        // if args is formData
+        if (args instanceof FormData) {
+          args = {
+            ...(Object.fromEntries(args.entries()) as any),
+            ...(overrideArgs || {}),
+          }
+        }
+
         await this.handleStart(args, timeoutStatus)
 
         if (!this.$internals.inputSchema && !this.$internals.isChained)
@@ -769,13 +613,19 @@ export class ZodSafeFunction<
 
         // run the procedure chain to get the context
         const ctx =
-          $ctx || (await this.getProcedureChainOutput(args, timeoutStatus))
+          this.$internals.isProcedure && opts
+            ? (opts.ctx as TProcedureChainOutput)
+            : await this.getProcedureChainOutput(
+                args,
+                timeoutStatus,
+                opts?.request
+              )
 
         // parse the input data
         const input = await this.parseInputData(
           args,
           timeoutStatus,
-          $overrideInputSchema
+          opts?.overrideInputSchema
         )
 
         // timeout checkpoint
@@ -784,6 +634,7 @@ export class ZodSafeFunction<
         const data = await fn({
           input,
           ctx,
+          request: opts?.request,
         })
 
         const parsed = await this.parseOutputData(data, timeoutStatus)
@@ -792,11 +643,14 @@ export class ZodSafeFunction<
 
         return [parsed, null]
       } catch (err) {
-        const retryDelay = this.getRetryDelay(err)
+        const retryDelay = this.getRetryDelay(err, opts?.attempts || 1)
 
         if (retryDelay >= 0) {
           await new Promise((r) => setTimeout(r, retryDelay))
-          return await wrapper(args, overrideArgs, $ctx, $overrideInputSchema)
+          return await wrapper(args, overrideArgs, {
+            ...(opts || {}),
+            attempts: (opts?.attempts || 1) + 1,
+          })
         }
 
         return await this.handleError(err)
@@ -807,15 +661,13 @@ export class ZodSafeFunction<
     const withTimeout = async (
       args: TArgs,
       overrideArgs?: Partial<TInputSchema["_input"]>,
-      ctx?: TProcedureChainOutput,
-      $overrideInputSchema?: z.ZodType
+      opts?: THandlerOpts<TProcedureChainOutput>
     ) => {
       const timeoutMs = this.$internals.timeout
-      if (!timeoutMs)
-        return await wrapper(args, overrideArgs, ctx, $overrideInputSchema)
+      if (!timeoutMs) return await wrapper(args, overrideArgs, opts)
 
       return await Promise.race([
-        wrapper(args, overrideArgs, ctx, $overrideInputSchema),
+        wrapper(args, overrideArgs, opts),
         this.getTimeoutErrorPromise(timeoutMs),
       ])
         .then((r) => r)
@@ -892,6 +744,10 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
 export type inferServerActionReturnData<
   TAction extends TAnyZodSafeFunctionHandler,
 > = NonNullable<Awaited<ReturnType<TAction>>[0]>
+
+// helper type to infer the error of a server action
+export type inferServerActionError<TAction extends TAnyZodSafeFunctionHandler> =
+  NonNullable<Awaited<ReturnType<TAction>>[1]>
 
 // helper type to infer the return type of a server action
 export type inferServerActionReturnType<
