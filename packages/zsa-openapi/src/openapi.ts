@@ -559,8 +559,17 @@ export const createRouteHandlers = <
       }
 
       return new Response(JSON.stringify(data), { status: 200 }) as THandlerRet
-    } catch (error: unknown) {
+    } catch (error: any) {
       let status = getErrorStatusFromZSAError(error)
+
+      // if the error is a redirect, throw it
+      if (
+        typeof error === "object" &&
+        (error.message === "NEXT_REDIRECT" ||
+          error.message === "NEXT_NOT_FOUND")
+      ) {
+        throw error
+      }
 
       if (opts?.responseType === "JSON") {
         return {
