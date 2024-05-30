@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState, useTransition } from "react"
+import { useCallback, useRef, useState } from "react"
 import {
   TAnyZodSafeFunctionHandler,
   TZSAError,
@@ -60,7 +60,6 @@ export const useServerAction = <
 
   const initialData = opts?.initialData
 
-  const [isTransitionPending, startTransition] = useTransition()
   const [result, setResult] = useState<TResult>(
     !initialData
       ? getEmptyResult()
@@ -100,9 +99,7 @@ export const useServerAction = <
 
       if (opts?.onStart) opts.onStart()
 
-      startTransition(() => {
-        setIsExecuting(true)
-      })
+      setIsExecuting(true)
 
       const [data, err] = await serverAction(input)
 
@@ -139,21 +136,19 @@ export const useServerAction = <
           return [data, err] as any
         }
 
-        startTransition(() => {
-          setIsExecuting(false)
+        setIsExecuting(false)
 
-          // don't retry => update the result
-          if (oldResult.status === "filled") {
-            setResult(oldResult.result)
-          } else {
-            setResult({ error: err as any, isError: true, data: undefined })
-          }
+        // don't retry => update the result
+        if (oldResult.status === "filled") {
+          setResult(oldResult.result)
+        } else {
+          setResult({ error: err as any, isError: true, data: undefined })
+        }
 
-          // clear the old data
-          setOldResult({
-            status: "empty",
-            result: undefined,
-          })
+        // clear the old data
+        setOldResult({
+          status: "empty",
+          result: undefined,
         })
 
         return [data, err] as any
@@ -165,19 +160,17 @@ export const useServerAction = <
         })
       }
 
-      startTransition(() => {
-        setResult({
-          isError: false,
-          error: undefined,
-          data: data ?? undefined,
-        })
-        setIsExecuting(false)
+      setResult({
+        isError: false,
+        error: undefined,
+        data: data ?? undefined,
+      })
+      setIsExecuting(false)
 
-        // clear the old data
-        setOldResult({
-          status: "empty",
-          result: undefined,
-        })
+      // clear the old data
+      setOldResult({
+        status: "empty",
+        result: undefined,
       })
 
       return [data, err] as any
@@ -211,32 +204,28 @@ export const useServerAction = <
         ? fn(oldResult.status === "empty" ? result.data : oldResult.result.data)
         : fn
 
-      startTransition(() => {
-        if (oldResult.status === "empty") {
-          setOldResult({
-            status: "filled",
-            result: { ...result },
-          })
-        }
-
-        setResult({
-          isError: false,
-          error: undefined,
-          data: data ?? undefined,
+      if (oldResult.status === "empty") {
+        setOldResult({
+          status: "filled",
+          result: { ...result },
         })
+      }
+
+      setResult({
+        isError: false,
+        error: undefined,
+        data: data ?? undefined,
       })
     },
     [execute]
   )
 
   const reset = useCallback(() => {
-    startTransition(() => {
-      setResult(getEmptyResult())
-      setOldResult(getEmptyOldResult())
-      setIsExecuting(false)
-      lastRetryId.current = 0
-      retryCount.current = 0
-    })
+    setResult(getEmptyResult())
+    setOldResult(getEmptyOldResult())
+    setIsExecuting(false)
+    lastRetryId.current = 0
+    retryCount.current = 0
   }, [])
 
   let final: TServerActionResult<TServerAction>
@@ -250,7 +239,6 @@ export const useServerAction = <
       error: undefined,
       isSuccess: false,
       status: "pending",
-      isTransitionPending: isTransitionPending,
     }
   } else if (isExecuting && oldResult.status === "filled" && result.data) {
     final = {
@@ -261,7 +249,6 @@ export const useServerAction = <
       error: undefined,
       isSuccess: false,
       status: "pending",
-      isTransitionPending: isTransitionPending,
     }
   } else if (!result.isError && result.data) {
     // success state
@@ -273,7 +260,6 @@ export const useServerAction = <
       error: undefined,
       isSuccess: true,
       status: "success",
-      isTransitionPending: isTransitionPending,
     }
   } else if (result.isError) {
     // error state
@@ -285,7 +271,6 @@ export const useServerAction = <
       isOptimistic: false,
       isSuccess: false,
       status: "error",
-      isTransitionPending: isTransitionPending,
     }
   } else {
     // idle state
@@ -297,7 +282,6 @@ export const useServerAction = <
       error: undefined,
       isSuccess: false,
       status: "idle",
-      isTransitionPending: isTransitionPending,
     }
   }
 
