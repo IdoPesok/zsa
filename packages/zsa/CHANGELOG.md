@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.2.1
+
+### Patch Changes
+
+- 735530f: throwing the error when it is a next redirect error to allow the next framework to properly handle and redirect
+
 ## 0.2.0
 
 ### Minor Changes

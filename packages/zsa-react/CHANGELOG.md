@@ -1,5 +1,13 @@
 # server-actions-wrapper
 
+## 0.1.2
+
+### Patch Changes
+
+- 735530f: throwing the error when it is a next redirect error to allow the next framework to properly handle and redirect
+- Updated dependencies [735530f]
+  - zsa@0.2.1
+
 ## 0.1.1
 
 ### Patch Changes
