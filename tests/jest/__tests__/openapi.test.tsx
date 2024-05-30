@@ -118,6 +118,29 @@ describe("openapi", () => {
       expect(response.headers.get("content-type")).toEqual("application/json")
     })
 
+    it("should multiply two numbers with a custom response [GET]", async () => {
+      const { GET } = createRouteHandlers(openapiRouter)
+
+      const request = mockNextRequest({
+        method: "GET",
+        pathname: "/api/calculations/multiplyCustomResponse/100",
+        searchParams: {
+          number2: "100",
+        },
+      })
+
+      const response = await GET(request)
+      expect(response.status).toBe(201)
+
+      const json = await response.json()
+      expect(json).toEqual({
+        result: 100 * 100,
+      })
+
+      expect(response.headers.get("content-type")).toEqual("application/json")
+      expect(response.headers.get("custom-header")).toEqual("123")
+    })
+
     it("should fail to multiply a number and a string [GET]", async () => {
       const { GET } = createRouteHandlers(openapiRouter)
 

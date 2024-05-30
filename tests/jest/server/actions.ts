@@ -172,6 +172,26 @@ export const multiplyAction = publicAction
     }
   })
 
+export const multiplyActionWithCustomResponse = publicAction
+  .input(
+    z.object({
+      number2: z.coerce.number(),
+      number1: z.coerce.number(),
+    })
+  )
+  .handler(async ({ input }) => {
+    return new Response(
+      JSON.stringify({ result: input.number1 * input.number2 }),
+      {
+        status: 201,
+        headers: {
+          "content-type": "application/json",
+          "custom-header": "123",
+        },
+      }
+    )
+  })
+
 export const protectedMultiplyAction = protectedAction
   .input(
     z.object({
