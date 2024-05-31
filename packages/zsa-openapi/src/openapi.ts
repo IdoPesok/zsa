@@ -644,6 +644,26 @@ export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
   return createRouteHandlers(router)
 }
 
+/**
+ * Create an API route handler for Next JS given a server action
+ *
+ * Exports `GET`, `POST`, `PUT`, `DELETE`, and `PATCH` functions.
+ *
+ * @example
+ * ```ts
+ * export const { GET } = createRouteHandlersForAction(getPostAction)
+ * ```
+ *
+ * @example
+ * ```ts
+ * export const { POST } = createRouteHandlersForAction(createPostAction)
+ * ```
+ *
+ * @example
+ * ```ts
+ * export const { PUT } = createRouteHandlersForAction(updatePostAction)
+ * ```
+ */
 export function createRouteHandlersForAction(
   action: TAnyZodSafeFunctionHandler
 ) {
