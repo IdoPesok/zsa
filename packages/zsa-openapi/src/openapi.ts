@@ -594,7 +594,11 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
   const handler: ApiRouteHandler = async (request: NextRequest) => {
     const parsedData = await parseRequest(request)
     if (!parsedData) return new Response("", { status: 404 })
-    return getResponseFromAction(request, parsedData.action, parsedData.input)
+    return await getResponseFromAction(
+      request,
+      parsedData.action,
+      parsedData.input
+    )
   }
 
   return {
@@ -659,7 +663,7 @@ export function createRouteHandlersForAction(
       input = undefined
     }
 
-    return getResponseFromAction(request, action, input)
+    return await getResponseFromAction(request, action, input)
   }
 
   return {

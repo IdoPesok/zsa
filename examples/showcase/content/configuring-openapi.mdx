@@ -109,13 +109,47 @@ If you hit this endpoint, you should have access to your API documentation in OA
 
 ## Single endpoints
 
-Additionally, if you only want to expose a single server action as an endpoint, you can use `setupApiHandler`. This is good when you want to create adhoc route heandlers. For example:
+Additionally, if you only want to expose a single server action as an endpoint, you can use `createRouteHandlersForAction`. This is good when you want to create adhoc route heandlers. For example:
 
-```typescript:app/api/adhoc-example/route.ts
-import { setupApiHandler } from "zsa-openapi"; <|highlight|>
-import { getReply } from "./actions";
+```typescript:app/api/:postId/route.ts
+import { z } from "zod"
+import { createServerAction } from "zsa"
+import { createRouteHandlersForAction } from "zsa-openapi"
 
-export const { GET } = setupApiHandler("/posts/{postId}/replies/{replyId}", getReply) <|highlight|>
+const getPostAction = createServerAction()
+  .input(z.object({ postId: z.string(), query: z.string().optional() }))
+  .handler(async ({ input }) => {
+    return {
+      postId: input.postId,
+    }
+  })
+
+export const { GET } = createRouteHandlersForAction(getPostAction) <|highlight|>
+```
+
+## Coerce
+
+If you are trying to use a number value, you can use the `coerce` modifier to automatically convert the string value to a number. For example:
+
+```typescript:app/api/calculations/multiply/:number1/:number2/route.ts
+import { z } from "zod"
+import { createServerAction } from "zsa"
+import { createRouteHandlersForAction } from "zsa-openapi"
+
+const getPostAction = createServerAction()
+  .input(
+    z.object({
+      number1: z.coerce.number(), <|highlight|>
+      number2: z.coerce.number(), <|highlight|>
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 * input.number2,
+    }
+  })
+
+export const { GET } = createRouteHandlersForAction(getPostAction)
 ```
 
 ## Authentication
