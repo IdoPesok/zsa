@@ -21,6 +21,7 @@ const updateProcedure = createServerActionProcedure().handler(
     if (responseMeta) {
       responseMeta.statusCode = 201
       responseMeta.headers.set("x-custom-header", "custom-value")
+      responseMeta.headers.set("content-type", "text/plain")
     }
   }
 )
@@ -39,6 +40,9 @@ const updatePost = other
   .handler(async ({ input, ctx }) => {
     // Sleep for .5 seconds
     await new Promise((resolve) => setTimeout(resolve, 1000))
+    return {
+      hello: "world",
+    }
   })
 
 const createPost = updatePost
@@ -53,7 +57,7 @@ export const openApiRouter = createOpenApiServerActionRouter({
   .post("/posts", createPost, {
     tags: ["posts"],
   })
-  .put("/posts/{postId}", updatePost, {
+  .get("/posts/{postId}", updatePost, {
     tags: ["posts"],
   })
   .get("/posts/{postId}/replies/{replyId}", getReply, {
