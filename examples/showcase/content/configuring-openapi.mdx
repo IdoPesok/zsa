@@ -392,3 +392,51 @@ export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
 ```
 
 In this example, we use the `defaults` option to specify common properties for all actions in the router. We set the `tags` to `["Posts"]` and define a required `Authorization` header. These defaults will be applied to all actions in the router, so you don't have to specify them individually for each action.
+
+## Streaming
+
+Below is an example to show how to use streaming in your server actions. TLDR is return your own Response : )
+
+```typescript:route.ts
+import { createServerAction } from "zsa"
+import { createRouteHandlersForAction } from "zsa-openapi"
+
+function iteratorToStream(iterator: any) {
+  return new ReadableStream({
+    async pull(controller) {
+      const { value, done } = await iterator.next()
+
+      if (done) {
+        controller.close()
+      } else {
+        controller.enqueue(value)
+      }
+    },
+  })
+}
+
+function sleep(time: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, time)
+  })
+}
+
+const encoder = new TextEncoder()
+
+async function* makeIterator() {
+  yield encoder.encode("<p>One</p>")
+  await sleep(200)
+  yield encoder.encode("<p>Two</p>")
+  await sleep(200)
+  yield encoder.encode("<p>Three</p>")
+}
+
+const action = createServerAction().handler(async () => {
+  const iterator = makeIterator()
+  const stream = iteratorToStream(iterator)
+
+  return new Response(stream) <|highlight|>
+})
+
+export const { GET } = createRouteHandlersForAction(action)
+```
