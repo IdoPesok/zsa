@@ -91,8 +91,11 @@ export default function MarkdownContainer(props: MDXRemoteProps) {
         )
       }
 
-      const cnSplit = className?.split(":")
-      const fileName = cnSplit?.[1]
+      const cnSplit = [
+        className?.substring(0, className.indexOf(":")),
+        className?.substring(className.indexOf(":") + 1),
+      ]
+      const fileName = cnSplit[1]
       const highlightLineNumbers = cnSplit?.[2]?.split(",").map((n) => +n)
 
       return (

@@ -1,7 +1,11 @@
 import { type NextRequest } from "next/server"
 import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
-import { TAnyZodSafeFunctionHandler, ZSAResponseMeta } from "zsa"
+import {
+  TAnyZodSafeFunctionHandler,
+  ZSAResponseMeta,
+  inferServerActionInput,
+} from "zsa"
 import {
   acceptsRequestBody,
   getErrorStatusFromZSAError,
@@ -374,6 +378,107 @@ export const createOpenApiServerActionRouter = (args?: {
   })
 }
 
+const getDataFromRequest = async (request: NextRequest) => {
+  // get the search params
+  const searchParams = request.nextUrl.searchParams
+  const searchParamsJson =
+    searchParams && "entries" in searchParams
+      ? Object.fromEntries(searchParams.entries())
+      : {}
+
+  const headers = new Headers(request.headers)
+  let data: Object | undefined = undefined
+
+  // if it has a body
+  if (acceptsRequestBody(request.method)) {
+    try {
+      if (
+        headers.get("content-type")?.startsWith(FORM_DATA_CONTENT_TYPE) ||
+        headers.get("content-type")?.startsWith(MULTI_PART_CONTENT_TYPE)
+      ) {
+        // if its form data
+        const formData = await request.formData()
+        data = Object.fromEntries(formData.entries())
+      } else {
+        // if its json
+        data = await request.json()
+      }
+    } catch (err) {
+      data = undefined
+    }
+  }
+  return {
+    data,
+    searchParamsJson,
+  }
+}
+
+const getResponseFromAction = async <
+  TAction extends TAnyZodSafeFunctionHandler,
+>(
+  request: NextRequest,
+  action: TAction,
+  input: inferServerActionInput<TAction>
+) => {
+  const responseMeta = new ZSAResponseMeta()
+
+  const stringifyIfNeeded = (data: any) =>
+    typeof data === "string" ? data : JSON.stringify(data)
+
+  try {
+    const [data, err] = await action(input, undefined, {
+      request: request,
+      responseMeta,
+    })
+
+    if (data instanceof Response) {
+      return data
+    }
+
+    if (err) {
+      throw err
+    }
+
+    // set default content type
+    if (
+      typeof data === "object" &&
+      responseMeta.headers.get("content-type") === null
+    ) {
+      responseMeta.headers.set("content-type", "application/json")
+    } else if (
+      typeof data === "string" &&
+      responseMeta.headers.get("content-type") === null
+    ) {
+      responseMeta.headers.set("content-type", "text/plain")
+    }
+
+    return new Response(stringifyIfNeeded(data), {
+      status: responseMeta.statusCode,
+      headers: responseMeta.headers,
+    })
+  } catch (error: any) {
+    let status = getErrorStatusFromZSAError(error)
+
+    // if the error is a redirect, throw it
+    if (
+      typeof error === "object" &&
+      (error.message === "NEXT_REDIRECT" || error.message === "NEXT_NOT_FOUND")
+    ) {
+      throw error
+    }
+
+    responseMeta.headers.set(
+      "content-type",
+      typeof error === "string" ? "text/plain" : "application/json"
+    )
+
+    return new Response(stringifyIfNeeded(error), {
+      status,
+      headers: responseMeta.headers,
+    })
+  }
+}
+
 /**
  * Setup API route handlers for Next JS given an OpenAPI server action router
  *
@@ -399,34 +504,7 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
     body: Record<string, any> | undefined
   }> => {
     try {
-      // get the search params
-      const searchParams = request.nextUrl.searchParams
-      const searchParamsJson =
-        searchParams && "entries" in searchParams
-          ? Object.fromEntries(searchParams.entries())
-          : {}
-
-      const headers = new Headers(request.headers)
-      let data: Object | undefined = undefined
-
-      // if it has a body
-      if (acceptsRequestBody(request.method)) {
-        try {
-          if (
-            headers.get("content-type")?.startsWith(FORM_DATA_CONTENT_TYPE) ||
-            headers.get("content-type")?.startsWith(MULTI_PART_CONTENT_TYPE)
-          ) {
-            // if its form data
-            const formData = await request.formData()
-            data = Object.fromEntries(formData.entries())
-          } else {
-            // if its json
-            data = await request.json()
-          }
-        } catch (err) {
-          data = undefined
-        }
-      }
+      const { data, searchParamsJson } = await getDataFromRequest(request)
 
       const params: Record<string, string> = {}
 
@@ -516,65 +594,11 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
   const handler: ApiRouteHandler = async (request: NextRequest) => {
     const parsedData = await parseRequest(request)
     if (!parsedData) return new Response("", { status: 404 })
-
-    const responseMeta = new ZSAResponseMeta()
-
-    const stringifyIfNeeded = (data: any) =>
-      typeof data === "string" ? data : JSON.stringify(data)
-
-    try {
-      const [data, err] = await parsedData.action(parsedData.input, undefined, {
-        request: request,
-        responseMeta,
-      })
-
-      if (data instanceof Response) {
-        return data
-      }
-
-      if (err) {
-        throw err
-      }
-
-      // set default content type
-      if (
-        typeof data === "object" &&
-        responseMeta.headers.get("content-type") === null
-      ) {
-        responseMeta.headers.set("content-type", "application/json")
-      } else if (
-        typeof data === "string" &&
-        responseMeta.headers.get("content-type") === null
-      ) {
-        responseMeta.headers.set("content-type", "text/plain")
-      }
-
-      return new Response(stringifyIfNeeded(data), {
-        status: responseMeta.statusCode,
-        headers: responseMeta.headers,
-      })
-    } catch (error: any) {
-      let status = getErrorStatusFromZSAError(error)
-
-      // if the error is a redirect, throw it
-      if (
-        typeof error === "object" &&
-        (error.message === "NEXT_REDIRECT" ||
-          error.message === "NEXT_NOT_FOUND")
-      ) {
-        throw error
-      }
-
-      responseMeta.headers.set(
-        "content-type",
-        typeof error === "string" ? "text/plain" : "application/json"
-      )
-
-      return new Response(stringifyIfNeeded(error), {
-        status,
-        headers: responseMeta.headers,
-      })
-    }
+    return await getResponseFromAction(
+      request,
+      parsedData.action,
+      parsedData.input
+    )
   }
 
   return {
@@ -618,4 +642,55 @@ export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
     .patch(path, action)
 
   return createRouteHandlers(router)
+}
+
+/**
+ * Create an API route handler for Next JS given a server action
+ *
+ * Exports `GET`, `POST`, `PUT`, `DELETE`, and `PATCH` functions.
+ *
+ * @example
+ * ```ts
+ * export const { GET } = createRouteHandlersForAction(getPostAction)
+ * ```
+ *
+ * @example
+ * ```ts
+ * export const { POST } = createRouteHandlersForAction(createPostAction)
+ * ```
+ *
+ * @example
+ * ```ts
+ * export const { PUT } = createRouteHandlersForAction(updatePostAction)
+ * ```
+ */
+export function createRouteHandlersForAction(
+  action: TAnyZodSafeFunctionHandler
+) {
+  const handler: ApiRouteHandler = async (
+    request: NextRequest,
+    args?: { params?: Record<string, string> }
+  ) => {
+    const { data, searchParamsJson } = await getDataFromRequest(request)
+
+    let input: any = {
+      ...(data || {}),
+      ...(searchParamsJson || {}),
+      ...(args?.params || {}),
+    }
+
+    if (Object.keys(input).length === 0) {
+      input = undefined
+    }
+
+    return await getResponseFromAction(request, action, input)
+  }
+
+  return {
+    GET: handler,
+    POST: handler,
+    DELETE: handler,
+    PUT: handler,
+    PATCH: handler,
+  }
 }
