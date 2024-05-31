@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.0.8
+
+### Patch Changes
+
+- b075c86: Added createRouteHandlersForAction
+
 ## 0.0.7
 
 ### Patch Changes
