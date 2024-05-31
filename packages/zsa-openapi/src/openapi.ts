@@ -66,9 +66,9 @@ const createPath = (args: {
 }) => {
   const { path, method, pathPrefix, actions } = args
 
-  const tmp = pathPrefix ? `${pathPrefix}${path}` : path
+  let tmp = pathPrefix ? `${pathPrefix}${path}` : path
   if (tmp.endsWith("/") && tmp !== "/") {
-    return tmp.slice(0, -1)
+    tmp = tmp.slice(0, -1)
   }
 
   if (tmp.includes(" ")) {
@@ -79,6 +79,11 @@ const createPath = (args: {
     throw new Error(
       `Path [${method}]: ${tmp} contains a question mark. Do not include query params in the path`
     )
+  }
+
+  // replace all :param with {param}
+  if (tmp.includes(":")) {
+    tmp = tmp.replace(/:\w+/g, (match) => `{${match.slice(1)}}`)
   }
 
   // check for duplicates
