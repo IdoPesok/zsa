@@ -257,7 +257,10 @@ describe("openapi", () => {
 
       const request = mockNextRequest({
         method: "POST",
-        pathname: "/api/calculations/subtract/200/100",
+        pathname: "/api/calculations/subtract/100/50",
+        body: {
+          number3: 5,
+        },
       })
 
       const response = await POST(request)
@@ -265,7 +268,7 @@ describe("openapi", () => {
 
       const json = await response.json()
       expect(json).toEqual({
-        result: 100,
+        result: 100 - 50 - 5,
       })
     })
 
