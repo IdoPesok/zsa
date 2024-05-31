@@ -15,6 +15,7 @@ import {
   TimeoutStatus,
   ZSAResponseMeta,
 } from "./types"
+import { addToNullishArray } from "./utils"
 
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
@@ -364,9 +365,9 @@ export class ZodSafeFunction<
       this.$internals.onStartFromProcedureFn &&
       !this.$internals.isProcedure
     ) {
-      await this.$internals.onStartFromProcedureFn({
-        args,
-      })
+      for (const fn of this.$internals.onStartFromProcedureFn) {
+        await fn({ args })
+      }
     }
 
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
@@ -390,10 +391,9 @@ export class ZodSafeFunction<
       this.$internals.onSuccessFromProcedureFn &&
       !this.$internals.isProcedure
     ) {
-      await this.$internals.onSuccessFromProcedureFn({
-        args,
-        data,
-      })
+      for (const fn of this.$internals.onSuccessFromProcedureFn) {
+        await fn({ args, data })
+      }
     }
 
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
@@ -411,13 +411,15 @@ export class ZodSafeFunction<
       this.$internals.onCompleteFromProcedureFn &&
       !this.$internals.isProcedure
     ) {
-      await this.$internals.onCompleteFromProcedureFn({
-        isSuccess: true,
-        isError: false,
-        status: "success",
-        args,
-        data,
-      })
+      for (const fn of this.$internals.onCompleteFromProcedureFn) {
+        await fn({
+          isSuccess: true,
+          isError: false,
+          status: "success",
+          args,
+          data,
+        })
+      }
     }
 
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
@@ -449,7 +451,9 @@ export class ZodSafeFunction<
       this.$internals.onErrorFromProcedureFn &&
       !this.$internals.isProcedure
     ) {
-      await this.$internals.onErrorFromProcedureFn(customError)
+      for (const fn of this.$internals.onErrorFromProcedureFn) {
+        await fn(customError)
+      }
     }
 
     if (this.$internals.onErrorFn && !this.$internals.isProcedure) {
@@ -460,12 +464,14 @@ export class ZodSafeFunction<
       this.$internals.onCompleteFromProcedureFn &&
       !this.$internals.isProcedure
     ) {
-      await this.$internals.onCompleteFromProcedureFn({
-        isSuccess: false,
-        isError: true,
-        status: "error",
-        error: customError,
-      })
+      for (const fn of this.$internals.onCompleteFromProcedureFn) {
+        await fn({
+          isSuccess: false,
+          isError: true,
+          status: "error",
+          error: customError,
+        })
+      }
     }
 
     if (this.$internals.onCompleteFn && !this.$internals.isProcedure) {
@@ -699,16 +705,22 @@ export class ZodSafeFunction<
         inputSchema: this.$internals.inputSchema,
         handlerChain: [...this.$internals.procedureHandlerChain, handler],
         lastHandler: handler,
-        onCompleteFn:
-          this.$internals.onCompleteFn ||
+        onCompleteFns: addToNullishArray(
           this.$internals.onCompleteFromProcedureFn,
-        onErrorFn:
-          this.$internals.onErrorFn || this.$internals.onErrorFromProcedureFn,
-        onStartFn:
-          this.$internals.onStartFn || this.$internals.onStartFromProcedureFn,
-        onSuccessFn:
-          this.$internals.onSuccessFn ||
+          this.$internals.onCompleteFn
+        ),
+        onErrorFns: addToNullishArray(
+          this.$internals.onErrorFromProcedureFn,
+          this.$internals.onErrorFn
+        ),
+        onStartFns: addToNullishArray(
+          this.$internals.onStartFromProcedureFn,
+          this.$internals.onStartFn
+        ),
+        onSuccessFns: addToNullishArray(
           this.$internals.onSuccessFromProcedureFn,
+          this.$internals.onSuccessFn
+        ),
         timeout: this.$internals.timeout,
         retryConfig: this.$internals.retryConfig,
       }) as any
@@ -741,10 +753,10 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
     isChained: parentProcedure !== undefined,
     isProcedure: isProcedure === true,
     procedureHandlerChain: parentProcedure?.$internals.handlerChain || [],
-    onCompleteFromProcedureFn: parentProcedure?.$internals.onCompleteFn,
-    onErrorFromProcedureFn: parentProcedure?.$internals.onErrorFn,
-    onStartFromProcedureFn: parentProcedure?.$internals.onStartFn,
-    onSuccessFromProcedureFn: parentProcedure?.$internals.onSuccessFn,
+    onCompleteFromProcedureFn: parentProcedure?.$internals.onCompleteFns,
+    onErrorFromProcedureFn: parentProcedure?.$internals.onErrorFns,
+    onStartFromProcedureFn: parentProcedure?.$internals.onStartFns,
+    onSuccessFromProcedureFn: parentProcedure?.$internals.onSuccessFns,
   }) as any
 }
 
