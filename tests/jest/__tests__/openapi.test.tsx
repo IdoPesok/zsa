@@ -252,6 +252,23 @@ describe("openapi", () => {
       expect(response.status).toBe(401)
     })
 
+    it("it should succeed in subtracting two numbers with :param [POST]", async () => {
+      const { POST } = createRouteHandlers(openapiRouter)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/subtract/200/100",
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
+        result: 100,
+      })
+    })
+
     it("it should fail to divide a number by zero [POST]", async () => {
       const { POST } = createRouteHandlers(openapiRouter)
 
