@@ -131,7 +131,7 @@ export const useServerAction = <
         // calculate if we should retry
         const retryConfig = opts?.retry
         const shouldRetry = retryConfig
-          ? retryCount.current < retryConfig.maxAttempts
+          ? retryCount.current + 1 < retryConfig.maxAttempts
           : false
 
         let retryDelay = 0
@@ -145,7 +145,7 @@ export const useServerAction = <
         if (shouldRetry) {
           // execute the retry logic
           retryCount.current += 1
-          return new Promise((resolve) =>
+          return await new Promise((resolve) =>
             setTimeout(() => {
               internalExecute(input, {
                 ...(args || {}),
