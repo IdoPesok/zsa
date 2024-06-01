@@ -4,7 +4,7 @@ import { sleep } from "lib/utils"
 import { notFound, redirect } from "next/navigation"
 import { z } from "zod"
 import { createServerAction } from "zsa"
-import { TEST_DATA } from "./data"
+import { CLIENT_TEST_DATA, TEST_DATA } from "./data"
 import {
   adminAction,
   faultyOutputProcedure,
@@ -40,6 +40,33 @@ export const getAdminGreetingAction = adminAction.handler(async ({ ctx }) => {
 
 export const getPostByIdAction = ownsPostAction.handler(async ({ ctx }) => {
   return ctx.post
+})
+
+export const loadingHelloWorldAction = publicAction.input(z.object({ ms: z.number() })).handler(async ({ input: { ms } }) => {
+  await sleep(ms)
+  return CLIENT_TEST_DATA.resultMessages.helloWorldAction
+})
+
+export const loadingGetUserGreetingAction = protectedAction.input(z.object({ ms: z.number() })).handler(async ({ ctx, input: { ms } }) => {
+  await sleep(ms)
+  return `Hello, ${ctx.auth.name}!` as const
+})
+
+export const optimisticAction = publicAction.handler(async () => {
+  await sleep(CLIENT_TEST_DATA.sleep)
+  return CLIENT_TEST_DATA.resultMessages.optimisticUpdates as string
+})
+
+export const errorAction = publicAction.handler(async () => {
+  throw new Error(TEST_DATA.errors.string)
+})
+
+export const callbacksAction = publicAction.input(z.object({ shouldError: z.boolean() })).handler(async ({ input: { shouldError } }) => {
+  await sleep(CLIENT_TEST_DATA.sleep)
+  if (shouldError) {
+    throw new Error(CLIENT_TEST_DATA.resultMessages.callbacksAction)
+  }
+  return CLIENT_TEST_DATA.resultMessages.callbacksAction
 })
 
 export const getPostByIdIsAdminAction = ownsPostIsAdminAction.handler(
