@@ -29,20 +29,21 @@ export default function IncrementExample() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
                 <Button
-                onClick={async () => {
-                    const [data, err] = await execute({ <|highlight|>
-                        number: counter, <|highlight|>
-                    }) <|highlight|>
+                  disabled={isPending}
+                  onClick={async () => {
+                      const [data, err] = await execute({ <|highlight|>
+                          number: counter, <|highlight|>
+                      }) <|highlight|>
 
-                    if (err) {
-                        // handle error
-                        return
-                    }
+                      if (err) {
+                          // handle error
+                          return
+                      }
 
-                    setCounter(data);
-                }}
+                      setCounter(data);
+                  }}
                 >
-                Invoke action
+                  Invoke action
                 </Button>
                 <p>Count:</p>
                 <div>{isPending ? "saving..." : data}</div> <|highlight|>
@@ -152,8 +153,5 @@ The `retry` option is useful for handling temporary network issues or server err
 
 You can pass either the new data directly or a function that receives the current data and returns the new data to `setOptimistic`. If the server action fails, the optimistic update will be rolled back to the previous value.
 
-<Warning>
-Be cautious when using optimistic updates, as they may not always match the actual server response. Handle potential discrepancies appropriately in your application logic.
-</Warning>
-
 That's it! You can now use `useServerAction` to execute server actions and handle their results in your React components with ease.
+

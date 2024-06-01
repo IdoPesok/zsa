@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useRef, useState, useTransition } from "react"
 import {
   TAnyZodSafeFunctionHandler,
   TZSAError,
@@ -73,6 +73,7 @@ export const useServerAction = <
   const [isExecuting, setIsExecuting] = useState(false)
   const lastRetryId = useRef(0)
   const retryCount = useRef(0)
+  const [isTransitioning, startTransition] = useTransition()
 
   const internalExecute = useCallback(
     async (
@@ -85,7 +86,16 @@ export const useServerAction = <
 
       // if the retry ids don't match, we should not refetch
       if (isFromRetryId && lastRetryId.current !== isFromRetryId) {
-        return null as any
+        return [
+          null,
+          {
+            message: "Could not successfully execute the server action",
+            data: "Could not successfully execute the server action",
+            stack: "",
+            name: "ZSAError",
+            code: "ERROR",
+          },
+        ] as any
       }
 
       // start a new retry count
@@ -101,13 +111,13 @@ export const useServerAction = <
 
       setIsExecuting(true)
 
-      let data, err;
-      
-      await serverAction(input).then(response => {
+      let data, err
+
+      await serverAction(input).then((response) => {
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
-          [data, err] = response
+          ;[data, err] = response
         }
       })
 
@@ -121,7 +131,7 @@ export const useServerAction = <
         // calculate if we should retry
         const retryConfig = opts?.retry
         const shouldRetry = retryConfig
-          ? retryCount.current < retryConfig.maxAttempts
+          ? retryCount.current + 1 < retryConfig.maxAttempts
           : false
 
         let retryDelay = 0
@@ -135,13 +145,14 @@ export const useServerAction = <
         if (shouldRetry) {
           // execute the retry logic
           retryCount.current += 1
-          setTimeout(() => {
-            internalExecute(input, {
-              ...(args || {}),
-              isFromRetryId: retryId,
-            })
-          }, retryDelay)
-          return [data, err] as any
+          return await new Promise((resolve) =>
+            setTimeout(() => {
+              internalExecute(input, {
+                ...(args || {}),
+                isFromRetryId: retryId,
+              }).then(resolve)
+            }, retryDelay)
+          )
         }
 
         setIsExecuting(false)
@@ -162,11 +173,9 @@ export const useServerAction = <
         return [data, err] as any
       }
 
-      if (opts?.onSuccess) {
-        opts.onSuccess({
-          data,
-        })
-      }
+      opts?.onSuccess?.({
+        data,
+      })
 
       setResult({
         isError: false,
@@ -191,8 +200,12 @@ export const useServerAction = <
       ...opts: Parameters<TServerAction>[0] extends undefined
         ? []
         : [Parameters<TServerAction>[0]]
-    ) => {
-      return await internalExecute(opts[0])
+    ): Promise<inferServerActionReturnType<TServerAction>> => {
+      return await new Promise((resolve) => {
+        startTransition(() => {
+          internalExecute(opts[0]).then(resolve)
+        })
+      })
     },
     [internalExecute]
   )
@@ -238,7 +251,9 @@ export const useServerAction = <
 
   let final: TServerActionResult<TServerAction>
 
-  if (isExecuting && oldResult.status === "empty") {
+  const isPending = isTransitioning || isExecuting
+
+  if (isPending && oldResult.status === "empty") {
     final = {
       isPending: true,
       isOptimistic: false,
@@ -248,7 +263,7 @@ export const useServerAction = <
       isSuccess: false,
       status: "pending",
     }
-  } else if (isExecuting && oldResult.status === "filled" && result.data) {
+  } else if (isPending && oldResult.status === "filled" && result.data) {
     final = {
       isPending: true,
       isOptimistic: true,

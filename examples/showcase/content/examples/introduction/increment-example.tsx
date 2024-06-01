@@ -20,6 +20,7 @@ export default function IncrementExample() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <Button
+          disabled={isPending}
           onClick={async () => {
             const [data, err] = await execute({
               number: counter,
