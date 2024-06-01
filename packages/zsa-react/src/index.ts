@@ -136,13 +136,14 @@ export const useServerAction = <
         if (shouldRetry) {
           // execute the retry logic
           retryCount.current += 1
-          setTimeout(() => {
-            internalExecute(input, {
-              ...(args || {}),
-              isFromRetryId: retryId,
-            })
-          }, retryDelay)
-          return [data, err] as any
+          return new Promise((resolve) =>
+            setTimeout(() => {
+              internalExecute(input, {
+                ...(args || {}),
+                isFromRetryId: retryId,
+              }).then(resolve)
+            }, retryDelay)
+          )
         }
 
         setIsExecuting(false)

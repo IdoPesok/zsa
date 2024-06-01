@@ -6,7 +6,7 @@ import { createServerAction } from "zsa"
 export const incrementNumberAction = createServerAction()
   .input(
     z.object({
-      number: z.number(),
+      number: z.number().min(100),
     })
   )
   .handler(async ({ input }) => {
