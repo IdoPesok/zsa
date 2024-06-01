@@ -17,7 +17,6 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
-      isTransitioning: boolean
     }
   | {
       // pending state (optimistic)
@@ -28,7 +27,6 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
-      isTransitioning: boolean
     }
   | {
       // idle state
@@ -39,7 +37,6 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "idle"
-      isTransitioning: boolean
     }
   | {
       // error state
@@ -50,7 +47,6 @@ export type TServerActionResult<
       error: TZSAError<inferInputSchemaFromHandler<TServerAction>>
       isSuccess: false
       status: "error"
-      isTransitioning: boolean
     }
   | {
       isPending: false
@@ -60,5 +56,4 @@ export type TServerActionResult<
       error: undefined
       isSuccess: true
       status: "success"
-      isTransitioning: boolean
     }

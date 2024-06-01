@@ -185,26 +185,17 @@ export const useServerAction = <
     [serverAction]
   )
 
-  const transition = useCallback(
-    async (
-      ...opts: Parameters<TServerAction>[0] extends undefined
-        ? []
-        : [Parameters<TServerAction>[0]]
-    ) => {
-      startTransition(() => {
-        internalExecute(opts[0])
-      })
-    },
-    [internalExecute]
-  )
-
   const execute = useCallback(
     async (
       ...opts: Parameters<TServerAction>[0] extends undefined
         ? []
         : [Parameters<TServerAction>[0]]
     ) => {
-      return await internalExecute(opts[0])
+      return await new Promise((resolve) => {
+        startTransition(() => {
+          internalExecute(opts[0]).then(resolve)
+        })
+      })
     },
     [internalExecute]
   )
@@ -253,7 +244,6 @@ export const useServerAction = <
   if (isExecuting && oldResult.status === "empty") {
     final = {
       isPending: true,
-      isTransitioning,
       isOptimistic: false,
       data: undefined,
       isError: false,
@@ -264,7 +254,6 @@ export const useServerAction = <
   } else if (isExecuting && oldResult.status === "filled" && result.data) {
     final = {
       isPending: true,
-      isTransitioning,
       isOptimistic: true,
       data: result.data,
       isError: false,
@@ -276,7 +265,6 @@ export const useServerAction = <
     // success state
     final = {
       isPending: false,
-      isTransitioning,
       isOptimistic: false,
       data: result.data,
       isError: false,
@@ -288,7 +276,6 @@ export const useServerAction = <
     // error state
     final = {
       isPending: false,
-      isTransitioning,
       data: undefined,
       isError: true,
       error: result.error as any,
@@ -300,7 +287,6 @@ export const useServerAction = <
     // idle state
     final = {
       isPending: false,
-      isTransitioning,
       data: undefined,
       isOptimistic: false,
       isError: false,
@@ -312,9 +298,9 @@ export const useServerAction = <
 
   return {
     ...final,
+    isPending: isTransitioning,
     reset,
     execute,
-    transition,
     setOptimistic,
   }
 }
