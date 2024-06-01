@@ -46,25 +46,25 @@ export const TEST_DATA = {
   },
 } as const
 
-
 export const CLIENT_TEST_DATA = {
   sleep: 500,
-  loadingMessage: 'loading...',
-  initialMessage: 'NOTHING',
-  dummyMessage: 'DUMMY',
+  loadingMessage: "loading...",
+  initialMessage: "NOTHING",
+  dummyMessage: "DUMMY",
   roles: {
-    invoke: 'invoke',
-    result: 'result',
-    invokeError: 'invokeError',
-    data: 'data',
+    invoke: "invoke",
+    result: "result",
+    invokeError: "invokeError",
+    data: "data",
   },
   resultMessages: {
-    helloWorldAction: 'helloWorldAction',
+    helloWorldAction: "helloWorldAction",
     optimisticUpdates: "Optimistic Action Result",
     errorAction: "Error Action Error",
     getUserGreetingAction: `Hello, ${TEST_DATA.user.name}!`,
     callbacksAction: "Callbacks Action Result",
-  }
+    resetAction: "Reset Action Result",
+  },
 } as const
 
 export const auth = () => {

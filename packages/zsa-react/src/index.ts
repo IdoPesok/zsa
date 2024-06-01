@@ -101,13 +101,13 @@ export const useServerAction = <
 
       setIsExecuting(true)
 
-      let data, err;
-      
-      await serverAction(input).then(response => {
+      let data, err
+
+      await serverAction(input).then((response) => {
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
-          [data, err] = response
+          ;[data, err] = response
         }
       })
 

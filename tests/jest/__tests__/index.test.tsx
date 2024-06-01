@@ -27,6 +27,8 @@ import {
   undefinedAction,
 } from "server/actions"
 import { RetryState, TEST_DATA } from "server/data"
+import { z } from "zod"
+import { createServerAction } from "zsa"
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(),
@@ -418,6 +420,82 @@ describe("actions", () => {
       await expect(nextRedirectInProcedureAction()).rejects.toThrow(
         "NEXT_REDIRECT"
       )
+    })
+  })
+
+  describe("callbacks", () => {
+    let onStartMock: jest.Mock
+    let onSuccessMock: jest.Mock
+    let onCompleteMock: jest.Mock
+    let onErrorMock: jest.Mock
+    let onInputParseErrorMock: jest.Mock
+    let testCallbacksAction: any
+
+    beforeEach(() => {
+      onStartMock = jest.fn()
+      onSuccessMock = jest.fn()
+      onCompleteMock = jest.fn()
+      onErrorMock = jest.fn()
+      onInputParseErrorMock = jest.fn()
+      testCallbacksAction = createServerAction()
+        .input(z.object({ shouldError: z.boolean() }))
+        .onStart(onStartMock)
+        .onSuccess(onSuccessMock)
+        .onComplete(onCompleteMock)
+        .onError(onErrorMock)
+        .onInputParseError(onInputParseErrorMock)
+        .handler(async ({ input }) => {
+          if (input.shouldError) {
+            throw new Error("Test error")
+          }
+          return "Test success"
+        })
+    })
+
+    it("executes onStart, onSuccess, and onComplete callbacks on success", async () => {
+      const [data, err] = await testCallbacksAction({ shouldError: false })
+      expect(data).toEqual("Test success")
+      expect(err).toBeNull()
+      expect(onStartMock).toHaveBeenCalledWith({ args: { shouldError: false } })
+      expect(onSuccessMock).toHaveBeenCalledWith({
+        args: { shouldError: false },
+        data: "Test success",
+      })
+      expect(onCompleteMock).toHaveBeenCalledWith({
+        isSuccess: true,
+        isError: false,
+        status: "success",
+        args: { shouldError: false },
+        data: "Test success",
+      })
+      expect(onErrorMock).not.toHaveBeenCalled()
+      expect(onInputParseErrorMock).not.toHaveBeenCalled()
+    })
+
+    it("executes onStart, onError, and onComplete callbacks on error", async () => {
+      const [data, err] = await testCallbacksAction({ shouldError: true })
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(onStartMock).toHaveBeenCalledWith({ args: { shouldError: true } })
+      expect(onErrorMock).toHaveBeenCalled()
+      expect(onCompleteMock).toHaveBeenCalled()
+      expect(onSuccessMock).not.toHaveBeenCalled()
+      expect(onInputParseErrorMock).not.toHaveBeenCalled()
+    })
+
+    it("executes onStart, onInputParseError, and onComplete callbacks on input parse error", async () => {
+      const [data, err] = await testCallbacksAction({
+        shouldError: "invalid",
+      } as any)
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(onStartMock).toHaveBeenCalledWith({
+        args: { shouldError: "invalid" },
+      })
+      expect(onInputParseErrorMock).toHaveBeenCalled()
+      expect(onCompleteMock).toHaveBeenCalled()
+      expect(onSuccessMock).not.toHaveBeenCalled()
+      expect(onErrorMock).toHaveBeenCalled()
     })
   })
 })
