@@ -80,8 +80,6 @@ function MyComponent() {
     execute,
     setOptimistic,
     reset,
-    transition,
-    isTransitioning,
   } = useServerAction(myServerAction, {
     onError: ({ err }) => {
       console.error("Server action error:", err)
@@ -162,56 +160,3 @@ Be cautious when using optimistic updates, as they may not always match the actu
 
 That's it! You can now use `useServerAction` to execute server actions and handle their results in your React components with ease.
 
-
-## Transitions
-
-Often when using RSC your server actions will need to invoke revalidatePath or redirect.  Calling those functions require you to manually call your actions inside transitions:
-
-```tsx
-function MyComponent() {
-  const [isPending, startTransition] = useTransition();
-
-  return (
-    <button 
-      disabled={isPending}
-      onClick={() => {
-        startTransition(() => {
-          execute({ /* input */ })
-        })
-      }}
-    >
-      Execute
-    </button>
-  )
-}
-```
-
-To make this easier, useServerAction provides a `transition({ /* input */})` function that wraps your action in a startTransition function.  This allows you to call your action like this:
-
-```tsx
-function MyComponent() {
-  const { isTransitioning, transition } = useServerAction(myServerAction, {
-    onSuccess: ({ data }) => {
-      // show a success toast
-    },
-    onError: ({ err }) => {
-      // show an error toast
-    },
-  });
-
-  return (
-    <button 
-      disabled={isTransitioning}
-      onClick={() => {
-        transition(({ /* input */ })
-      }}
-    >
-      Execute
-    </button>
-  )
-}
-```
-
-<Warning>
-The transition function will not return the results or errors of the action in a promise; therefore, you'll need to destruct data and error from the useServerAction hook, or use the onSuccess or onError callbacks to run logic after the action finishes such as showing toasts or alerts.
-</Warning>
