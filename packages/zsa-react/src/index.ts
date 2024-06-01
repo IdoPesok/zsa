@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useRef, useState, useTransition } from "react"
 import {
   TAnyZodSafeFunctionHandler,
   TZSAError,
@@ -73,6 +73,7 @@ export const useServerAction = <
   const [isExecuting, setIsExecuting] = useState(false)
   const lastRetryId = useRef(0)
   const retryCount = useRef(0)
+  const [isTransitioning, startTransition] = useTransition()
 
   const internalExecute = useCallback(
     async (
@@ -101,13 +102,13 @@ export const useServerAction = <
 
       setIsExecuting(true)
 
-      let data, err;
-      
-      await serverAction(input).then(response => {
+      let data, err
+
+      await serverAction(input).then((response) => {
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
-          [data, err] = response
+          ;[data, err] = response
         }
       })
 
@@ -162,11 +163,9 @@ export const useServerAction = <
         return [data, err] as any
       }
 
-      if (opts?.onSuccess) {
-        opts.onSuccess({
-          data,
-        })
-      }
+      opts?.onSuccess?.({
+        data,
+      })
 
       setResult({
         isError: false,
@@ -184,6 +183,19 @@ export const useServerAction = <
       return [data, err] as any
     },
     [serverAction]
+  )
+
+  const transition = useCallback(
+    async (
+      ...opts: Parameters<TServerAction>[0] extends undefined
+        ? []
+        : [Parameters<TServerAction>[0]]
+    ) => {
+      startTransition(() => {
+        internalExecute(opts[0])
+      })
+    },
+    [internalExecute]
   )
 
   const execute = useCallback(
@@ -241,6 +253,7 @@ export const useServerAction = <
   if (isExecuting && oldResult.status === "empty") {
     final = {
       isPending: true,
+      isTransitioning,
       isOptimistic: false,
       data: undefined,
       isError: false,
@@ -251,6 +264,7 @@ export const useServerAction = <
   } else if (isExecuting && oldResult.status === "filled" && result.data) {
     final = {
       isPending: true,
+      isTransitioning,
       isOptimistic: true,
       data: result.data,
       isError: false,
@@ -262,6 +276,7 @@ export const useServerAction = <
     // success state
     final = {
       isPending: false,
+      isTransitioning,
       isOptimistic: false,
       data: result.data,
       isError: false,
@@ -273,6 +288,7 @@ export const useServerAction = <
     // error state
     final = {
       isPending: false,
+      isTransitioning,
       data: undefined,
       isError: true,
       error: result.error as any,
@@ -284,6 +300,7 @@ export const useServerAction = <
     // idle state
     final = {
       isPending: false,
+      isTransitioning,
       data: undefined,
       isOptimistic: false,
       isError: false,
@@ -297,6 +314,7 @@ export const useServerAction = <
     ...final,
     reset,
     execute,
+    transition,
     setOptimistic,
   }
 }
