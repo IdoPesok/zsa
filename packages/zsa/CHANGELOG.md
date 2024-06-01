@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.2.3
+
+### Patch Changes
+
+- 69f8059: Add name to TZSAError
+
 ## 0.2.2
 
 ### Patch Changes
