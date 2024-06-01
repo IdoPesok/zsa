@@ -86,7 +86,16 @@ export const useServerAction = <
 
       // if the retry ids don't match, we should not refetch
       if (isFromRetryId && lastRetryId.current !== isFromRetryId) {
-        return null as any
+        return [
+          null,
+          {
+            message: "Could not successfully execute the server action",
+            data: "Could not successfully execute the server action",
+            stack: "",
+            name: "ZSAError",
+            code: "ERROR",
+          },
+        ] as any
       }
 
       // start a new retry count

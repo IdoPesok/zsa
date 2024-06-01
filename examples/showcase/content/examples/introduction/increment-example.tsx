@@ -10,13 +10,7 @@ export default function IncrementExample() {
   const [counter, setCounter] = useState(0)
 
   const { isPending, execute, data, error, isError } = useServerAction(
-    incrementNumberAction,
-    {
-      retry: {
-        maxAttempts: 3,
-        delay: 1000,
-      },
-    }
+    incrementNumberAction
   )
 
   return (
