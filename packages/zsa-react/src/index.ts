@@ -190,7 +190,7 @@ export const useServerAction = <
       ...opts: Parameters<TServerAction>[0] extends undefined
         ? []
         : [Parameters<TServerAction>[0]]
-    ) => {
+    ): Promise<inferServerActionReturnType<TServerAction>> => {
       return await new Promise((resolve) => {
         startTransition(() => {
           internalExecute(opts[0]).then(resolve)
@@ -241,7 +241,9 @@ export const useServerAction = <
 
   let final: TServerActionResult<TServerAction>
 
-  if (isExecuting && oldResult.status === "empty") {
+  const isPending = isTransitioning || isExecuting
+
+  if (isPending && oldResult.status === "empty") {
     final = {
       isPending: true,
       isOptimistic: false,
@@ -251,7 +253,7 @@ export const useServerAction = <
       isSuccess: false,
       status: "pending",
     }
-  } else if (isExecuting && oldResult.status === "filled" && result.data) {
+  } else if (isPending && oldResult.status === "filled" && result.data) {
     final = {
       isPending: true,
       isOptimistic: true,
@@ -298,7 +300,6 @@ export const useServerAction = <
 
   return {
     ...final,
-    isPending: isTransitioning,
     reset,
     execute,
     setOptimistic,
