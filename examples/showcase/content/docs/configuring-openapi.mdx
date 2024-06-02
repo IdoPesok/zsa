@@ -235,14 +235,16 @@ The `createOpenApiServerActionRouter` function allows you to extend routers by c
 
 Here's an example of how you can extend routers:
 
-<Note>
-Pay attention to the recommended file structure
-
-- `app/api/[[...openapi]]/_router/posts.ts` - this is the router for posts
-- `app/api/[[...openapi]]/_router/users.ts` - this is the router for users
-- `app/api/[[...openapi]]/_router/index.ts` - this is the main router that combines all the other routers
-- `app/api/[[...openapi]]/route.ts` - this is the file that exports the main router
-</Note>
+<Files>
+  <Folder name="app/api/[[...openapi]]" defaultOpen>
+    <Folder name="_router" defaultOpen>
+      <File name="posts.ts" />
+      <File name="users.ts" />
+      <File name="index.ts" />
+    </Folder>
+    <File name="route.ts" />
+  </Folder>
+</Files>
 
 First we create a posts router:
 

@@ -1,3 +1,4 @@
+import { File, Files, Folder } from "fumadocs-ui/components/files"
 import defaultComponents from "fumadocs-ui/mdx"
 import type { MDXComponents } from "mdx/types"
 import ExampleComponent from "./components/markdown/example-component"
@@ -13,6 +14,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     Tip: ({ children }) => <Tip>{children}</Tip>,
     Warning: ({ children }) => <Warning>{children}</Warning>,
     Note: ({ children }) => <Note>{children}</Note>,
+    File: (props) => <File {...props} />,
+    Folder: (props) => <Folder {...props} />,
+    Files: (props) => <Files {...props} />,
     ...defaultComponents,
     ...components,
   }
