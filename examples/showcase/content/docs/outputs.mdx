@@ -1,0 +1,37 @@
+---
+title: "Outputs"
+group: "Getting Started"
+groupOrder: 7
+---
+
+In addition to validating inputs, `zsa` allows you to define an output schema using `.output`, ensuring that the response from your server action adheres to a specified structure. This can help maintain consistency and reliability in your API responses.
+
+## Defining an Output Schema
+
+Here's an example of how to create a server action with an output schema:
+
+```ts title="actions.ts"
+"use server"
+
+import { createServerAction } from "zsa"
+import z from "zod"
+
+export const myOutputAction = createServerAction()
+    .input(z.object({
+        name: z.string(),
+        email: z.string().email()
+    }))
+    .output(z.object({ // [!code highlight]
+        message: z.string(), // [!code highlight]
+        timestamp: z.date() // [!code highlight]
+    })) // [!code highlight]
+    .handler(async ({ input }) => {
+        // Process the input data and create a response
+        return { // [!code highlight]
+            message: `Hello, ${input.name}! Your email is ${input.email}.`, // [!code highlight]
+            timestamp: new Date() // [!code highlight]
+        }; // [!code highlight]
+    });
+```
+
+In this example, the server action `myOutputAction` is configured with both an input schema and an output schema. The `output` method defines the expected structure of the response, ensuring that the handler's return value matches the specified schema.
