@@ -19,7 +19,11 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sonner": "^1.4.41",
-    "swagger-ui-react": "^5.17.14"
+    "swagger-ui-react": "^5.17.14",
+    "zsa": "*",
+    "zsa-openapi": "*",
+    "zsa-react": "*",
+    "zsa-react-query": "*"
   },
   "devDependencies": {
     "@types/mdx": "^2.0.13",
