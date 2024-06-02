@@ -44,6 +44,7 @@
     "sonner": "^1.4.41",
     "sugar-high": "^0.6.1",
     "swagger-ui-react": "^5.17.14",
+    "vaul": "^0.9.1",
     "zsa": "*",
     "zsa-openapi": "*",
     "zsa-react": "*",
