@@ -253,8 +253,10 @@ export const stateInputAction = publicAction
     return input.number
   })
 
-export const stateInputProcedureAction = previousStateAction.handler(
-  async ({ ctx }) => {
-    return "123"
-  }
-)
+export const stateInputProcedureAction = previousStateAction
+  .input(z.undefined(), {
+    type: "state",
+  })
+  .handler(async ({ ctx }) => {
+    return ctx.number
+  })

@@ -24,6 +24,7 @@ import {
   nextRedirectAction,
   nextRedirectInProcedureAction,
   stateInputAction,
+  stateInputProcedureAction,
   transformedOutputAction,
   undefinedAction,
 } from "server/actions"
@@ -433,6 +434,23 @@ describe("actions", () => {
       // test with previous state
       ;[data, err] = await stateInputAction([data, err], formData)
       expect(data).toEqual(10)
+      expect(err).toBeNull()
+    })
+
+    it.only("makes sure procedures have access to the previous state", async () => {
+      // test without previous state
+      let [data, err] = await stateInputProcedureAction(
+        [null, null],
+        new FormData()
+      )
+      expect(data).toEqual(2)
+      expect(err).toBeNull()
+      // test with previous state
+      ;[data, err] = await stateInputProcedureAction(
+        [data, err],
+        new FormData()
+      )
+      expect(data).toEqual(4)
       expect(err).toBeNull()
     })
   })

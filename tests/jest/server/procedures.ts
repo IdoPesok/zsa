@@ -265,7 +265,7 @@ export const previousStateProcedure = createServerActionProcedure().handler(
     let num: number = 0
 
     if (Array.isArray(previousState) && previousState.length > 0) {
-      num = ((previousState[0] as number) || 1) * 2
+      num = (previousState[0] || 1) * 2
     }
 
     return {
