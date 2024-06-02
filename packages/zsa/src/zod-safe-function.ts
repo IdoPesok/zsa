@@ -618,7 +618,7 @@ export class ZodSafeFunction<
       let args
 
       if (this.$internals.inputType === "state") {
-        args = overrideArgs
+        args = overrideArgs // the second argument is the form data
       } else {
         args = $args
       }
