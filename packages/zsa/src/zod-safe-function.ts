@@ -685,7 +685,7 @@ export class ZodSafeFunction<
 
         if (retryDelay >= 0) {
           await new Promise((r) => setTimeout(r, retryDelay))
-          return await wrapper(args, overrideArgs, {
+          return await wrapper($args, overrideArgs, {
             ...(opts || {}),
             attempts: (opts?.attempts || 1) + 1,
           })
