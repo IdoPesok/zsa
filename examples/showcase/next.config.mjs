@@ -1,18 +1,10 @@
-import createMDX from '@next/mdx'
-import remarkGfm from 'remark-gfm'
+import createMDX from 'fumadocs-mdx/config';
+
+const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  pageExtensions: ['js', 'jsx', 'mdx', 'ts', 'tsx'],
-  transpilePackages: [],
+const config = {
+  reactStrictMode: true,
 };
 
-const withMDX = createMDX({
-  // Add markdown plugins here, as desired
-  options: {
-    remarkPlugins: [remarkGfm],
-    rehypePlugins: [],
-  },
-})
-
-export default withMDX(nextConfig)
+export default withMDX(config);

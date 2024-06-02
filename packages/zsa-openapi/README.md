@@ -29,4 +29,4 @@ View the full documentation and examples on [zsa.vercel.app](https://zsa.vercel.
 
 If you need help with anything, feel free to DM ([@ido_pesok](https://twitter.com/ido_pesok)) on X.
 
-## [Contributors](https://github.com/vercel/ai/graphs/contributors)
+## [Contributors](https://github.com/IdoPesok/zsa/graphs/contributors)

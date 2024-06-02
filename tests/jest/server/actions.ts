@@ -210,6 +210,20 @@ export const protectedMultiplyAction = protectedAction
     }
   })
 
+export const subtractAction = publicAction
+  .input(
+    z.object({
+      number2: z.coerce.number(),
+      number1: z.coerce.number(),
+      number3: z.coerce.number(),
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 - input.number2 - input.number3,
+    }
+  })
+
 export const divideAction = publicAction
   .input(
     z.object({

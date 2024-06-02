@@ -59,6 +59,7 @@ export type TZSAError<TInputSchema extends z.ZodType> = Error &
         message?: string
         stack: string
         data: string
+        name: string
         fieldErrors?: undefined
         formErrors?: undefined
         formattedErrors?: undefined
@@ -68,6 +69,7 @@ export type TZSAError<TInputSchema extends z.ZodType> = Error &
         stack: string
         code: "INPUT_PARSE_ERROR"
         data: string
+        name: string
         fieldErrors: z.inferFlattenedErrors<TInputSchema>["fieldErrors"]
         formErrors: z.inferFlattenedErrors<TInputSchema>["formErrors"]
         formattedErrors: z.inferFormattedError<TInputSchema>

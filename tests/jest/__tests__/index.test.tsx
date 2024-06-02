@@ -424,7 +424,7 @@ describe("actions", () => {
   })
 
   describe("state input", () => {
-    it.only("returns the previous state", async () => {
+    it("returns the previous state", async () => {
       const formData = new FormData()
       formData.append("number", "5")
       // test without previous state
@@ -437,7 +437,7 @@ describe("actions", () => {
       expect(err).toBeNull()
     })
 
-    it.only("makes sure procedures have access to the previous state", async () => {
+    it("makes sure procedures have access to the previous state", async () => {
       // test without previous state
       let [data, err] = await stateInputProcedureAction(
         [null, null],

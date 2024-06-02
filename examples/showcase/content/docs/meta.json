@@ -1,0 +1,28 @@
+{
+    "title": "ZSA",
+    "root": true,
+    "pages": [
+        "---Getting Started---",
+        "introduction",
+        "procedures",
+        "callbacks",
+        "timeouts",
+        "retries",
+        "outputs",
+        "---Client Side Usage---",
+        "calling-directly",
+        "use-server-action",
+        "use-form-state",
+        "forms",
+        "react-query",
+        "refetching-queries",
+        "additional-information",
+        "---Errors---",
+        "error-handling",
+        "---REST API---",
+        "configuring-openapi",
+        "---Goodies---",
+        "best-practices",
+        "infer-types"
+    ]
+}

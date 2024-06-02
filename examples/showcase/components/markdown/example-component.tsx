@@ -1,10 +1,10 @@
-import DocsPage from "@/content/examples/docs/swagger-docs"
-import FormDataExample from "@/content/examples/form-data/form-data-example"
-import IncrementExample from "@/content/examples/introduction/increment-example"
-import HelloWorld from "@/content/examples/react-query/hello-world-action"
-import RandomNumberExampleDisplay from "@/content/examples/refetching-queries/random-number-example-display"
-import RandomNumberExampleRefetch from "@/content/examples/refetching-queries/random-number-example-refetch"
-import UseFormStateExample from "@/content/examples/use-form-state/use-form-state-example"
+import DocsPage from "@/content/docs/examples/docs/swagger-docs"
+import FormDataExample from "@/content/docs/examples/form-data/form-data-example"
+import IncrementExample from "@/content/docs/examples/introduction/increment-example"
+import HelloWorld from "@/content/docs/examples/react-query/hello-world-action"
+import RandomNumberExampleDisplay from "@/content/docs/examples/refetching-queries/random-number-example-display"
+import RandomNumberExampleRefetch from "@/content/docs/examples/refetching-queries/random-number-example-refetch"
+import UseFormStateExample from "@/content/docs/examples/use-form-state/use-form-state-example"
 import { memo } from "react"
 
 function ExampleComponent({ id }: { id: string }) {

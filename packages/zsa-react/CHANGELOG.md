@@ -1,5 +1,13 @@
 # server-actions-wrapper
 
+## 0.1.3
+
+### Patch Changes
+
+- c71547f: Wrap internalExecute with a transition
+- Updated dependencies [69f8059]
+  - zsa@0.2.3
+
 ## 0.1.2
 
 ### Patch Changes
