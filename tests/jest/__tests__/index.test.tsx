@@ -23,6 +23,7 @@ import {
   nextNotFoundAction,
   nextRedirectAction,
   nextRedirectInProcedureAction,
+  stateInputAction,
   transformedOutputAction,
   undefinedAction,
 } from "server/actions"
@@ -418,6 +419,21 @@ describe("actions", () => {
       await expect(nextRedirectInProcedureAction()).rejects.toThrow(
         "NEXT_REDIRECT"
       )
+    })
+  })
+
+  describe("state input", () => {
+    it.only("returns the previous state", async () => {
+      const formData = new FormData()
+      formData.append("number", "5")
+      // test without previous state
+      let [data, err] = await stateInputAction([null, null], formData)
+      expect(data).toEqual(5)
+      expect(err).toBeNull()
+      // test with previous state
+      ;[data, err] = await stateInputAction([data, err], formData)
+      expect(data).toEqual(10)
+      expect(err).toBeNull()
     })
   })
 })

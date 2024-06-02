@@ -8,6 +8,7 @@ import {
   PrettifyNested,
   RetryConfig,
   TAnyZodSafeFunctionHandler,
+  TDataOrErrorOrNull,
   THandlerFunc,
   THandlerOpts,
   TInternals,
@@ -566,7 +567,9 @@ export class ZodSafeFunction<
       /** an object containing response metadata for OpenAPI handlers */
       responseMeta?: ZSAResponseMeta
       /** the previous state when inputType is "state" */
-      previousState?: any
+      previousState: TInputType extends "state"
+        ? TDataOrErrorOrNull<TInputSchema, TRet>
+        : any
     }) => TRet
   ): TIsProcedure extends false
     ? TInputType extends "state"
@@ -623,7 +626,7 @@ export class ZodSafeFunction<
       let previousState = opts?.previousState || undefined
 
       if (this.$internals.inputType === "state") {
-        previousState = args // the first argument is the previous state
+        previousState = $args // the first argument is the previous state
       }
 
       try {
