@@ -8,21 +8,27 @@
     "start": "next start"
   },
   "dependencies": {
+    "@radix-ui/react-tooltip": "^1.0.7",
+    "@uidotdev/usehooks": "^2.4.1",
+    "clsx": "^2.1.1",
     "fumadocs-core": "^11.3.1",
     "fumadocs-mdx": "^8.2.26",
     "fumadocs-ui": "^11.3.1",
     "lucide-react": "^0.381.0",
     "next": "^14.2.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "sonner": "^1.4.41",
+    "swagger-ui-react": "^5.17.14"
   },
   "devDependencies": {
     "@types/mdx": "^2.0.13",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/swagger-ui-react": "^4.18.3",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
-    "typescript": "^5.4.5"
+    "typescript": "^5.3.3"
   }
 }
