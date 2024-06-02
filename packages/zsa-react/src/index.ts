@@ -9,7 +9,6 @@ import {
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
-import { TServerActionActionStateResult } from "./action-state-results"
 import { TServerActionResult } from "./results"
 
 const getEmptyResult = () => ({
@@ -300,63 +299,4 @@ export const useServerAction = <
     execute,
     setOptimistic,
   }
-}
-
-export const createActionStateHookFrom = <
-  TUseActionState extends (
-    fn: (previousState: any, formData: FormData) => any,
-    initialState: any
-  ) => any,
->(
-  useActionState: TUseActionState
-) => {
-  const caller = <TAction extends TAnyZodSafeFunctionHandler>(
-    action: TAction,
-    initialData?: inferServerActionReturnData<TAction>
-  ): [
-    TServerActionActionStateResult<TAction>,
-    (formData: FormData) => void,
-    ReturnType<TUseActionState>[2],
-  ] => {
-    return useActionState(
-      async (prevState: any, formData: FormData) => {
-        const [data, err] = await action(formData)
-
-        if (err) {
-          return {
-            data: undefined,
-            isError: true,
-            error: err,
-            isSuccess: false,
-            status: "error",
-          }
-        }
-
-        return {
-          data,
-          isError: false,
-          error: undefined,
-          isSuccess: true,
-          status: "success",
-        }
-      },
-      !initialData
-        ? {
-            data: undefined,
-            isError: false,
-            error: undefined,
-            isSuccess: false,
-            status: "idle",
-          }
-        : {
-            data: initialData,
-            isError: false,
-            error: undefined,
-            isSuccess: true,
-            status: "success",
-          }
-    )
-  }
-
-  return caller
 }

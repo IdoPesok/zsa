@@ -1,6 +1,4 @@
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
-import { useFormState } from "react-dom"
-import { createActionStateHookFrom } from "zsa-react"
 import {
   createServerActionsKeyFactory,
   setupServerActionHooks,
@@ -32,5 +30,3 @@ export {
   useServerActionMutation,
   useServerActionQuery,
 }
-
-export const useAction = createActionStateHookFrom(useFormState)

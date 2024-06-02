@@ -5,12 +5,14 @@ import { TZSAError, ZSAError } from "./errors"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 import {
   InputTypeOptions,
+  PrettifyNested,
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   THandlerFunc,
   THandlerOpts,
   TInternals,
   TNoInputHandlerFunc,
+  TStateHandlerFunc,
   TZodSafeFunctionDefaultOmitted,
   TimeoutStatus,
   ZSAResponseMeta,
@@ -112,7 +114,8 @@ export class ZodSafeFunction<
     args: TInputSchema["_input"],
     timeoutStatus: TimeoutStatus,
     request: NextRequest | undefined,
-    responseMeta: ZSAResponseMeta | undefined
+    responseMeta: ZSAResponseMeta | undefined,
+    previousState?: any
   ): Promise<TProcedureChainOutput> {
     let accData = undefined
 
@@ -124,6 +127,7 @@ export class ZodSafeFunction<
         ctx: accData,
         request,
         responseMeta,
+        previousState,
       })
       if (err) {
         throw err
@@ -207,6 +211,7 @@ export class ZodSafeFunction<
         this.$internals.inputSchema instanceof z.ZodUndefined
           ? schema
           : schema.and(this.$internals.inputSchema),
+      inputType: opts?.type,
     }) as any
   }
 
@@ -553,29 +558,33 @@ export class ZodSafeFunction<
   >(
     fn: (v: {
       /** the parsed input to the action */
-      input: TInputSchema["_output"]
+      input: PrettifyNested<TInputSchema["_output"]>
       /** the final context of the action */
       ctx: TProcedureChainOutput
       /** a request object if the action is run from an Open API route `createOpenApiServerActionRouter` */
       request?: NextRequest
       /** an object containing response metadata for OpenAPI handlers */
       responseMeta?: ZSAResponseMeta
+      /** the previous state when inputType is "state" */
+      previousState?: any
     }) => TRet
   ): TIsProcedure extends false
-    ? TInputSchema extends z.ZodUndefined
-      ? TNoInputHandlerFunc<
-          TRet,
-          TInputSchema,
-          TOutputSchema,
-          TProcedureChainOutput
-        >
-      : THandlerFunc<
-          TInputSchema,
-          TOutputSchema,
-          TRet,
-          TProcedureChainOutput,
-          TInputType
-        >
+    ? TInputType extends "state"
+      ? TStateHandlerFunc<TInputSchema, TOutputSchema, TRet>
+      : TInputSchema extends z.ZodUndefined
+        ? TNoInputHandlerFunc<
+            TRet,
+            TInputSchema,
+            TOutputSchema,
+            TProcedureChainOutput
+          >
+        : THandlerFunc<
+            TInputSchema,
+            TOutputSchema,
+            TRet,
+            TProcedureChainOutput,
+            TInputType
+          >
     : CompleteProcedure<
         TInputSchema,
         THandlerFunc<
@@ -593,7 +602,7 @@ export class ZodSafeFunction<
     type TArgs = TInputType extends "json" ? TInputSchema["_input"] : FormData
 
     const wrapper = async (
-      args: TArgs,
+      $args: TArgs,
       overrideArgs?: Partial<TInputSchema["_input"]>,
       opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
@@ -603,12 +612,28 @@ export class ZodSafeFunction<
         return this.$internals.outputSchema
       }
 
+      let args
+
+      if (this.$internals.inputType === "state") {
+        args = overrideArgs
+      } else {
+        args = $args
+      }
+
+      let previousState = opts?.previousState || undefined
+
+      if (this.$internals.inputType === "state") {
+        previousState = args // the first argument is the previous state
+      }
+
       try {
         // if args is formData
         if (args instanceof FormData) {
           args = {
             ...(Object.fromEntries(args.entries()) as any),
-            ...(overrideArgs || {}),
+            ...(this.$internals.inputType !== "state"
+              ? overrideArgs || {}
+              : {}),
           }
         }
 
@@ -625,7 +650,8 @@ export class ZodSafeFunction<
                 args,
                 timeoutStatus,
                 opts?.request,
-                opts?.responseMeta
+                opts?.responseMeta,
+                previousState
               )
 
         // parse the input data
@@ -643,6 +669,7 @@ export class ZodSafeFunction<
           ctx,
           request: opts?.request,
           responseMeta: opts?.responseMeta,
+          previousState,
         })
 
         const parsed = await this.parseOutputData(data, timeoutStatus)

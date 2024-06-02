@@ -4,7 +4,6 @@ import IncrementExample from "@/content/examples/introduction/increment-example"
 import HelloWorld from "@/content/examples/react-query/hello-world-action"
 import RandomNumberExampleDisplay from "@/content/examples/refetching-queries/random-number-example-display"
 import RandomNumberExampleRefetch from "@/content/examples/refetching-queries/random-number-example-refetch"
-import UseActionStateExample from "@/content/examples/use-action-state/use-action-state-example"
 import UseFormStateExample from "@/content/examples/use-form-state/use-form-state-example"
 import { memo } from "react"
 
@@ -22,8 +21,6 @@ function ExampleComponent({ id }: { id: string }) {
       return <FormDataExample />
     case "use-form-state":
       return <UseFormStateExample />
-    case "use-action-state":
-      return <UseActionStateExample />
     case "docs":
       return <DocsPage />
     default:

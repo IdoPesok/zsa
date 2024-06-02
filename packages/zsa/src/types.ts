@@ -22,6 +22,12 @@ export type TDataOrError<
   | Promise<[TCleanData<TData>, null]>
   | Promise<[null, TZSAError<TInputSchema>]>
 
+/** The return type of a server action */
+export type TDataOrErrorOrNull<
+  TInputSchema extends z.ZodType,
+  TData extends Promise<any>,
+> = [TCleanData<TData>, null] | [null, TZSAError<TInputSchema>] | [null, null]
+
 /** A configuration object for retrying a server action */
 export interface RetryConfig {
   /** The maximum number of times to retry the action. Inclusive. */
@@ -70,6 +76,8 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   responseMeta?: ZSAResponseMeta
   /** the number of attempts the handler has made */
   attempts?: number
+  /** the previous state */
+  previousState?: any
 }
 
 /** A function type for a handler that does not have an input */
@@ -109,6 +117,25 @@ export interface THandlerFunc<
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
 }
+
+/** A function type for a handler that has an input */
+export interface TStateHandlerFunc<
+  TInputSchema extends z.ZodType,
+  TOutputSchema extends z.ZodType,
+  TRet extends any,
+> {
+  (
+    /** The previous state */
+    previousState: any,
+    /** Override the args */
+    formData: FormData
+  ): TDataOrErrorOrNull<
+    TInputSchema,
+    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
+  >
+}
+
+export type TAnyStateHandlerFunc = TStateHandlerFunc<z.ZodType, z.ZodType, any>
 
 /** a helper type to hold the status of a timeout */
 export interface TimeoutStatus {
@@ -155,7 +182,9 @@ export type inferInputSchemaFromHandler<
 > =
   THandler extends TAnyZodSafeFunctionHandler<infer TInputSchema>
     ? TInputSchema
-    : z.ZodType
+    : THandler extends TStateHandlerFunc<infer TInputSchema, any, any>
+      ? TInputSchema
+      : z.ZodType
 
 /**
  * A data type for the internals of a Zod Safe Function
@@ -199,6 +228,9 @@ export interface TInternals<
   /** A function to run when the handler errors */
   onErrorFn?: TOnErrorFn | undefined
 
+  /** the type of input */
+  inputType?: InputTypeOptions
+
   /** A function to run when the handler starts */
   onStartFn?: TOnStartFn<TInputSchema, TIsProcedure> | undefined
 
@@ -238,7 +270,7 @@ export interface TInternals<
   handler?: TAnyZodSafeFunctionHandler | undefined
 }
 
-export type InputTypeOptions = "formData" | "json"
+export type InputTypeOptions = "formData" | "json" | "state"
 
 /**
  * A class representing a ZSA response meta object
@@ -260,3 +292,10 @@ export class ZSAResponseMeta {
     this.headers = new Headers()
   }
 }
+
+export type PrettifyNested<T> =
+  T extends Record<string, any>
+    ? {
+        [K in keyof T]: PrettifyNested<T[K]>
+      }
+    : T
