@@ -6,6 +6,7 @@ import {
   faultyAction,
   faultyOutputAction,
   faultyOutputInProcedureAction,
+  formDataAction,
   getAdminGreetingAction,
   getPostByIdAction,
   getPostByIdIsAdminAction,
@@ -420,6 +421,37 @@ describe("actions", () => {
       await expect(nextRedirectInProcedureAction()).rejects.toThrow(
         "NEXT_REDIRECT"
       )
+    })
+  })
+
+  describe("form data", () => {
+    it("returns the form data", async () => {
+      const formData = new FormData()
+      formData.append("name", "test")
+      formData.append("email", "test@example.com")
+      formData.append("number", "100")
+      const [data, err] = await formDataAction(formData, {
+        email: "test@example123.com",
+      })
+
+      expect(data).toEqual({
+        name: "test",
+        email: "test@example123.com",
+        number: 100,
+      })
+      expect(err).toBeNull()
+    })
+
+    it("returns an input parse error", async () => {
+      const formData = new FormData()
+      formData.append("name", "test")
+      formData.append("email", "test@example.com")
+      formData.append("number", "not a number")
+      const [data, err] = await formDataAction(formData)
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
     })
   })
 

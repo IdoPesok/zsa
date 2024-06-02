@@ -622,7 +622,10 @@ export class ZodSafeFunction<
 
       let previousState = opts?.previousState || undefined
 
-      if (this.$internals.inputType === "state") {
+      if (
+        this.$internals.inputType === "state" &&
+        !this.$internals.isProcedure
+      ) {
         previousState = $args // the first argument is the previous state
       }
 

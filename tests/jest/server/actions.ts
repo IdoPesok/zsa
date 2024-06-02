@@ -274,3 +274,22 @@ export const stateInputProcedureAction = previousStateAction
   .handler(async ({ ctx }) => {
     return ctx.number
   })
+
+export const formDataAction = publicAction
+  .input(
+    z.object({
+      name: z.string(),
+      email: z.string().email(),
+      number: z.coerce.number(),
+    }),
+    {
+      type: "formData",
+    }
+  )
+  .handler(async ({ input }) => {
+    return {
+      name: input.name,
+      email: input.email,
+      number: input.number,
+    }
+  })
