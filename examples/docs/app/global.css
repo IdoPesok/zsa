@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.nd-codeblock .highlighted {
+    padding: 0 16px;
+}

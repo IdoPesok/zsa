@@ -1,0 +1,440 @@
+---
+title: "Configuring OpenAPI"
+group: "REST API"
+groupOrder: 0
+---
+
+To expose your server actions as RESTful endpoints in your application, we recommend using `zsa-openapi`. This ensures adherence to OpenAPI standards. 
+
+<Info>
+The functionality of `zsa-openapi` is heavily inspired by and built upon the work done in [trpc-openapi](https://github.com/jlalmes/trpc-openapi). We owe a lot of credit to `trpc-openapi` for making this possible.
+</Info>
+
+## RESTful Endpoints
+
+All server actions that you create can be exposed as RESTful endpoints using `zsa-openapi`. To get started, run:
+
+```bash 
+npm i zsa-openapi
+```
+
+Next, define your desired server actions.
+
+```ts title="actions.ts"
+"use server"
+
+import { z } from "zod"
+import { createServerAction } from "zsa"
+
+export const createPost = createServerAction()
+    .input(z.object({ message: z.string() }))
+    .handler(async ({ input }) => {
+        // add your logic here
+    })
+
+export const updatePost = createServerAction()
+    .input(z.object({ postId: z.string(), message: z.string() }))
+    .handler(async ({ input }) => {
+        // add your logic here
+    })
+
+export const getReply = createServerAction()
+    .input(z.object({ postId: z.string(), replyId: z.string(), message: z.string() }))
+    .handler(async ({ input }) => {
+        // add your logic here
+    })
+```
+
+Now that you have your server actions, create an OpenAPI router and expose these actions as endpoints in your application. To do this in your Next.js application, create a route at `/api/[[...openapi]]/route.ts`:
+
+```ts title="app/api/[[...openapi]]/route.ts"
+import { createOpenApiServerActionRouter, createRouteHandlers } from "zsa-openapi"
+import { createPost, updatePost, getReply, getPosts } from "./actions"
+
+const router = createOpenApiServerActionRouter({   // [!code highlight]
+    pathPrefix: "/api", // [!code highlight]
+}) // [!code highlight]
+    .get("/posts", getPosts, {
+        tags: ["posts"],
+    })
+    .post("/posts", createPost, {
+        tags: ["posts"],
+    })
+    .put("/posts/{postId}", updatePost, {
+        tags: ["posts"],
+    })
+    .get("/posts/{postId}/replies/{replyId}", getReply, {
+        tags: ["replies"],
+    })
+
+export const { GET, POST, PUT } = createRouteHandlers(router) // [!code highlight]
+```
+
+Ensure that your `pathPrefix` matches the prefix to your `/[[...openapi]]/route.ts` path.
+
+You can now hit your server actions at the configured paths. Your server actions will take the path parameters defined in your router as input to the action.
+
+<Note>
+Anything not defined as a path parameter but required in the server action input will be required in the query parameters or request body for that endpoint. 
+</Note>
+
+## OpenAPI Documentation
+
+`zsa-openapi` allows you to take your RESTful API router and automatically generate valid, industry-standard OpenAPI documentation (OAS-compliant structure).
+
+To do this in Next.js, start by creating an endpoint at `/docs/page.ts`:
+
+```tsx title="app/docs/page.tsx"
+import SwaggerUI from "swagger-ui-react" // [!code highlight]
+import "swagger-ui-react/swagger-ui.css"
+import { generateOpenApiDocument } from "zsa-openapi" // [!code highlight]
+import { router } from "../api/[[...openapi]]/route"
+
+export default async function DocsPage() {
+  const spec = await generateOpenApiDocument(router, {
+    title: "ZSA OpenAPI",
+    version: "1.0.0",
+    baseUrl: "http://localhost:3000",
+  })
+
+  return <SwaggerUI spec={spec} />
+}
+```
+
+If you hit this endpoint, you should have access to your API documentation in OAS-compliant structure. Here is an example of the outputted structured docs: Swagger Editor.
+
+<ExampleComponent id="docs" />
+
+## Single endpoints
+
+Additionally, if you only want to expose a single server action as an endpoint, you can use `createRouteHandlersForAction`. This is good when you want to create adhoc route heandlers. For example:
+
+```ts title="app/api/:postId/route.ts"
+import { z } from "zod"
+import { createServerAction } from "zsa"
+import { createRouteHandlersForAction } from "zsa-openapi"
+
+const getPostAction = createServerAction()
+  .input(z.object({ postId: z.string(), query: z.string().optional() }))
+  .handler(async ({ input }) => {
+    return {
+      postId: input.postId,
+    }
+  })
+
+export const { GET } = createRouteHandlersForAction(getPostAction) // [!code highlight]
+```
+
+## Coerce
+
+If you are trying to use a number value, you can use the `coerce` modifier to automatically convert the string value to a number. For example:
+
+```ts title="app/api/calculations/multiply/:number1/:number2/route.ts"
+import { z } from "zod"
+import { createServerAction } from "zsa"
+import { createRouteHandlersForAction } from "zsa-openapi"
+
+const getPostAction = createServerAction()
+  .input(
+    z.object({
+      number1: z.coerce.number(), // [!code highlight]
+      number2: z.coerce.number(), // [!code highlight]
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 * input.number2,
+    }
+  })
+
+export const { GET } = createRouteHandlersForAction(getPostAction)
+```
+
+## Authentication
+
+If you expose your server actions using `createOpenApiServerActionRouter` or `setupApiHandler`, then the `NextRequest` object will automatically be available in your defined actions and procedures. For example:
+
+```ts title="actions.ts"
+"use server"
+
+import { z } from "zod"
+import { createServerAction } from "zsa"
+
+export const getReplyWithHeaders = createServerAction()
+    .input(
+        z.object({ postId: z.string(), replyId: z.string(), message: z.string() })
+    )
+    .handler(async ({ input, request }) => { // [!code highlight]
+        if (request) {
+            // authenticate with headers
+            const apiKey = request.headers.get("authorization")?.split(" ")[1] // [!code highlight]
+
+            if (!apiKey || apiKey !== "123") {
+                throw new Error("NOT_AUTHORIZED")
+            }
+
+            return {
+                user: {
+                    id: 123,
+                    name: "test",
+                },
+            }
+        } else {
+            // authenticate with cookies
+            const user = await auth()
+
+            return {
+                user
+            }
+        }
+    })
+```
+
+In this example, the request object represents the incoming HTTP request. You can access various properties and methods of the request object, such as headers, to retrieve information from the request.
+
+## Response Metadata
+
+When defining server actions using `createServerAction`, you can access and modify the response metadata through the `responseMeta` parameter in the action handler. The `responseMeta` object allows you to customize the response headers and status code for the specific action.
+
+Here's an example of how you can use `responseMeta`:
+
+```ts title="actions.ts"
+import { createServerAction } from "zsa";
+import { ZSAResponseMeta } from "zsa-openapi";
+
+const updatePost = createServerAction()
+  .input(z.object({ postId: z.string(), content: z.string() }))
+  .handler(async ({ input, responseMeta }) => { // [!code highlight]
+    // Update the post logic here
+
+    if (responseMeta) { // [!code highlight]
+      responseMeta.statusCode = 201; // Set the status code to 201 (Created) // [!code highlight]
+      responseMeta.headers.set("x-custom-header", "custom-value"); // Set a custom header // [!code highlight]
+    } // [!code highlight]
+
+    return {
+      message: "Post updated successfully",
+    };
+  });
+```
+
+In this example, the `updatePost` action modifies the response metadata using the `responseMeta` parameter. It sets the status code to `201` (Created) and adds a custom header `x-custom-header` with the value `"custom-value"`.
+
+The `ZSAResponseMeta` class provides the following properties:
+
+- `headers: Headers`: Represents the headers of the response. You can use the `set`, `append`, `delete`, and other methods of the `Headers` class to modify the response headers.
+- `statusCode: number`: Represents the status code of the response. By default, it is set to `200`. You can assign a different status code as needed.
+
+By modifying the `responseMeta` object, you can customize the response metadata for each individual action, allowing you to have fine-grained control over the response behavior.
+
+Using `responseMeta`, you can tailor the response headers and status codes to match your API requirements and provide additional information or instructions to the clients consuming your API endpoints.
+
+## Extending Routers
+
+The `createOpenApiServerActionRouter` function allows you to extend routers by combining multiple routers together. This is useful when you have separate files for different resource types, such as posts and users, and want to combine their routes in the final `route.ts` file.
+
+Here's an example of how you can extend routers:
+
+<Note>
+Pay attention to the recommended file structure
+
+- `app/api/[[...openapi]]/_router/posts.ts` - this is the router for posts
+- `app/api/[[...openapi]]/_router/users.ts` - this is the router for users
+- `app/api/[[...openapi]]/_router/index.ts` - this is the main router that combines all the other routers
+- `app/api/[[...openapi]]/route.ts` - this is the file that exports the main router
+</Note>
+
+First we create a posts router:
+
+```ts title="app/api/[[...openapi]]/_router/posts.ts"
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+import { createPost, updatePost, deletePost } from "./postActions";
+
+export const postsRouter = createOpenApiServerActionRouter({
+    pathPrefix: "/api/posts",
+})
+  .post("/", createPost)
+  .put("/{postId}", updatePost)
+  .delete("/{postId}", deletePost);
+```
+
+Next we create a users router:
+
+```ts title="app/api/[[...openapi]]/_router/users.ts"
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+import { createUser, updateUser, deleteUser } from "./userActions";
+
+export const usersRouter = createOpenApiServerActionRouter({
+    pathPrefix: "/api/users",
+})
+  .post("/", createUser)
+  .put("/{userId}", updateUser)
+  .delete("/{userId}", deleteUser);
+```
+
+We then combine the two routers into a main router:
+
+```ts title="app/api/[[...openapi]]/_router/index.ts"
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+import { postsRouter } from "./posts";
+import { usersRouter } from "./users";
+
+export const router = createOpenApiServerActionRouter({
+  extend: [postsRouter, usersRouter], // [!code highlight]
+});
+```
+
+Finally, we export the main router:
+
+```ts title="app/api/[[...openapi]]/route.ts"
+import { createRouteHandlers } from "zsa-openapi";
+import { router } from "./_router";
+
+export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
+```
+
+In this example, we have separate files for posts and users routes. Each file creates its own router using `createOpenApiServerActionRouter`. Then, in the final `route.ts` file, we create a new router and use the `extend` option to combine the `postsRouter` and `usersRouter`. This way, all the routes from both routers will be included in the final router.
+
+## Attributes
+
+When defining OpenAPI actions using `createOpenApiServerActionRouter` or `setupApiHandler`, you can specify additional attributes to provide more information about the action. Here are the available attributes:
+
+- `enabled?: boolean`: Determines whether the action is enabled or not. If set to `false`, the action will be excluded from the generated OpenAPI documentation. Defaults to `true`.
+
+- `method: OpenApiMethod`: Specifies the HTTP method for the action. It can be one of the following values: `"GET"`, `"POST"`, `"PATCH"`, `"PUT"`, or `"DELETE"`. This attribute is required.
+
+- `path: string`: Defines the URL path for the action. It should start with a forward slash (`/`) and can include path parameters using curly braces (e.g., `"/posts/{postId}"`). This attribute is required.
+
+- `summary?: string`: Provides a brief summary or title for the action. It is used in the generated OpenAPI documentation.
+
+- `description?: string`: Describes the purpose or functionality of the action in more detail. It is used in the generated OpenAPI documentation.
+
+- `protect?: boolean`: Indicates whether the action requires authentication or authorization. If set to `true`, it implies that the action is protected and may require additional security measures.
+
+- `tags?: string[]`: Assigns tags or categories to the action. Tags are used to group related actions together in the generated OpenAPI documentation.
+
+- `headers?: (OpenAPIV3.ParameterBaseObject & { name: string; in?: "header" })[]`: Defines additional headers that are expected or required for the action. Each header is specified as an object with properties such as `name`, `description`, `required`, etc.
+
+- `contentTypes?: OpenApiContentType[]`: Specifies the supported content types for the request body of the action. It can include values like `"application/json"`, `"multipart/form-data"`, etc.
+
+- `deprecated?: boolean`: Indicates whether the action is deprecated. If set to `true`, it implies that the action should be avoided or is no longer recommended for use.
+
+- `example?: { request?: Record<string, any>; response?: Record<string, any> }`: Provides example request and response payloads for the action. It can be used to illustrate the expected input and output of the action.
+
+- `responseHeaders?: Record<string, OpenAPIV3.HeaderObject | OpenAPIV3.ReferenceObject>`: Defines the headers that are included in the response of the action. Each header is specified as a key-value pair, where the key is the header name and the value is an object describing the header.
+
+These attributes allow you to provide additional information and metadata about your OpenAPI actions, making the generated OpenAPI documentation more comprehensive and informative.
+
+Example:
+
+```ts
+router.post("/posts", createPost, {
+  summary: "Create a new post",
+  description: "Creates a new post with the provided title and content",
+  tags: ["Posts"],
+  protect: true,
+  headers: [
+    {
+      name: "Authorization",
+      description: "Bearer token for authentication",
+      required: true,
+    },
+  ],
+  contentTypes: ["application/json"],
+  deprecated: false,
+  example: {
+    request: {
+      title: "Example Post",
+      content: "This is an example post",
+    },
+    response: {
+      id: "123",
+      title: "Example Post",
+      content: "This is an example post",
+    },
+  },
+});
+```
+
+In this example, the `createPost` action is defined with various attributes such as `summary`, `description`, `tags`, `protect`, `headers`, `contentTypes`, `deprecated`, and `example`. These attributes provide additional information about the action and are used to generate comprehensive OpenAPI documentation.
+
+## Default Attributes
+
+The `createOpenApiServerActionRouter` function also allows you to specify default OpenAPI attributes that will be applied to all actions in the router. This can be useful when you want to set common properties for all your actions.
+
+Here's an example of how you can use `defaults`:
+
+```ts title="route.ts"
+import { createOpenApiServerActionRouter, createRouteHandlers } from "zsa-openapi";
+import { getPosts, createPost, updatePost, deletePost } from "./postActions";
+
+const router = createOpenApiServerActionRouter({
+  pathPrefix: "/api",
+  defaults: { // [!code highlight]
+    tags: ["Posts"], // [!code highlight]
+    headers: [ // [!code highlight]
+      { // [!code highlight]
+        name: "Authorization", // [!code highlight]
+        description: "Bearer token for authentication", // [!code highlight]
+        required: true, // [!code highlight]
+      }, // [!code highlight]
+    ], // [!code highlight]
+  }, // [!code highlight]
+})
+  .get("/posts", getPosts)
+  .post("/posts", createPost)
+  .put("/posts/{postId}", updatePost)
+  .delete("/posts/{postId}", deletePost);
+
+export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
+```
+
+In this example, we use the `defaults` option to specify common properties for all actions in the router. We set the `tags` to `["Posts"]` and define a required `Authorization` header. These defaults will be applied to all actions in the router, so you don't have to specify them individually for each action.
+
+## Streaming
+
+Below is an example to show how to use streaming in your server actions. TLDR is return your own Response : )
+
+```ts title="route.ts"
+import { createServerAction } from "zsa"
+import { createRouteHandlersForAction } from "zsa-openapi"
+
+function iteratorToStream(iterator: any) {
+  return new ReadableStream({
+    async pull(controller) {
+      const { value, done } = await iterator.next()
+
+      if (done) {
+        controller.close()
+      } else {
+        controller.enqueue(value)
+      }
+    },
+  })
+}
+
+function sleep(time: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, time)
+  })
+}
+
+const encoder = new TextEncoder()
+
+async function* makeIterator() {
+  yield encoder.encode("<p>One</p>")
+  await sleep(200)
+  yield encoder.encode("<p>Two</p>")
+  await sleep(200)
+  yield encoder.encode("<p>Three</p>")
+}
+
+const action = createServerAction().handler(async () => {
+  const iterator = makeIterator()
+  const stream = iteratorToStream(iterator)
+
+  return new Response(stream) // [!code highlight]
+})
+
+export const { GET } = createRouteHandlersForAction(action)
+```

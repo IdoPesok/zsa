@@ -1,0 +1,181 @@
+---
+title: "React Query"
+group: "Client Side Usage"
+groupOrder: 6
+---
+
+It's likely that you may need to use your server actions for querying data on the client side. In order to do this, we recommend using `zsa` with `@tanstack/react-query` (aka [React Query](https://tanstack.com/query/latest/docs/framework/react/overview)).
+
+<Note>
+  *React Query* is the leading solution for asynchronous querying and state
+  management in React. By using React Query, you will have all the functionality
+  of React Query for using your `zsa` server actions on the client side.
+</Note>
+
+<Warning>
+Please use the latest version of `@tanstack/react-query` for best
+results.
+</Warning>
+
+## Installation
+
+To get started, make sure you have installed `zsa-react-query` and `@tanstack/react-query`:
+
+```bash
+npm i zsa-react-query @tanstack/react-query
+```
+
+Next, wrap your application in a [React Query](https://tanstack.com/query/latest/docs/framework/react/overview) provider:
+
+```tsx title="providers/react-query.ts"
+"use client"
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { useState } from "react"
+
+function ReactQueryProvider({ children }: React.PropsWithChildren) {
+  const [client] = useState(new QueryClient())
+
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+}
+
+export default ReactQueryProvider
+```
+
+```tsx title="app/layout.tsx"
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}): JSX.Element {
+
+  return (
+    <html lang="en">
+      <body>
+        <ReactQueryProvider>
+            {children}
+        </ReactQueryProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+Finally, set up your hooks at `@/lib/hooks/server-action-hooks.ts`
+
+```ts title="lib/hooks/server-action-hooks.ts"
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
+import {
+  setupServerActionHooks
+} from "zsa-react-query"
+
+const {  // [!code highlight]
+  useServerActionQuery,  // [!code highlight]
+  useServerActionMutation,  // [!code highlight]
+  useServerActionInfiniteQuery,  // [!code highlight]
+} = setupServerActionHooks({  // [!code highlight]
+  hooks: {   // [!code highlight]
+    useQuery: useQuery,  // [!code highlight]
+    useMutation: useMutation,  // [!code highlight]
+    useInfiniteQuery: useInfiniteQuery,  // [!code highlight]
+  },  // [!code highlight]
+})  // [!code highlight]
+
+export {
+  useServerActionInfiniteQuery,  // [!code highlight]
+  useServerActionMutation,  // [!code highlight]
+  useServerActionQuery,  // [!code highlight]
+}
+```
+
+Using now you can utilize `useServerActionQuery`, `useServerActionMutation`, and `useServerActionInfiniteQuery` for your server actions.
+
+These hooks are synonymous with the `useQuery` `useMutation` and `useInfiniteQuery` hooks from [React Query](https://tanstack.com/query/latest/docs/framework/react/overview), the only difference being the **first argument** of these hooks will be your desired server action, and the **second argument** being all the same options and inputs required in their corresponding React Query hook.
+
+The return value of all `zsa-react-query` hooks will be the same return value of their corresponding React Query hooks.
+
+<Note>
+  For further guidance on how to use these hooks, we recommend you look towards
+  the [React Query
+  Docs](https://tanstack.com/query/latest/docs/framework/react/overview) for
+  more information.
+</Note>
+
+## Usage
+
+For a basic example of how to use `zsa-react-query`, lets create a simple, queryable server action.
+
+```ts title="actions.ts"
+"use server"
+
+import { createServerAction } from "zsa";
+import z from "zod";
+
+export const helloWorldAction = createServerAction()
+  .input(
+    z.object({
+      message: z.string(),
+    })
+  )
+  .handler(async ({ input }) => {
+    // sleep for .5 seconds
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    // update the message
+    return {
+      result: "Hello World: " + (input.message || "N/A"),
+    }
+  })
+```
+
+Querying from the client:
+ 
+```tsx title="hello-world-example.tsx"
+"use client"
+
+import { helloWorldAction } from "./actions";
+import { useServerActionQuery } from "@/lib/hooks/server-action-hooks";  // [!code highlight]
+
+export default function HelloWorld() {
+  const [input, setInput] = useState("")
+  const debouncedInput = useDebounce(input, 300)
+
+  const { isLoading, data } = useServerActionQuery(helloWorldAction, {  // [!code highlight]
+    input: {  // [!code highlight]
+      message: debouncedInput,  // [!code highlight]
+    },  // [!code highlight]
+    queryKey: [debouncedInput],  // [!code highlight]
+  })
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Say hello</CardTitle>
+        <CardDescription>
+          This card refetches your server action as you type
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <Input
+          placeholder="Message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        {isLoading ? 'loading...' : data?.result} // [!code highlight]
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+In the client component:
+
+1. Import `helloWorldAction` and the `useServerActionQuery` hook.
+2. Call `useServerActionQuery` with the imported action and provide the necessary input and options.
+3. Bind the user input to the server action's input using state and debounce it to avoid excessive requests.
+4. Render different views based on the `helloWorldAction`'s state (`isLoading`, `isSuccess`, `isError`).
+
+Here is the result:
+
+<ExampleComponent id="hello-world-action" />
+
+As you can see, `zsa` provides built-in error and loading states and allows easy integration of server actions into your client components.
