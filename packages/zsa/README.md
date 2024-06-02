@@ -23,7 +23,7 @@ npm i zsa zsa-react zsa-react-query zsa-openapi zod
 
 ## Documentation
 
-View the full documentation and examples on [zsa.vercel.app](https://zsa.vercel.app/introduction).
+View the full documentation and examples on [zsa.vercel.app](https://zsa.vercel.app/docs/introduction).
 
 ## Support
 
