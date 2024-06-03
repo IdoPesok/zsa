@@ -280,7 +280,7 @@ export const setAuthToOneProcedure = createServerActionProcedure()
   .input(z.object({ one: z.enum(["valid", "invalid"]) }))
   .handler(async ({ input }) => {
     if (input.one === "invalid") {
-      throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+      throw new ZSAError("NOT_AUTHORIZED", "one")
     }
     cookies().set("auth", "one")
     return
@@ -292,7 +292,7 @@ export const setAuthToTwoProcedure = createServerActionProcedure(
   .input(z.object({ two: z.enum(["valid", "invalid"]) }))
   .handler(async ({ input }) => {
     if (input.two === "invalid") {
-      throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+      throw new ZSAError("NOT_AUTHORIZED", "two")
     }
     cookies().set("auth", "two")
     return
@@ -302,7 +302,7 @@ export const setAuthToOneProcedureWithCounter = createServerActionProcedure()
   .input(z.object({ one: z.enum(["valid", "invalid"]) }))
   .handler(async ({ input }) => {
     if (input.one === "invalid") {
-      throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+      throw new ZSAError("NOT_AUTHORIZED", "one")
     }
     cookies().set("auth", "one")
     return {
@@ -316,7 +316,7 @@ export const setAuthToTwoProcedureWithCounter = createServerActionProcedure(
   .input(z.object({ two: z.enum(["valid", "invalid"]) }))
   .handler(async ({ input, ctx }) => {
     if (input.two === "invalid") {
-      throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+      throw new ZSAError("NOT_AUTHORIZED", "two")
     }
     cookies().set("auth", "two")
     return {

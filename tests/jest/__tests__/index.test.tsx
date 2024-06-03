@@ -508,6 +508,7 @@ describe("actions", () => {
       })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("one")
       expect(state).toBe("zero")
     })
 
@@ -519,6 +520,7 @@ describe("actions", () => {
       })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("one")
       expect(state).toBe("zero")
     })
 
@@ -530,6 +532,7 @@ describe("actions", () => {
       })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("two")
       expect(state).toBe("one")
     })
 
@@ -541,6 +544,7 @@ describe("actions", () => {
       })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("two")
       expect(state).toBe("one")
     })
 
@@ -552,6 +556,7 @@ describe("actions", () => {
       })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("three")
       expect(state).toBe("two")
     })
 
@@ -563,6 +568,7 @@ describe("actions", () => {
       })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("three")
       expect(state).toBe("two")
     })
 

@@ -302,7 +302,7 @@ export const procedureChainAuthAction = setAuthToTwoProcedure
   .input(z.object({ three: z.enum(["valid", "invalid"]) }))
   .handler(async ({ input }) => {
     if (input.three === "invalid") {
-      throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+      throw new ZSAError("NOT_AUTHORIZED", "three")
     }
     cookies().set("auth", "three")
     return
@@ -314,7 +314,7 @@ export const procedureChainAuthActionWithCounter =
     .input(z.object({ three: z.enum(["valid", "invalid"]) }))
     .handler(async ({ input, ctx }) => {
       if (input.three === "invalid") {
-        throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+        throw new ZSAError("NOT_AUTHORIZED", "three")
       }
       cookies().set("auth", "three")
       return {
