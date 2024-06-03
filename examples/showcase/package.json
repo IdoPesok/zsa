@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.4.2",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-aspect-ratio": "^1.0.3",
     "@radix-ui/react-avatar": "^1.0.4",
