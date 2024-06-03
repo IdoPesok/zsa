@@ -5,7 +5,6 @@ import { TZSAError, ZSAError } from "./errors"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 import {
   InputTypeOptions,
-  PrettifyNested,
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   THandlerFunc,
@@ -558,7 +557,7 @@ export class ZodSafeFunction<
   >(
     fn: (v: {
       /** the parsed input to the action */
-      input: PrettifyNested<TInputSchema["_output"]>
+      input: TInputSchema["_output"]
       /** the final context of the action */
       ctx: TProcedureChainOutput
       /** a request object if the action is run from an Open API route `createOpenApiServerActionRouter` */
