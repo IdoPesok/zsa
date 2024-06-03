@@ -13,7 +13,7 @@ export default function UseFormStateExample() {
       const [data, err] = await produceNewMessage(formData)
 
       if (err) {
-        toast.error("Error!!!")
+        toast.error("Error! " + JSON.stringify(err.fieldErrors?.name))
         return previousState
       }
 

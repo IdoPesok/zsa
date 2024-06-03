@@ -10,7 +10,7 @@ Learn how to use ZSA with forms.
 
 You can use the `useServerAction` hook with a regular form. Set the `type` to `"formData"` to indicate that the input is a `FormData` object.
 
-```tsx title="actions.ts"
+```typescript title="actions.ts"
 "use server"
 
 import z from "zod"
@@ -116,7 +116,7 @@ In this example, we create a basic form and handle the form submission manually.
 
 The `useServerAction` hook from the `zsa-react` library allows you to easily integrate ZSA with the popular `react-hook-form` library. Here's an example of how to use it:
 
-```tsx title="actions.ts"
+```typescript title="actions.ts"
 "use server"
 
 import z from "zod"
@@ -232,7 +232,7 @@ useActionState was previously called useFormState. It is now deprecated and will
 
 The `useActionState` hook from ZSA allows you to perform actions and manage the action state. Make sure to set the `type` to `"state"` to indicate that the input is a (previousState, formData) tuple.
 
-```tsx title="actions.ts"
+```typescript title="actions.ts"
 "use server"
 
 import z from "zod"
@@ -296,11 +296,91 @@ This example supports progressive enhancement. Give it a shot, try submitting af
 
 In this example, we use the `useActionState` hook to perform the `produceNewMessage` action and manage the action state. The `submitAction` function is passed to the form's `action` prop to handle the form submission. The `isPending`, `data`, and `err` variables can be used to display loading, success, and error states respectively.
 
+### Custom State
+
+What if you want to control the state of the form yourself? Let's see how we can do that. This example will show how to append messages to an array.
+
+First, make sure you are using `formData` as the input type.
+
+```typescript title="actions.ts"
+"use server"
+
+import z from "zod"
+import { createServerAction } from "zsa"
+
+export const produceNewMessage = createServerAction()
+  .input(
+    z.object({
+      name: z.string().min(5),
+    }),
+    {
+      type: "formData", // [!code highlight]
+    }
+  )
+  .handler(async ({ input }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return "Hello, " + input.name
+  })
+```
+
+Now we can use the `useActionState` hook to control the state of the form.
+
+```tsx title="use-action-state-custom-state.tsx"
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { useActionState } from "react-dom"
+import { toast } from "sonner"
+import { produceNewMessage } from "./actions"
+
+export default function UseActionStateExample() {
+  let [messages, submitAction] = useActionState( // [!code highlight]
+    async (previousState: string[], formData: FormData) => {
+      const [data, err] = await produceNewMessage(formData)
+
+      if (err) {
+        toast.error("Error! " + JSON.stringify(err.fieldErrors?.name))
+        return previousState
+      }
+
+      return [...previousState, data]  // [!code highlight]
+    },
+    ["my initial message"] // [!code highlight]
+  )
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Use Form State</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form action={submitAction} className="flex flex-col gap-4"> // [!code highlight]
+          <Input name="name" placeholder="Enter your name..." />
+          <Button>Create message</Button>
+        </form>
+        <h1>Messages:</h1>
+        <div>
+          {messages.map((message, index) => (
+            <div key={index}>{message}</div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+Let's check out the result!
+
+<ExampleComponent id="use-form-state" />
+
 ## File Upload
 
 ZSA supports file and/or image uploads within forms. To handle file uploads, you need to specify the expected file type in the server action using `z.custom<File>()` and include a file input in your form.
 
-```tsx title="actions.ts"
+```typescript title="actions.ts"
 "use server"
 
 import { z } from "zod";
