@@ -1,9 +1,10 @@
 "use server"
 
 import { sleep } from "lib/utils"
+import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 import { z } from "zod"
-import { createServerAction } from "zsa"
+import { ZSAError, createServerAction } from "zsa"
 import { TEST_DATA } from "./data"
 import {
   adminAction,
@@ -18,6 +19,8 @@ import {
   rateLimitedAction,
   redirectAction,
   retryAction,
+  setAuthToTwoProcedure,
+  setAuthToTwoProcedureWithCounter,
   timeoutAction,
 } from "./procedures"
 
@@ -293,3 +296,28 @@ export const formDataAction = publicAction
       number: input.number,
     }
   })
+
+export const procedureChainAuthAction = setAuthToTwoProcedure
+  .createServerAction()
+  .input(z.object({ three: z.enum(["valid", "invalid"]) }))
+  .handler(async ({ input }) => {
+    if (input.three === "invalid") {
+      throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+    }
+    cookies().set("auth", "three")
+    return
+  })
+
+export const procedureChainAuthActionWithCounter =
+  setAuthToTwoProcedureWithCounter
+    .createServerAction()
+    .input(z.object({ three: z.enum(["valid", "invalid"]) }))
+    .handler(async ({ input, ctx }) => {
+      if (input.three === "invalid") {
+        throw new ZSAError("NOT_AUTHORIZED", "Not authorized")
+      }
+      cookies().set("auth", "three")
+      return {
+        counter: ctx.counter + 1,
+      }
+    })
