@@ -4,6 +4,8 @@ group: "Client Side Usage"
 groupOrder: 5
 ---
 
+Learn how to use ZSA with forms.
+
 ## Basic Form
 
 You can use the `useServerAction` hook with a regular form. Set the `type` to `"formData"` to indicate that the input is a `FormData` object.
@@ -286,8 +288,79 @@ Here is the result:
 
 <ExampleComponent id="use-action-state" />
 
+---
+
 <Note>
 This example supports progressive enhancement. Give it a shot, try submitting after disabling Javascript!
 </Note>
 
 In this example, we use the `useActionState` hook to perform the `produceNewMessage` action and manage the action state. The `submitAction` function is passed to the form's `action` prop to handle the form submission. The `isPending`, `data`, and `err` variables can be used to display loading, success, and error states respectively.
+
+## File Upload
+
+ZSA supports file and/or image uploads within forms. To handle file uploads, you need to specify the expected file type in the server action using `z.custom<File>()` and include a file input in your form.
+
+```tsx title="actions.ts"
+"use server"
+
+import { z } from "zod";
+import { createServerAction } from "zsa";
+
+export const uploadFile = createServerAction()
+  .input(
+    z.object({
+      name: z.string().min(5),
+      file: z.custom<File>().refine((file) => file.size > 0), // [!code highlight]
+    }),
+    {
+      type: "state",
+    }
+  )
+  .handler(async ({ input }) => {
+    // Process the uploaded file
+    const { name, file } = input;
+    // ...
+
+    return "File uploaded successfully!";
+  });
+```
+
+On the client side, include a file input in your form:
+
+```tsx title="file-upload-example.tsx"
+"use client"
+
+import { useActionState } from "zsa-react";
+import { uploadFile } from "./actions";
+
+export default function FileUploadExample() {
+  const [[data, error], submitAction, isPending] = useActionState(uploadFile, [null, null]); // [!code highlight]
+
+  return (
+    <form action={submitAction} className="flex flex-col gap-4"> // [!code highlight]
+      <label>
+        Name:
+        <input type="text" name="name" required />
+      </label>
+      <label>
+        File:
+        <input type="file" name="file" required /> // [!code highlight]
+      </label>
+      <button type="submit" disabled={isPending}>
+        Upload
+      </button>
+      {isPending && <div>Uploading...</div>}
+      {data && <div>Success: {data}</div>}
+      {error && <div>Error: {JSON.stringify(error.fieldErrors)}</div>}
+    </form>
+  );
+}
+```
+
+In this example, we define a server action `uploadFile` that expects a `name` field of type `string` and a `file` field of type `File`. The `type` is set to `"formData"` to handle the form data.
+
+On the client side, we include a file input with the name `"file"` in the form. When the form is submitted, the file is included in the `FormData` object and sent to the server action for processing.
+
+Remember to handle the uploaded file appropriately in the server action's `handler` function based on your specific requirements.
+
+That's it! You can now upload files using ZSA with forms.
