@@ -3,10 +3,10 @@
 import z from "zod"
 import { createServerAction } from "zsa"
 
-export const produceNewMessage = createServerAction()
+const produceNewMessageAction = createServerAction()
   .input(
     z.object({
-      name: z.string().min(5),
+      name: z.string(),
     }),
     {
       type: "formData",
@@ -16,3 +16,17 @@ export const produceNewMessage = createServerAction()
     await new Promise((resolve) => setTimeout(resolve, 500))
     return "Hello, " + input.name
   })
+
+export const produceNewMessage = async (
+  previousState: string[],
+  formData: FormData
+) => {
+  const [data, err] = await produceNewMessageAction(formData)
+
+  if (err) {
+    // handle error
+    return previousState
+  }
+
+  return [...previousState, data]
+}

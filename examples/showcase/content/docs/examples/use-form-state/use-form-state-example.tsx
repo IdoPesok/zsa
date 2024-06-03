@@ -4,28 +4,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useFormState } from "react-dom"
-import { toast } from "sonner"
 import { produceNewMessage } from "./actions"
 
-export default function UseFormStateExample() {
-  let [messages, submitAction] = useFormState(
-    async (previousState: string[], formData: FormData) => {
-      const [data, err] = await produceNewMessage(formData)
-
-      if (err) {
-        toast.error("Error! " + JSON.stringify(err.fieldErrors?.name))
-        return previousState
-      }
-
-      return [...previousState, data]
-    },
-    ["my initial message"]
-  )
+export default function UseActionCustomStateExample() {
+  let [messages, submitAction] = useFormState(produceNewMessage, [
+    "my initial message",
+  ])
 
   return (
     <Card className="not-prose">
       <CardHeader>
-        <CardTitle>Use Form State</CardTitle>
+        <CardTitle>Use Action Custom State</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <form action={submitAction} className="flex flex-col gap-4">

@@ -7,7 +7,7 @@ import HelloWorld from "@/content/docs/examples/react-query/hello-world-action"
 import RandomNumberExampleDisplay from "@/content/docs/examples/refetching-queries/random-number-example-display"
 import RandomNumberExampleRefetch from "@/content/docs/examples/refetching-queries/random-number-example-refetch"
 import UseActionStateExample from "@/content/docs/examples/use-action-state/use-action-state-example"
-import UseFormStateExample from "@/content/docs/examples/use-form-state/use-form-state-example"
+import UseActionCustomStateExample from "@/content/docs/examples/use-form-state/use-form-state-example"
 import { memo } from "react"
 
 function ExampleComponent({ id }: { id: string }) {
@@ -23,7 +23,7 @@ function ExampleComponent({ id }: { id: string }) {
     case "form-data":
       return <FormDataExample />
     case "use-form-state":
-      return <UseFormStateExample />
+      return <UseActionCustomStateExample />
     case "use-action-state":
       return <UseActionStateExample />
     case "basic-form":

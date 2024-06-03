@@ -308,10 +308,10 @@ First, make sure you are using `formData` as the input type.
 import z from "zod"
 import { createServerAction } from "zsa"
 
-export const produceNewMessage = createServerAction()
+const produceNewMessageAction = createServerAction()
   .input(
     z.object({
-      name: z.string().min(5),
+      name: z.string(),
     }),
     {
       type: "formData", // [!code highlight]
@@ -321,6 +321,21 @@ export const produceNewMessage = createServerAction()
     await new Promise((resolve) => setTimeout(resolve, 500))
     return "Hello, " + input.name
   })
+
+export const produceNewMessage = async (
+  previousState: string[],
+  formData: FormData
+) => {
+  const [data, err] = await produceNewMessageAction(formData) // [!code highlight]
+
+  if (err) {
+    // handle error
+    return previousState // [!code highlight]
+  }
+
+  return [...previousState, data] // [!code highlight]
+}
+
 ```
 
 Now we can use the `useActionState` hook to control the state of the form.
@@ -331,29 +346,18 @@ Now we can use the `useActionState` hook to control the state of the form.
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useActionState } from "react-dom"
-import { toast } from "sonner"
+import { useActionState } from "react"
 import { produceNewMessage } from "./actions"
 
-export default function UseActionStateExample() {
-  let [messages, submitAction] = useActionState( // [!code highlight]
-    async (previousState: string[], formData: FormData) => {
-      const [data, err] = await produceNewMessage(formData)
-
-      if (err) {
-        toast.error("Error! " + JSON.stringify(err.fieldErrors?.name))
-        return previousState
-      }
-
-      return [...previousState, data]  // [!code highlight]
-    },
-    ["my initial message"] // [!code highlight]
-  )
+export default function UseActionCustomStateExample() {
+  let [messages, submitAction] = useActionState(produceNewMessage, [ // [!code highlight]
+    "my initial message", // [!code highlight]
+  ]) // [!code highlight]
 
   return (
     <Card className="not-prose">
       <CardHeader>
-        <CardTitle>Use Form State</CardTitle>
+        <CardTitle>Use Action Custom State</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <form action={submitAction} className="flex flex-col gap-4"> // [!code highlight]
@@ -370,6 +374,7 @@ export default function UseActionStateExample() {
     </Card>
   )
 }
+
 ```
 
 Let's check out the result!
