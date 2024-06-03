@@ -24,6 +24,8 @@ import {
   nextNotFoundAction,
   nextRedirectAction,
   nextRedirectInProcedureAction,
+  procedureChainAuthAction,
+  procedureChainAuthActionWithCounter,
   stateInputAction,
   stateInputProcedureAction,
   transformedOutputAction,
@@ -484,6 +486,114 @@ describe("actions", () => {
       )
       expect(data).toEqual(4)
       expect(err).toBeNull()
+    })
+  })
+
+  describe("procedure chain", () => {
+    let state: string = "zero"
+    beforeEach(() => {
+      state = "zero"
+      ;(cookies as jest.Mock).mockReturnValue({
+        set: (k: string, v: string) => {
+          state = v
+        },
+      })
+    })
+
+    it("should throw an error if the first procedure is invalid [no counter]", async () => {
+      let [data, err] = await procedureChainAuthAction({
+        one: "invalid",
+        two: "valid",
+        three: "valid",
+      })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("one")
+      expect(state).toBe("zero")
+    })
+
+    it("should throw an error if the first procedure is invalid [with counter]", async () => {
+      let [data, err] = await procedureChainAuthActionWithCounter({
+        one: "invalid",
+        two: "valid",
+        three: "valid",
+      })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("one")
+      expect(state).toBe("zero")
+    })
+
+    it("should throw an error if the second procedure is invalid [no counter]", async () => {
+      const [data, err] = await procedureChainAuthAction({
+        one: "valid",
+        two: "invalid",
+        three: "valid",
+      })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("two")
+      expect(state).toBe("one")
+    })
+
+    it("should throw an error if the second procedure is invalid [with counter]", async () => {
+      let [data, err] = await procedureChainAuthActionWithCounter({
+        one: "valid",
+        two: "invalid",
+        three: "valid",
+      })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("two")
+      expect(state).toBe("one")
+    })
+
+    it("should throw an error if the third procedure is invalid [no counter]", async () => {
+      const [data, err] = await procedureChainAuthAction({
+        one: "valid",
+        two: "valid",
+        three: "invalid",
+      })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("three")
+      expect(state).toBe("two")
+    })
+
+    it("should throw an error if the third procedure is invalid [with counter]", async () => {
+      let [data, err] = await procedureChainAuthActionWithCounter({
+        one: "valid",
+        two: "valid",
+        three: "invalid",
+      })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.notAuthorized)
+      expect(err?.data).toBe("three")
+      expect(state).toBe("two")
+    })
+
+    it("should not throw an error if all procedures are valid [no counter]", async () => {
+      const [data, err] = await procedureChainAuthAction({
+        one: "valid",
+        two: "valid",
+        three: "valid",
+      })
+      expect(data).toBeUndefined()
+      expect(err).toBeNull()
+      expect(state).toBe("three")
+    })
+
+    it("should not throw an error if all procedures are valid [with counter]", async () => {
+      let [data, err] = await procedureChainAuthActionWithCounter({
+        one: "valid",
+        two: "valid",
+        three: "valid",
+      })
+      expect(data).toEqual({
+        counter: 3,
+      })
+      expect(err).toBeNull()
+      expect(state).toBe("three")
     })
   })
 })

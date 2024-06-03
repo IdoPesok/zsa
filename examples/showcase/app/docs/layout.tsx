@@ -4,7 +4,11 @@ import { Network } from "lucide-react"
 import type { ReactNode } from "react"
 import { pageTree } from "../source"
 
-export default function RootDocsLayout({ children }: { children: ReactNode }) {
+export default async function RootDocsLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
   return (
     <DocsLayout
       tree={pageTree}
