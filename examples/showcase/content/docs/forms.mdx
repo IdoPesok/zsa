@@ -256,6 +256,8 @@ export const produceNewMessage = createServerAction()
 Then on the client side, you can use the `useActionState` hook to execute the action and handle the result.
 
 ```tsx title="use-action-state.tsx"
+"use client"
+
 import { useActionState } from "react";
 import { produceNewMessage } from "./actions";
 
