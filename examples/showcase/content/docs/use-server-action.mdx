@@ -4,7 +4,7 @@ group: "Client Side Usage"
 groupOrder: 0
 ---
 
-`useServerAction` is a custom React hook provided by ZSA that allows you to easily execute server actions from your client components. It handles the execution, loading states, optimistic updates, and error handling for you.
+`useServerAction` is a custom React hook provided by ZSA that allows you to easily execute server actions from your client components. It handles the execution, transition, loading states, optimistic updates, and error handling for you.
 
 ## Basic Example
 
@@ -56,6 +56,10 @@ export default function IncrementExample() {
 
 - `useServerAction` allows you to use this server action from within your client components.
 - `execute` executes the server action endpoint with the typesafe input directly from `onClick`.
+
+<Note>
+useServerAction uses the useTransition hook internally to handle the transition state of the action
+</Note>
 
 Here is the result:
 

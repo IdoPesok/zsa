@@ -259,3 +259,19 @@ export const redirectProcedure = createServerActionProcedure(
 })
 
 export const redirectAction = redirectProcedure.createServerAction()
+
+export const previousStateProcedure = createServerActionProcedure().handler(
+  async ({ previousState }) => {
+    let num: number = 0
+
+    if (Array.isArray(previousState) && previousState.length > 0) {
+      num = (previousState[0] || 1) * 2
+    }
+
+    return {
+      number: num,
+    }
+  }
+)
+
+export const previousStateAction = previousStateProcedure.createServerAction()

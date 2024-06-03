@@ -11,6 +11,7 @@ import {
   inputNumberProcedure,
   ownsPostAction,
   ownsPostIsAdminAction,
+  previousStateAction,
   protectedAction,
   protectedTimeoutAction,
   publicAction,
@@ -251,3 +252,44 @@ export const nextRedirectInProcedureAction = redirectAction.handler(
     return "123"
   }
 )
+
+export const stateInputAction = publicAction
+  .input(z.object({ number: z.coerce.number() }), {
+    type: "state",
+  })
+  .handler(async ({ input, previousState }) => {
+    const [data, err] = previousState
+
+    if (data) {
+      return data * 2
+    }
+
+    return input.number
+  })
+
+export const stateInputProcedureAction = previousStateAction
+  .input(z.undefined(), {
+    type: "state",
+  })
+  .handler(async ({ ctx }) => {
+    return ctx.number
+  })
+
+export const formDataAction = publicAction
+  .input(
+    z.object({
+      name: z.string(),
+      email: z.string().email(),
+      number: z.coerce.number(),
+    }),
+    {
+      type: "formData",
+    }
+  )
+  .handler(async ({ input }) => {
+    return {
+      name: input.name,
+      email: input.email,
+      number: input.number,
+    }
+  })

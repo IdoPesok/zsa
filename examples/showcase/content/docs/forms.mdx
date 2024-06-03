@@ -4,56 +4,48 @@ group: "Client Side Usage"
 groupOrder: 5
 ---
 
-In some cases, you might want to handle `FormData` directly in your server actions, especially when working with forms in client-side components. `zsa` supports `FormData` as an input type, making it easy to integrate form submissions with your server actions.
+Learn how to use ZSA with forms.
 
-## Server Action with FormData
+## Basic Form
 
-Here's an example of how to create a server action that accepts `FormData`:
+You can use the `useServerAction` hook with a regular form. Set the `type` to `"formData"` to indicate that the input is a `FormData` object.
 
-```ts title="actions.ts"
+```typescript title="actions.ts"
 "use server"
 
-import { createServerAction } from "zsa"
 import z from "zod"
+import { createServerAction } from "zsa"
 
-export const myFormDataAction = createServerAction()
-    .input(z.object({
-        name: z.string(),
-        email: z.string()
-    }), {
-        type: "formData"  // [!code highlight]
-    })
-    .handler(async ({ input }) => {
-        // Process the input data
-        return {
-            message: `Received data: ${input.name}, ${input.email}`
-        };
-    });
+export const produceNewMessage = createServerAction()
+  .input(
+    z.object({
+      name: z.string().min(5),
+    }),
+    {
+      type: "formData", // [!code highlight]
+    }
+  )
+  .handler(async ({ input }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return "Hello, " + input.name
+  })
 ```
 
-In this example, the server action `myFormDataAction` is configured to accept `FormData` by specifying the `type: "formData"` option. The `input` schema defines the expected fields and their types.
-
-## Form data client example
-
-To call this server action from a client component, you can use a standard HTML form with the `action` attribute set to the server action function:
+Then on the client you can pass the `action` prop to the form to handle the form submission.
 
 ```tsx title="form-example.tsx"
 "use client"
 
-import { myFormDataAction } from "./actions";
+import { produceNewMessage } from "./actions";
 
 export default function FormExample() {
     return (
         <form
-            action={myFormDataAction}
+            action={produceNewMessage} // [!code highlight]
         >
             <label>
                 Name:
                 <input type="text" name="name" required />
-            </label>
-            <label>
-                Email:
-                <input type="email" name="email" required />
             </label>
             <button type="submit">Submit</button>
         </form>
@@ -61,10 +53,394 @@ export default function FormExample() {
 }
 ```
 
-- The form's `action` attribute is set to the server action function, `myFormDataAction`.
+However if you do it this way you will not have access to the `data` and `error` variables. To get the data and error you can use the `useServerAction` hook.
 
-This setup allows you to handle form submissions seamlessly, leveraging the type safety and validation provided by `zsa`.
+```tsx title="basic-form-example.tsx"
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { useServerAction } from "zsa-react"
+import { produceNewMessage } from "./actions"
+
+export const BasicForm = () => {
+  const { isPending, execute, isSuccess, data, isError, error } = // [!code highlight]
+    useServerAction(produceNewMessage) // [!code highlight]
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Form Example</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            const form = event.currentTarget
+
+            const formData = new FormData(form) // [!code highlight]
+            const [data, err] = await execute(formData) // [!code highlight]
+
+            if (err) {
+              // handle error
+              return
+            }
+
+            form.reset()
+          }}
+        >
+          <Input type="text" name="name" placeholder="Enter your name..." />
+          <Button className="w-full" type="submit" disabled={isPending}>
+            Submit
+          </Button>
+          {isPending && <div>Loading...</div>}
+          {isSuccess && <div>Success: {JSON.stringify(data)}</div>}
+          {isError && <div>Error: {JSON.stringify(error.fieldErrors)}</div>}
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+```
 
 Here is the result:
 
-<ExampleComponent id="form-data" />
+<ExampleComponent id="basic-form" />
+
+In this example, we create a basic form and handle the form submission manually. We use the `useServerAction` hook to execute the ZSA action and handle the success and error states accordingly.
+
+## React Hook Form
+
+The `useServerAction` hook from the `zsa-react` library allows you to easily integrate ZSA with the popular `react-hook-form` library. Here's an example of how to use it:
+
+```typescript title="actions.ts"
+"use server"
+
+import z from "zod"
+import { createServerAction } from "zsa"
+
+export const produceNewMessage = createServerAction()
+  .input(
+    z.object({
+      name: z.string().min(5),
+    }),
+  )
+  .handler(async ({ input }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return "Hello, " + input.name
+  })
+```
+
+Then on the client side, you can use the `useServerAction` hook to execute the action and handle the result.
+
+```tsx title="react-hook-form.tsx"
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { useServerAction } from "zsa-react"
+import { produceNewMessage } from "./actions"
+
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
+  }),
+})
+
+export function ReactHookForm() {
+  const { isPending, execute, data, error } = useServerAction(produceNewMessage) // [!code highlight]
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+    },
+  })
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const [data, err] = await execute(values) // [!code highlight]
+
+    if (err) {
+      // show a toast or something
+      return
+    }
+
+    form.reset({ name: "" })
+  }
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Form Example</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="shadcn" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button disabled={isPending} type="submit" className="w-full">
+              {isPending ? "Saving..." : "Save"}
+            </Button>
+          </form>
+        </Form>
+        {data && <div>Message: {data}</div>}
+        {error && <div>Error: {JSON.stringify(error.fieldErrors)}</div>}
+      </CardContent>
+    </Card>
+  )
+}
+
+```
+
+Here is the result:
+
+<ExampleComponent id="react-hook-form" />
+
+In this example, we define a form schema using Zod and create a form using `react-hook-form`. We then use the `useServerAction` hook to execute the ZSA action when the form is submitted. The `isPending` variable can be used to display a loading state while the action is being executed.
+
+## useActionState
+
+<Info>
+useActionState was previously called useFormState. It is now deprecated and will be removed in a future release.
+</Info>
+
+The `useActionState` hook from ZSA allows you to perform actions and manage the action state. Make sure to set the `type` to `"state"` to indicate that the input is a (previousState, formData) tuple.
+
+```typescript title="actions.ts"
+"use server"
+
+import z from "zod"
+import { createServerAction } from "zsa"
+
+export const produceNewMessage = createServerAction()
+  .input(
+    z.object({
+      name: z.string().min(5),
+    }),
+    {
+      type: "state", // [!code highlight]
+    }
+  )
+  .handler(async ({ input }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return "Hello, " + input.name
+  })
+```
+
+Then on the client side, you can use the `useActionState` hook to execute the action and handle the result.
+
+```tsx title="use-action-state.tsx"
+import { useActionState } from "react";
+import { produceNewMessage } from "./actions";
+
+export default function UseActionStateExample() {
+  let [[data, err], submitAction, isPending] = useActionState( // [!code highlight]
+    produceNewMessage, // [!code highlight]
+    [null, null] // or [initialData, null] // [!code highlight]
+  ); // [!code highlight]
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Use Form State</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form action={submitAction} className="flex flex-col gap-4"> // [!code highlight]
+          <Input name="name" placeholder="Enter your name..." />
+          <Button disabled={isPending}>Create message</Button>
+        </form>
+        {isPending && <div>Loading...</div>}
+        {data && <p>Message: {data}</p>}
+        {err && <div>Error: {JSON.stringify(err)}</div>}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+Here is the result:
+
+<ExampleComponent id="use-action-state" />
+
+---
+
+<Note>
+This example supports progressive enhancement. Give it a shot, try submitting after disabling Javascript!
+</Note>
+
+In this example, we use the `useActionState` hook to perform the `produceNewMessage` action and manage the action state. The `submitAction` function is passed to the form's `action` prop to handle the form submission. The `isPending`, `data`, and `err` variables can be used to display loading, success, and error states respectively.
+
+### Custom State
+
+What if you want to control the state of the form yourself? Let's see how we can do that. This example will show how to append messages to an array.
+
+First, make sure you are using `formData` as the input type.
+
+```typescript title="actions.ts"
+"use server"
+
+import z from "zod"
+import { createServerAction } from "zsa"
+
+export const produceNewMessage = createServerAction()
+  .input(
+    z.object({
+      name: z.string().min(5),
+    }),
+    {
+      type: "formData", // [!code highlight]
+    }
+  )
+  .handler(async ({ input }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return "Hello, " + input.name
+  })
+```
+
+Now we can use the `useActionState` hook to control the state of the form.
+
+```tsx title="use-action-state-custom-state.tsx"
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { useActionState } from "react-dom"
+import { toast } from "sonner"
+import { produceNewMessage } from "./actions"
+
+export default function UseActionStateExample() {
+  let [messages, submitAction] = useActionState( // [!code highlight]
+    async (previousState: string[], formData: FormData) => {
+      const [data, err] = await produceNewMessage(formData)
+
+      if (err) {
+        toast.error("Error! " + JSON.stringify(err.fieldErrors?.name))
+        return previousState
+      }
+
+      return [...previousState, data]  // [!code highlight]
+    },
+    ["my initial message"] // [!code highlight]
+  )
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Use Form State</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form action={submitAction} className="flex flex-col gap-4"> // [!code highlight]
+          <Input name="name" placeholder="Enter your name..." />
+          <Button>Create message</Button>
+        </form>
+        <h1>Messages:</h1>
+        <div>
+          {messages.map((message, index) => (
+            <div key={index}>{message}</div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+Let's check out the result!
+
+<ExampleComponent id="use-form-state" />
+
+## File Upload
+
+ZSA supports file and/or image uploads within forms. To handle file uploads, you need to specify the expected file type in the server action using `z.custom<File>()` and include a file input in your form.
+
+```typescript title="actions.ts"
+"use server"
+
+import { z } from "zod";
+import { createServerAction } from "zsa";
+
+export const uploadFile = createServerAction()
+  .input(
+    z.object({
+      name: z.string().min(5),
+      file: z.custom<File>().refine((file) => file.size > 0), // [!code highlight]
+    }),
+    {
+      type: "state",
+    }
+  )
+  .handler(async ({ input }) => {
+    // Process the uploaded file
+    const { name, file } = input;
+    // ...
+
+    return "File uploaded successfully!";
+  });
+```
+
+On the client side, include a file input in your form:
+
+```tsx title="file-upload-example.tsx"
+"use client"
+
+import { useActionState } from "zsa-react";
+import { uploadFile } from "./actions";
+
+export default function FileUploadExample() {
+  const [[data, error], submitAction, isPending] = useActionState(uploadFile, [null, null]); // [!code highlight]
+
+  return (
+    <form action={submitAction} className="flex flex-col gap-4"> // [!code highlight]
+      <label>
+        Name:
+        <input type="text" name="name" required />
+      </label>
+      <label>
+        File:
+        <input type="file" name="file" required /> // [!code highlight]
+      </label>
+      <button type="submit" disabled={isPending}>
+        Upload
+      </button>
+      {isPending && <div>Uploading...</div>}
+      {data && <div>Success: {data}</div>}
+      {error && <div>Error: {JSON.stringify(error.fieldErrors)}</div>}
+    </form>
+  );
+}
+```
+
+In this example, we define a server action `uploadFile` that expects a `name` field of type `string` and a `file` field of type `File`. The `type` is set to `"formData"` to handle the form data.
+
+On the client side, we include a file input with the name `"file"` in the form. When the form is submitted, the file is included in the `FormData` object and sent to the server action for processing.
+
+Remember to handle the uploaded file appropriately in the server action's `handler` function based on your specific requirements.
+
+That's it! You can now upload files using ZSA with forms.

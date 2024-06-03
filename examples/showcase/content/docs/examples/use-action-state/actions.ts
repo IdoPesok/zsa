@@ -9,7 +9,7 @@ export const produceNewMessage = createServerAction()
       name: z.string().min(5),
     }),
     {
-      type: "formData",
+      type: "state",
     }
   )
   .handler(async ({ input }) => {

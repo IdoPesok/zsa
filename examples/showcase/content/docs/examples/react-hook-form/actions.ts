@@ -7,10 +7,7 @@ export const produceNewMessage = createServerAction()
   .input(
     z.object({
       name: z.string().min(5),
-    }),
-    {
-      type: "formData",
-    }
+    })
   )
   .handler(async ({ input }) => {
     await new Promise((resolve) => setTimeout(resolve, 500))
