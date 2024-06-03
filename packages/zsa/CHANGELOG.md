@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.3.0
+
+### Minor Changes
+
+- 474e0bf: Added new "state" type to inputs to enable use with useActionState
+
 ## 0.2.3
 
 ### Patch Changes
