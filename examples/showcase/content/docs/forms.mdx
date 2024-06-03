@@ -378,7 +378,7 @@ Let's check out the result!
 
 ## File Upload
 
-ZSA supports file and/or image uploads within forms. To handle file uploads, you need to specify the expected file type in the server action using `z.custom<File>()` and include a file input in your form.
+ZSA supports file and/or image uploads within forms. To handle file uploads, you need to specify the expected file type in the server action using `z.instanceof(File)` and include a file input in your form.
 
 ```typescript title="actions.ts"
 "use server"
@@ -390,7 +390,12 @@ export const uploadFile = createServerAction()
   .input(
     z.object({
       name: z.string().min(5),
-      file: z.custom<File>().refine((file) => file.size > 0), // [!code highlight]
+      file: z // [!code highlight]
+        .instanceof(File) // [!code highlight]
+        .refine( // [!code highlight]
+          (file) => file.size > 0 && file.size < 1024, // [!code highlight]
+          "File size must be less than 1kb" // [!code highlight]
+        ), // [!code highlight]
     }),
     {
       type: "state",
