@@ -96,20 +96,20 @@ export default function IncrementExample() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
                 <Button
-                onClick={async () => {
-                    const [data, err] = await incrementNumberAction({ // [!code highlight]
-                        number: counter, // [!code highlight]
-                    }) // [!code highlight]
+                    onClick={async () => {
+                        const [data, err] = await incrementNumberAction({ // [!code highlight]
+                            number: counter, // [!code highlight]
+                        }) // [!code highlight]
 
-                    if (err) {
-                        // handle error
-                        return
-                    }
+                        if (err) {
+                            // handle error
+                            return
+                        }
 
-                    setCounter(data);
-                }}
+                        setCounter(data);
+                    }}
                 >
-                Invoke action
+                    Invoke action
                 </Button>
                 <p>Count:</p>
             </CardContent>
@@ -141,20 +141,21 @@ export default function IncrementExample() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
                 <Button
-                onClick={async () => {
-                    const [data, err] = await execute({ // [!code highlight]
-                        number: counter, // [!code highlight]
-                    }) // [!code highlight]
+                    disabled={isPending} // [!code highlight]
+                    onClick={async () => {
+                        const [data, err] = await execute({ // [!code highlight]
+                            number: counter, // [!code highlight]
+                        }) // [!code highlight]
 
-                    if (err) {
-                        // handle error
-                        return
-                    }
+                        if (err) {
+                            // handle error
+                            return
+                        }
 
-                    setCounter(data);
-                }}
+                        setCounter(data);
+                    }}
                 >
-                Invoke action
+                    Invoke action
                 </Button>
                 <p>Count:</p>
                 <div>{isPending ? "saving..." : data}</div> // [!code highlight]
