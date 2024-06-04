@@ -142,7 +142,14 @@ describe("openapi", () => {
     })
 
     it("should fail to multiply a number and a string [GET]", async () => {
-      const { GET } = createRouteHandlers(openapiRouter)
+      const { GET } = createRouteHandlers(openapiRouter, {
+        shapeError: (error) => {
+          return {
+            message: error.message,
+            code: error.code,
+          }
+        },
+      })
 
       const request = mockNextRequest({
         method: "GET",
@@ -154,6 +161,11 @@ describe("openapi", () => {
 
       const response = await GET(request)
       expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.code).toBe("INPUT_PARSE_ERROR")
+      expect(json.message).toBeDefined()
+      expect(json.stack).not.toBeDefined()
     })
 
     it("should multiply two numbers [POST]", async () => {
@@ -311,7 +323,8 @@ describe("openapi", () => {
         result: 100 / 20,
       })
     })
-    it("it should fail to divide a number by zero [POST]", async () => {
+
+    it("it should fail to divide a number by zero and return full error [POST]", async () => {
       const { POST } = setupApiHandler(
         "/api/calculations/divide/{number1}",
         divideAction
@@ -327,6 +340,43 @@ describe("openapi", () => {
 
       const response = await POST(request)
       expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.code).toBe("INPUT_PARSE_ERROR")
+      expect(json.message).toBeDefined()
+      expect(json.stack).toBeDefined()
+      expect(json.name).toBeDefined()
+    })
+
+    it("it should fail to divide a number by zero and return a custom error [POST]", async () => {
+      const { POST } = setupApiHandler(
+        "/api/calculations/divide/{number1}",
+        divideAction,
+        {
+          shapeError: (error) => {
+            return {
+              message: error.message,
+              code: error.code,
+            }
+          },
+        }
+      )
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/divide/100",
+        body: {
+          number2: "0",
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.code).toBe("INPUT_PARSE_ERROR")
+      expect(json.message).toBeDefined()
+      expect(json.stack).not.toBeDefined()
     })
   })
 
