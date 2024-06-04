@@ -1,5 +1,13 @@
 # zsa-openapi
 
+## 0.0.10
+
+### Patch Changes
+
+- b8800d6: Support input formData entries with consistent field name
+- Updated dependencies [b8800d6]
+  - zsa@0.3.1
+
 ## 0.0.9
 
 ### Patch Changes

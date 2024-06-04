@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.3.1
+
+### Patch Changes
+
+- b8800d6: Support input formData entries with consistent field name
+
 ## 0.3.0
 
 ### Minor Changes
