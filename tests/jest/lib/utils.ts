@@ -8,7 +8,7 @@ export const mockNextRequest = (args: {
   pathname: `/${string}`
   searchParams?: Record<string, string>
   body?: Record<string, any>
-  type?: "formData" | "json"
+  formData?: FormData
   headers?: Record<string, string>
 }) => {
   const data: any = {
@@ -21,7 +21,7 @@ export const mockNextRequest = (args: {
     headers.append(key, value)
   }
 
-  if (args.type === "formData") {
+  if (args.formData !== undefined) {
     headers.append("content-type", "application/x-www-form-urlencoded")
   } else {
     headers.append("content-type", "application/json")
@@ -38,16 +38,10 @@ export const mockNextRequest = (args: {
     data.nextUrl.searchParams = searchParams
   }
 
-  if (args.body) {
-    if (args.type === "formData") {
-      const fd = new FormData()
-      for (const [key, value] of Object.entries(args.body)) {
-        fd.append(key, value)
-      }
-      data.formData = () => fd
-    } else {
-      data.json = () => args.body
-    }
+  if (args.formData) {
+    data.formData = () => args.formData
+  } else if (args.body) {
+    data.json = () => args.body
   }
 
   return data as unknown as NextRequest

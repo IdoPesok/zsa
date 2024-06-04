@@ -176,6 +176,18 @@ export const multiplyAction = publicAction
     }
   })
 
+export const multiplyActionWithArray = publicAction
+  .input(
+    z.object({
+      number: z.array(z.coerce.number()),
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number.reduce((a, b) => a * b, 1),
+    }
+  })
+
 export const multiplyActionWithCustomResponse = publicAction
   .input(
     z.object({
@@ -295,6 +307,19 @@ export const formDataAction = publicAction
       email: input.email,
       number: input.number,
     }
+  })
+
+export const multiEntryFormDataAction = publicAction
+  .input(
+    z.object({
+      name: z.array(z.string()),
+    }),
+    {
+      type: "formData",
+    }
+  )
+  .handler(async ({ input }) => {
+    return input.name
   })
 
 export const procedureChainAuthAction = setAuthToTwoProcedure

@@ -11,28 +11,16 @@
  */
 
 import { z } from "zod"
+import { instanceofZodTypeKind, unwrapZodType } from "zsa"
 
 export const instanceofZodType = (type: any): type is z.ZodTypeAny => {
   return !!type?._def?.typeName
-}
-
-export const instanceofZodTypeKind = <Z extends z.ZodFirstPartyTypeKind>(
-  type: z.ZodTypeAny,
-  zodTypeKind: Z
-): type is InstanceType<(typeof z)[Z]> => {
-  return type?._def?.typeName === zodTypeKind
 }
 
 export const instanceofZodTypeOptional = (
   type: z.ZodTypeAny
 ): type is z.ZodOptional<z.ZodTypeAny> => {
   return instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodOptional)
-}
-
-export const instanceofZodTypeObject = (
-  type: z.ZodTypeAny
-): type is z.ZodObject<z.ZodRawShape> => {
-  return instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodObject)
 }
 
 export type ZodTypeLikeVoid = z.ZodVoid | z.ZodUndefined | z.ZodNever
@@ -45,33 +33,6 @@ export const instanceofZodTypeLikeVoid = (
     instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodUndefined) ||
     instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodNever)
   )
-}
-
-export const unwrapZodType = (
-  type: z.ZodTypeAny,
-  unwrapPreprocess: boolean
-): z.ZodTypeAny => {
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodOptional)) {
-    return unwrapZodType(type.unwrap(), unwrapPreprocess)
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodDefault)) {
-    return unwrapZodType(type.removeDefault(), unwrapPreprocess)
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodLazy)) {
-    return unwrapZodType(type._def.getter(), unwrapPreprocess)
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodEffects)) {
-    if (type._def.effect.type === "refinement") {
-      return unwrapZodType(type._def.schema, unwrapPreprocess)
-    }
-    if (type._def.effect.type === "transform") {
-      return unwrapZodType(type._def.schema, unwrapPreprocess)
-    }
-    if (unwrapPreprocess && type._def.effect.type === "preprocess") {
-      return unwrapZodType(type._def.schema, unwrapPreprocess)
-    }
-  }
-  return type
 }
 
 type NativeEnumType = {

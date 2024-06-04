@@ -191,16 +191,59 @@ describe("openapi", () => {
     it("should multiply two numbers in form data [POST]", async () => {
       const { POST } = createRouteHandlers(openapiRouter)
 
+      const formData = new FormData()
+      formData.append("number2", "100")
+
       const request = mockNextRequest({
         method: "POST",
         pathname: "/api/calculations/multiply/100",
-        body: {
-          number2: "100",
-        },
-        type: "formData",
+        formData,
       })
 
       const response = await POST(request)
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
+        result: 100 * 100,
+      })
+    })
+
+    it("should multiply one number in form data array [POST]", async () => {
+      const { GET } = createRouteHandlers(openapiRouter)
+
+      const formData = new FormData()
+      formData.append("number", "100")
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/multiply-with-array",
+        formData,
+      })
+
+      const response = await GET(request)
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
+        result: 100,
+      })
+    })
+
+    it("should multiply two numbers in form data array [POST]", async () => {
+      const { GET } = createRouteHandlers(openapiRouter)
+
+      const formData = new FormData()
+      formData.append("number", "100")
+      formData.append("number", "100")
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/multiply-with-array",
+        formData,
+      })
+
+      const response = await GET(request)
       expect(response.status).toBe(200)
 
       const json = await response.json()

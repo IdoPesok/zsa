@@ -456,3 +456,91 @@ On the client side, we include a file input with the name `"file"` in the form. 
 Remember to handle the uploaded file appropriately in the server action's `handler` function based on your specific requirements.
 
 That's it! You can now upload files using ZSA with forms.
+
+## Multi Entry Forms
+
+ZSA also supports multi entry forms. This means that you can have multiple input fields with the same name in a form. To handle multi entry forms, you can set the schema to an array of the expected type.
+
+Here's an example of how to create a multi entry form using ZSA:
+
+```ts title="actions.ts"
+"use server"
+
+import z from "zod"
+import { createServerAction } from "zsa"
+
+export const multiplyNumbersAction = createServerAction()
+  .input(
+    z.object({
+      // an array of numbers
+      number: z.array(z.coerce.number()), // [!code highlight]
+      // an array of files
+      filefield: z // [!code highlight]
+        .array( // [!code highlight]
+          z // [!code highlight]
+            .instanceof(File) // [!code highlight]
+            .refine( // [!code highlight]
+              (file) => file.size > 0, // [!code highlight]
+              "File cannot be empty" // [!code highlight]
+            ) // [!code highlight]
+            .refine( // [!code highlight]
+              (file) => file.size < 1024, // [!code highlight]
+              "File size must be less than 1kb" // [!code highlight]
+            ) // [!code highlight]
+        ) // [!code highlight]
+    }),
+    {
+      type: "state",
+    }
+  )
+  .handler(async ({ input }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return (
+      input.number.reduce((a, b) => a * b, 1) +
+      ` and got ${input.filefield.length} files`
+    )
+  })
+
+```
+
+Then on the client side, you can use the `useActionState` hook to handle the multi entry form:
+
+```tsx title="multi-entry-example.tsx"
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { useActionState } from "react"
+import { multiplyNumbersAction } from "./actions"
+
+export default function MultiEntryExample() {
+  let [[data, err], submitAction, isPending] = useActionState(
+    multiplyNumbersAction,
+    [null, null]
+  )
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Multi Entry Form</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form action={submitAction} className="flex flex-col gap-4">
+          <Input name="number" placeholder="Enter number..." type="number" /> // [!code highlight]
+          <Input name="number" placeholder="Enter number..." type="number" /> // [!code highlight]
+          <Input name="filefield" type="file" multiple /> // [!code highlight]
+          <Button disabled={isPending}>Multiply Numbers</Button>
+        </form>
+        {isPending && <div>Loading...</div>}
+        {data && <p>Result: {data}</p>}
+        {err && <div>Error: {JSON.stringify(err.fieldErrors)}</div>}
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+Here is the result:
+
+<ExampleComponent id="multi-entry" />

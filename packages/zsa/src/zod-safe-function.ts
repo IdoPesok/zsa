@@ -16,6 +16,7 @@ import {
   TimeoutStatus,
   ZSAResponseMeta,
 } from "./types"
+import { formDataToJson } from "./utils"
 
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
@@ -632,7 +633,7 @@ export class ZodSafeFunction<
         // if args is formData
         if (args instanceof FormData) {
           args = {
-            ...(Object.fromEntries(args.entries()) as any),
+            ...formDataToJson(args, this.$internals.inputSchema),
             ...(this.$internals.inputType !== "state"
               ? overrideArgs || {}
               : {}),

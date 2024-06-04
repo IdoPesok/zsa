@@ -13,16 +13,14 @@
 import { OpenAPIV3 } from "openapi-types"
 import { z } from "zod"
 import zodToJsonSchema from "zod-to-json-schema"
-import { ZSAError } from "zsa"
+import { ZSAError, instanceofZodTypeObject, unwrapZodType } from "zsa"
 import { OpenApiContentType } from "./openapi"
 import {
   instanceofZodType,
   instanceofZodTypeCoercible,
   instanceofZodTypeLikeString,
   instanceofZodTypeLikeVoid,
-  instanceofZodTypeObject,
   instanceofZodTypeOptional,
-  unwrapZodType,
   zodSupportsCoerce,
 } from "./zod"
 
