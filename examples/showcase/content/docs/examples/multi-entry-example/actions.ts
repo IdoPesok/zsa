@@ -13,10 +13,7 @@ export const multiplyNumbersAction = createServerAction()
         z
           .instanceof(File)
           .refine((file) => file.size > 0, "File cannot be empty")
-          .refine(
-            (file) => file.size < 1024 * 1000000,
-            "File size must be less than 1kb"
-          )
+          .refine((file) => file.size < 1024, "File size must be less than 1kb")
       ),
     }),
     {
