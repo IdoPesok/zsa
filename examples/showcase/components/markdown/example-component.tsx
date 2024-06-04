@@ -2,6 +2,7 @@ import { BasicForm } from "@/content/docs/examples/basic-form/basic-form-example
 import DocsPage from "@/content/docs/examples/docs/swagger-docs"
 import FormDataExample from "@/content/docs/examples/form-data/form-data-example"
 import IncrementExample from "@/content/docs/examples/introduction/increment-example"
+import MultiEntryExample from "@/content/docs/examples/multi-entry-example/multi-entry-example"
 import { ReactHookForm } from "@/content/docs/examples/react-hook-form/react-hook-form-example"
 import HelloWorld from "@/content/docs/examples/react-query/hello-world-action"
 import RandomNumberExampleDisplay from "@/content/docs/examples/refetching-queries/random-number-example-display"
@@ -26,6 +27,8 @@ function ExampleComponent({ id }: { id: string }) {
       return <UseActionCustomStateExample />
     case "use-action-state":
       return <UseActionStateExample />
+    case "multi-entry":
+      return <MultiEntryExample />
     case "basic-form":
       return <BasicForm />
     case "react-hook-form":
