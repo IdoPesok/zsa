@@ -197,9 +197,7 @@ describe("openapi", () => {
       const request = mockNextRequest({
         method: "POST",
         pathname: "/api/calculations/multiply/100",
-        body: {
-          number2: "100",
-        },
+        formData,
       })
 
       const response = await POST(request)
