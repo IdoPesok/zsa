@@ -229,6 +229,74 @@ By modifying the `responseMeta` object, you can customize the response metadata 
 
 Using `responseMeta`, you can tailor the response headers and status codes to match your API requirements and provide additional information or instructions to the clients consuming your API endpoints.
 
+## Extending Routers
+
+The `createOpenApiServerActionRouter` function allows you to extend routers by combining multiple routers together. This is useful when you have separate files for different resource types, such as posts and users, and want to combine their routes in the final `route.ts` file.
+
+Here's an example of how you can extend routers:
+
+<Files>
+  <Folder name="app/api/[[...openapi]]" defaultOpen>
+    <Folder name="_router" defaultOpen>
+      <File name="posts.ts" />
+      <File name="users.ts" />
+      <File name="index.ts" />
+    </Folder>
+    <File name="route.ts" />
+  </Folder>
+</Files>
+
+First we create a posts router:
+
+```ts title="app/api/[[...openapi]]/_router/posts.ts"
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+import { createPost, updatePost, deletePost } from "./postActions";
+
+export const postsRouter = createOpenApiServerActionRouter({
+    pathPrefix: "/api/posts",
+})
+  .post("/", createPost)
+  .put("/{postId}", updatePost)
+  .delete("/{postId}", deletePost);
+```
+
+Next we create a users router:
+
+```ts title="app/api/[[...openapi]]/_router/users.ts"
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+import { createUser, updateUser, deleteUser } from "./userActions";
+
+export const usersRouter = createOpenApiServerActionRouter({
+    pathPrefix: "/api/users",
+})
+  .post("/", createUser)
+  .put("/{userId}", updateUser)
+  .delete("/{userId}", deleteUser);
+```
+
+We then combine the two routers into a main router:
+
+```ts title="app/api/[[...openapi]]/_router/index.ts"
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+import { postsRouter } from "./posts";
+import { usersRouter } from "./users";
+
+export const router = createOpenApiServerActionRouter({
+  extend: [postsRouter, usersRouter], // [!code highlight]
+});
+```
+
+Finally, we export the main router:
+
+```ts title="app/api/[[...openapi]]/route.ts"
+import { createRouteHandlers } from "zsa-openapi";
+import { router } from "./_router";
+
+export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
+```
+
+In this example, we have separate files for posts and users routes. Each file creates its own router using `createOpenApiServerActionRouter`. Then, in the final `route.ts` file, we create a new router and use the `extend` option to combine the `postsRouter` and `usersRouter`. This way, all the routes from both routers will be included in the final router.
+
 ## Error Handling
 
 ### OpenAPI Error Status Codes
@@ -303,73 +371,6 @@ export const { GET } = createRouteHandlersForAction(getPostAction, {
 })
 ```
 
-## Extending Routers
-
-The `createOpenApiServerActionRouter` function allows you to extend routers by combining multiple routers together. This is useful when you have separate files for different resource types, such as posts and users, and want to combine their routes in the final `route.ts` file.
-
-Here's an example of how you can extend routers:
-
-<Files>
-  <Folder name="app/api/[[...openapi]]" defaultOpen>
-    <Folder name="_router" defaultOpen>
-      <File name="posts.ts" />
-      <File name="users.ts" />
-      <File name="index.ts" />
-    </Folder>
-    <File name="route.ts" />
-  </Folder>
-</Files>
-
-First we create a posts router:
-
-```ts title="app/api/[[...openapi]]/_router/posts.ts"
-import { createOpenApiServerActionRouter } from "zsa-openapi";
-import { createPost, updatePost, deletePost } from "./postActions";
-
-export const postsRouter = createOpenApiServerActionRouter({
-    pathPrefix: "/api/posts",
-})
-  .post("/", createPost)
-  .put("/{postId}", updatePost)
-  .delete("/{postId}", deletePost);
-```
-
-Next we create a users router:
-
-```ts title="app/api/[[...openapi]]/_router/users.ts"
-import { createOpenApiServerActionRouter } from "zsa-openapi";
-import { createUser, updateUser, deleteUser } from "./userActions";
-
-export const usersRouter = createOpenApiServerActionRouter({
-    pathPrefix: "/api/users",
-})
-  .post("/", createUser)
-  .put("/{userId}", updateUser)
-  .delete("/{userId}", deleteUser);
-```
-
-We then combine the two routers into a main router:
-
-```ts title="app/api/[[...openapi]]/_router/index.ts"
-import { createOpenApiServerActionRouter } from "zsa-openapi";
-import { postsRouter } from "./posts";
-import { usersRouter } from "./users";
-
-export const router = createOpenApiServerActionRouter({
-  extend: [postsRouter, usersRouter], // [!code highlight]
-});
-```
-
-Finally, we export the main router:
-
-```ts title="app/api/[[...openapi]]/route.ts"
-import { createRouteHandlers } from "zsa-openapi";
-import { router } from "./_router";
-
-export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
-```
-
-In this example, we have separate files for posts and users routes. Each file creates its own router using `createOpenApiServerActionRouter`. Then, in the final `route.ts` file, we create a new router and use the `extend` option to combine the `postsRouter` and `usersRouter`. This way, all the routes from both routers will be included in the final router.
 
 ## Attributes
 
