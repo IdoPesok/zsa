@@ -67,3 +67,21 @@ export const getErrorStatusFromZSAError = (error: unknown) => {
       return 500
   }
 }
+
+export const formDataToJson = (formData: FormData) => {
+  const json: Record<string, any> = {}
+
+  formData.forEach((value, key) => {
+    // Reflect.has in favor of: object.hasOwnProperty(key)
+    if (!Reflect.has(json, key)) {
+      json[key] = value
+      return
+    }
+    if (!Array.isArray(json[key])) {
+      json[key] = [json[key]]
+    }
+    json[key].push(value)
+  })
+
+  return json
+}

@@ -11,6 +11,7 @@ import {
 } from "zsa"
 import {
   acceptsRequestBody,
+  formDataToJson,
   getErrorStatusFromZSAError,
   preparePathForMatching,
 } from "./utils"
@@ -405,7 +406,7 @@ const getDataFromRequest = async (request: NextRequest) => {
       ) {
         // if its form data
         const formData = await request.formData()
-        data = Object.fromEntries(formData.entries())
+        data = formDataToJson(formData)
       } else {
         // if its json
         data = await request.json()

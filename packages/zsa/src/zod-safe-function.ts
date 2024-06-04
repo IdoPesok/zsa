@@ -21,6 +21,24 @@ import {
 export interface TAnyZodSafeFunction
   extends ZodSafeFunction<any, any, any, any, boolean, any> {}
 
+const formDataToJson = (formData: FormData) => {
+  const json: Record<string, any> = {}
+
+  formData.forEach((value, key) => {
+    // Reflect.has in favor of: object.hasOwnProperty(key)
+    if (!Reflect.has(json, key)) {
+      json[key] = value
+      return
+    }
+    if (!Array.isArray(json[key])) {
+      json[key] = [json[key]]
+    }
+    json[key].push(value)
+  })
+
+  return json
+}
+
 /** A helper type to wrap ZodSafeFunction in an Omit */
 export type TZodSafeFunction<
   TInputSchema extends z.ZodType,
@@ -632,7 +650,7 @@ export class ZodSafeFunction<
         // if args is formData
         if (args instanceof FormData) {
           args = {
-            ...(Object.fromEntries(args.entries()) as any),
+            ...(formDataToJson(args) as any),
             ...(this.$internals.inputType !== "state"
               ? overrideArgs || {}
               : {}),
