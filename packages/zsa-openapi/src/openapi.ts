@@ -556,7 +556,7 @@ export const createRouteHandlers = (
 
       if (!foundMatch) return null
 
-      const inputSchema = foundMatch.action(undefined, undefined, {
+      const inputSchema = await foundMatch.action(undefined, undefined, {
         returnInputSchema: true,
       })
 
@@ -712,9 +712,9 @@ export function createRouteHandlersForAction<
     request: NextRequest,
     args?: { params?: Record<string, string> }
   ) => {
-    const inputSchema = action(undefined, undefined, {
+    const inputSchema = (await action(undefined, undefined, {
       returnInputSchema: true,
-    }) as any
+    })) as any
 
     const { data, searchParamsJson } = await getDataFromRequest(
       request,

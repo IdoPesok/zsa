@@ -65,3 +65,24 @@ export const isKeyAnArrayInZodSchema = (key: string, schema: z.ZodTypeAny) => {
 
   return isArray
 }
+
+export const formDataToJson = (formData: FormData, inputSchema: z.ZodType) => {
+  const json: Record<string, any> = {}
+
+  formData.forEach((value, key) => {
+    const isArraySchema = isKeyAnArrayInZodSchema(key, inputSchema)
+
+    // Reflect.has in favor of: object.hasOwnProperty(key)
+    if (!Reflect.has(json, key)) {
+      json[key] = isArraySchema ? [value] : value
+      return
+    }
+
+    if (!Array.isArray(json[key])) {
+      json[key] = [json[key]]
+    }
+    json[key].push(value)
+  })
+
+  return json
+}

@@ -21,6 +21,7 @@ import {
   helloWorldTimeoutAction,
   inputLargeNumberAction,
   inputNumberAction,
+  multiEntryFormDataAction,
   nextNotFoundAction,
   nextRedirectAction,
   nextRedirectInProcedureAction,
@@ -454,6 +455,25 @@ describe("actions", () => {
       expect(data).toBeNull()
       expect(err).not.toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+    })
+
+    it("returns a single element array", async () => {
+      const formData = new FormData()
+      formData.append("name", "test")
+      const [data, err] = await multiEntryFormDataAction(formData)
+
+      expect(data).toEqual(["test"])
+      expect(err).toBeNull()
+    })
+
+    it("returns a multi element array", async () => {
+      const formData = new FormData()
+      formData.append("name", "test")
+      formData.append("name", "test2")
+      const [data, err] = await multiEntryFormDataAction(formData)
+
+      expect(data).toEqual(["test", "test2"])
+      expect(err).toBeNull()
     })
   })
 
