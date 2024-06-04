@@ -297,6 +297,81 @@ export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
 
 In this example, we have separate files for posts and users routes. Each file creates its own router using `createOpenApiServerActionRouter`. Then, in the final `route.ts` file, we create a new router and use the `extend` option to combine the `postsRouter` and `usersRouter`. This way, all the routes from both routers will be included in the final router.
 
+## Error Handling
+
+### OpenAPI Error Status Codes
+
+`zsa-openapi` maps ZSA error codes to HTTP status codes. This can be useful when returning errors from an API endpoint:
+
+```ts 
+switch (error.code) {
+  case "INTERNAL_SERVER_ERROR":
+    return 500
+  case "INPUT_PARSE_ERROR":
+    return 400
+  case "OUTPUT_PARSE_ERROR":
+    return 500
+  case "ERROR":
+    return 500
+  case "NOT_AUTHORIZED":
+    return 401
+  case "TIMEOUT":
+    return 408
+  case "FORBIDDEN":
+    return 403
+  case "NOT_FOUND":
+    return 404
+  case "CONFLICT":
+    return 409
+  case "PRECONDITION_FAILED":
+    return 412
+  case "PAYLOAD_TOO_LARGE":
+    return 413
+  case "METHOD_NOT_SUPPORTED":
+    return 405
+  case "UNPROCESSABLE_CONTENT":
+    return 422
+  case "TOO_MANY_REQUESTS":
+    return 429
+  case "CLIENT_CLOSED_REQUEST":
+    return 499
+  default:
+    return 500
+}
+```
+
+### Customizing Errors
+
+You can customize the error responses returned by the OpenAPI router by providing a `shapeError` function to the `createRouteHandlers` function. This function takes an error object as input and returns an object with the desired error response properties.
+
+Here's an example of how to customize the error responses:
+
+```ts
+export const { GET } = createRouteHandlers(router, {
+  pathPrefix: "/api",
+  shapeError: (error) => { // [!code highlight]
+    return { // [!code highlight]
+      message: error.message, // [!code highlight]
+      code: error.code, // [!code highlight]
+    } // [!code highlight]
+  }, // [!code highlight]
+})
+```
+
+It also works with `createRouteHandlersForAction`:
+
+```ts
+export const { GET } = createRouteHandlersForAction(getPostAction, {
+  shapeError: (error) => { // [!code highlight]
+    return { // [!code highlight]
+      message: error.message, // [!code highlight]
+      code: error.code, // [!code highlight]
+    } // [!code highlight]
+  }, // [!code highlight]
+})
+```
+
+
 ## Attributes
 
 When defining OpenAPI actions using `createOpenApiServerActionRouter` or `setupApiHandler`, you can specify additional attributes to provide more information about the action. Here are the available attributes:
