@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.0.9
+
+### Patch Changes
+
+- 7b7615a: Small feature, shapeError option on routers
+
 ## 0.0.8
 
 ### Patch Changes
