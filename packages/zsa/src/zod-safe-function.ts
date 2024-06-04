@@ -16,20 +16,24 @@ import {
   TimeoutStatus,
   ZSAResponseMeta,
 } from "./types"
+import { isKeyAnArrayInZodSchema } from "./utils"
 
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
   extends ZodSafeFunction<any, any, any, any, boolean, any> {}
 
-const formDataToJson = (formData: FormData) => {
+export const formDataToJson = (formData: FormData, inputSchema: z.ZodType) => {
   const json: Record<string, any> = {}
 
   formData.forEach((value, key) => {
+    const isArraySchema = isKeyAnArrayInZodSchema(key, inputSchema)
+
     // Reflect.has in favor of: object.hasOwnProperty(key)
     if (!Reflect.has(json, key)) {
-      json[key] = value
+      json[key] = isArraySchema ? [value] : value
       return
     }
+
     if (!Array.isArray(json[key])) {
       json[key] = [json[key]]
     }
@@ -650,7 +654,7 @@ export class ZodSafeFunction<
         // if args is formData
         if (args instanceof FormData) {
           args = {
-            ...(formDataToJson(args) as any),
+            ...formDataToJson(args, this.$internals.inputSchema),
             ...(this.$internals.inputType !== "state"
               ? overrideArgs || {}
               : {}),

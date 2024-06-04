@@ -6,12 +6,12 @@ import {
   TAnyZodSafeFunctionHandler,
   TZSAError,
   ZSAResponseMeta,
+  formDataToJson,
   inferInputSchemaFromHandler,
   inferServerActionInput,
 } from "zsa"
 import {
   acceptsRequestBody,
-  formDataToJson,
   getErrorStatusFromZSAError,
   preparePathForMatching,
 } from "./utils"
@@ -386,7 +386,10 @@ export const createOpenApiServerActionRouter = (args?: {
   })
 }
 
-const getDataFromRequest = async (request: NextRequest) => {
+const getDataFromRequest = async (
+  request: NextRequest,
+  inputSchema: z.ZodType
+) => {
   // get the search params
   const searchParams = request.nextUrl.searchParams
   const searchParamsJson =
@@ -406,7 +409,7 @@ const getDataFromRequest = async (request: NextRequest) => {
       ) {
         // if its form data
         const formData = await request.formData()
-        data = formDataToJson(formData)
+        data = formDataToJson(formData, inputSchema)
       } else {
         // if its json
         data = await request.json()
@@ -528,10 +531,6 @@ export const createRouteHandlers = (
     body: Record<string, any> | undefined
   }> => {
     try {
-      const { data, searchParamsJson } = await getDataFromRequest(request)
-
-      const params: Record<string, string> = {}
-
       // find the matching action from the router
       const foundMatch = router.$INTERNALS.actions.find((action) => {
         if (action.method !== request.method) {
@@ -555,8 +554,21 @@ export const createRouteHandlers = (
         return true
       })
 
+      if (!foundMatch) return null
+
+      const inputSchema = foundMatch.action(undefined, undefined, {
+        returnInputSchema: true,
+      })
+
+      const { data, searchParamsJson } = await getDataFromRequest(
+        request,
+        inputSchema
+      )
+
+      const params: Record<string, string> = {}
+
       // parse the params from the path
-      if (foundMatch && foundMatch.path.includes("{")) {
+      if (foundMatch.path.includes("{")) {
         let basePathSplit = (foundMatch.path as string).split("/")
         let pathSplit = (
           request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
@@ -587,10 +599,6 @@ export const createRouteHandlers = (
         ...searchParamsJson,
         ...(data || {}),
         ...params,
-      }
-
-      if (!foundMatch) {
-        return null
       }
 
       if (Object.keys(final).length === 0) {
@@ -704,7 +712,14 @@ export function createRouteHandlersForAction<
     request: NextRequest,
     args?: { params?: Record<string, string> }
   ) => {
-    const { data, searchParamsJson } = await getDataFromRequest(request)
+    const inputSchema = action(undefined, undefined, {
+      returnInputSchema: true,
+    }) as any
+
+    const { data, searchParamsJson } = await getDataFromRequest(
+      request,
+      inputSchema
+    )
 
     let input: any = {
       ...(data || {}),
