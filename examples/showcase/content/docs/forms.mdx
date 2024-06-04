@@ -472,7 +472,22 @@ import { createServerAction } from "zsa"
 export const multiplyNumbersAction = createServerAction()
   .input(
     z.object({
+      // an array of numbers
       number: z.array(z.coerce.number()), // [!code highlight]
+      // an array of files
+      filefield: z // [!code highlight]
+        .array( // [!code highlight]
+          z // [!code highlight]
+            .instanceof(File) // [!code highlight]
+            .refine( // [!code highlight]
+              (file) => file.size > 0, // [!code highlight]
+              "File cannot be empty" // [!code highlight]
+            ) // [!code highlight]
+            .refine( // [!code highlight]
+              (file) => file.size < 1024 * 1000000, // [!code highlight]
+              "File size must be less than 1kb" // [!code highlight]
+            ) // [!code highlight]
+        ) // [!code highlight]
     }),
     {
       type: "state",
@@ -480,8 +495,12 @@ export const multiplyNumbersAction = createServerAction()
   )
   .handler(async ({ input }) => {
     await new Promise((resolve) => setTimeout(resolve, 500))
-    return input.number.reduce((a, b) => a * b, 1)
+    return (
+      input.number.reduce((a, b) => a * b, 1) +
+      ` and got ${input.filefield.length} files`
+    )
   })
+
 ```
 
 Then on the client side, you can use the `useActionState` hook to handle the multi entry form:
@@ -510,6 +529,7 @@ export default function MultiEntryExample() {
         <form action={submitAction} className="flex flex-col gap-4">
           <Input name="number" placeholder="Enter number..." type="number" /> // [!code highlight]
           <Input name="number" placeholder="Enter number..." type="number" /> // [!code highlight]
+          <Input name="filefield" type="file" multiple /> // [!code highlight]
           <Button disabled={isPending}>Multiply Numbers</Button>
         </form>
         {isPending && <div>Loading...</div>}

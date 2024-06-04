@@ -21,6 +21,7 @@ export default function MultiEntryExample() {
         <form action={submitAction} className="flex flex-col gap-4">
           <Input name="number" placeholder="Enter number..." type="number" />
           <Input name="number" placeholder="Enter number..." type="number" />
+          <Input name="filefield" type="file" multiple />
           <Button disabled={isPending}>Multiply Numbers</Button>
         </form>
         {isPending && <div>Loading...</div>}
