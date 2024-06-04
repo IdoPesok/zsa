@@ -232,7 +232,7 @@ describe("openapi", () => {
       })
     })
 
-    it.only("should multiply two numbers in form data array [POST]", async () => {
+    it("should multiply two numbers in form data array [POST]", async () => {
       const { GET } = createRouteHandlers(openapiRouter)
 
       const formData = new FormData()
