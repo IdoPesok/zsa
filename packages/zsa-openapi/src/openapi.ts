@@ -3,7 +3,9 @@ import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
 import {
   TAnyZodSafeFunctionHandler,
+  TZSAError,
   ZSAResponseMeta,
+  inferInputSchemaFromHandler,
   inferServerActionInput,
 } from "zsa"
 import {
@@ -418,7 +420,8 @@ const getResponseFromAction = async <
 >(
   request: NextRequest,
   action: TAction,
-  input: inferServerActionInput<TAction>
+  input: inferServerActionInput<TAction>,
+  shapeError?: (error: TZSAError<any>) => any
 ) => {
   const responseMeta = new ZSAResponseMeta()
 
@@ -456,7 +459,17 @@ const getResponseFromAction = async <
       status: responseMeta.statusCode,
       headers: responseMeta.headers,
     })
-  } catch (error: any) {
+  } catch ($error: any) {
+    let error = $error
+
+    if (shapeError) {
+      try {
+        error = shapeError(error)
+      } catch (error: any) {
+        error = $error
+      }
+    }
+
     let status = getErrorStatusFromZSAError(error)
 
     // if the error is a redirect, throw it
@@ -493,7 +506,12 @@ const getResponseFromAction = async <
  * export const { GET, POST, PUT, DELETE, PATCH } = createRouteHandlers(router)
  * ```
  */
-export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
+export const createRouteHandlers = (
+  router: TOpenApiServerActionRouter,
+  opts?: {
+    shapeError?: (error: TZSAError<any>) => any
+  }
+) => {
   const parseRequest = async (
     request: NextRequest
   ): Promise<null | {
@@ -597,7 +615,8 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
     return await getResponseFromAction(
       request,
       parsedData.action,
-      parsedData.input
+      parsedData.input,
+      opts?.shapeError
     )
   }
 
@@ -632,7 +651,12 @@ export const createRouteHandlers = (router: TOpenApiServerActionRouter) => {
  */
 export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
   path: `/${string}`,
-  action: THandler
+  action: THandler,
+  opts?: {
+    shapeError?: (
+      error: TZSAError<inferInputSchemaFromHandler<THandler>>
+    ) => any
+  }
 ) {
   const router = createOpenApiServerActionRouter()
     .get(path, action)
@@ -641,7 +665,7 @@ export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
     .put(path, action)
     .patch(path, action)
 
-  return createRouteHandlers(router)
+  return createRouteHandlers(router, opts as any)
 }
 
 /**
@@ -664,8 +688,15 @@ export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
  * export const { PUT } = createRouteHandlersForAction(updatePostAction)
  * ```
  */
-export function createRouteHandlersForAction(
-  action: TAnyZodSafeFunctionHandler
+export function createRouteHandlersForAction<
+  THandler extends TAnyZodSafeFunctionHandler,
+>(
+  action: THandler,
+  opts?: {
+    shapeError?: (
+      error: TZSAError<inferInputSchemaFromHandler<THandler>>
+    ) => any
+  }
 ) {
   const handler: ApiRouteHandler = async (
     request: NextRequest,
@@ -683,7 +714,12 @@ export function createRouteHandlersForAction(
       input = undefined
     }
 
-    return await getResponseFromAction(request, action, input)
+    return await getResponseFromAction(
+      request,
+      action,
+      input,
+      opts?.shapeError as any
+    )
   }
 
   return {
