@@ -1,19 +1,25 @@
 "use client"
 
+import { useState } from "react"
 import { errorAction } from "server/actions"
 import { useServerAction } from "zsa-react"
 
 export default function ErrorStatesUI() {
   const { isError, error, execute } = useServerAction(errorAction)
+  const [manualError, setManualError] = useState<string | undefined>(undefined)
 
   return (
     <div>
       <button
         role="invoke"
         onClick={async () => {
-          await execute({
+          const [data, err] = await execute({
             number: 0,
           })
+
+          if (err) {
+            setManualError(JSON.stringify(err.fieldErrors?.number))
+          }
         }}
       >
         Invoke Error Action
@@ -24,6 +30,7 @@ export default function ErrorStatesUI() {
           {JSON.stringify(error?.fieldErrors.number)}
         </div>
       )}
+      {manualError && <div role="manual-error">{manualError}</div>}
     </div>
   )
 }

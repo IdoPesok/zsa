@@ -241,12 +241,17 @@ describe("client", () => {
       await waitFor(() => {
         const isErrorElement = screen.getByRole("isError")
         expect(isErrorElement).toHaveTextContent("true")
-      })
 
-      const fieldErrorsElement = screen.getByRole("field-errors")
-      expect(fieldErrorsElement).toHaveTextContent(
-        `["Number must be greater than or equal to 10"]`
-      )
+        const fieldErrorsElement = screen.getByRole("field-errors")
+        expect(fieldErrorsElement).toHaveTextContent(
+          `["Number must be greater than or equal to 10"]`
+        )
+
+        const manualErrorElement = screen.getByRole("manual-error")
+        expect(manualErrorElement).toHaveTextContent(
+          `["Number must be greater than or equal to 10"]`
+        )
+      })
     })
   })
 

@@ -6,7 +6,9 @@ import { CLIENT_TEST_DATA } from "server/data"
 import { useServerAction } from "zsa-react"
 
 export default function HelloWorldUI() {
-  const [result, setResult] = useState<string>(CLIENT_TEST_DATA.initialMessage)
+  const [result, setResult] = useState<"helloWorldAction" | "NOTHING">(
+    CLIENT_TEST_DATA.initialMessage
+  )
 
   const { isPending, execute } = useServerAction(loadingHelloWorldAction)
 
