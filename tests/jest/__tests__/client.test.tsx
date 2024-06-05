@@ -243,8 +243,10 @@ describe("client", () => {
         expect(isErrorElement).toHaveTextContent("true")
       })
 
-      const resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
-      expect(resultElement).toHaveTextContent(TEST_DATA.errors.string)
+      const fieldErrorsElement = screen.getByRole("field-errors")
+      expect(fieldErrorsElement).toHaveTextContent(
+        `["Number must be greater than or equal to 10"]`
+      )
     })
   })
 

@@ -1,7 +1,5 @@
 import {
   TAnyZodSafeFunctionHandler,
-  TZSAError,
-  inferInputSchemaFromHandler,
   inferServerActionError,
   inferServerActionReturnData,
 } from "zsa"
@@ -67,7 +65,7 @@ export type TServerActionResult<
       isOptimistic: false
       data: undefined
       isError: true
-      error: TZSAError<inferInputSchemaFromHandler<TServerAction>>
+      error: inferServerActionError<TServerAction>
       isSuccess: false
       status: "error"
     }
@@ -90,7 +88,7 @@ export const calculateResultFromState = <
   isPending: boolean
   oldResult: TOldResult<TServerAction>
   result: TInnerResult<TServerAction>
-}) => {
+}): TServerActionResult<TServerAction> => {
   const { isPending, oldResult, result } = state
 
   if (isPending && oldResult.status === "empty") {

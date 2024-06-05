@@ -17,7 +17,9 @@ export default function RetryStatesUI() {
       <button
         role="invoke"
         onClick={async () => {
-          await execute()
+          await execute({
+            number: 0,
+          })
         }}
       >
         Invoke Error Action

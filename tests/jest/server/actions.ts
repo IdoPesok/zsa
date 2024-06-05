@@ -138,9 +138,11 @@ export const optimisticAction = publicAction.handler(async () => {
   return CLIENT_TEST_DATA.resultMessages.optimisticUpdates as string
 })
 
-export const errorAction = publicAction.handler(async () => {
-  throw new Error(TEST_DATA.errors.string)
-})
+export const errorAction = publicAction
+  .input(z.object({ number: z.number().min(10) }))
+  .handler(async () => {
+    throw new Error(TEST_DATA.errors.string)
+  })
 
 export const callbacksAction = publicAction
   .input(z.object({ shouldError: z.boolean() }))
