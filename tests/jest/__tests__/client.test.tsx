@@ -249,7 +249,7 @@ describe("client", () => {
   })
 
   describe("useServerAction retries", () => {
-    it.only("handles retry states correctly", async () => {
+    it("handles retry states correctly", async () => {
       render(<RetryStatesUI />)
 
       const isErrorElement = screen.getByRole("isError")
