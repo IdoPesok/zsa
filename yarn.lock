@@ -1737,11 +1737,11 @@
   dependencies:
     "@babel/runtime" "^7.13.10"
 
-"@repo/eslint-config@file:/Users/webdevcody/Workspace/zsa/packages/eslint-config":
+"@repo/eslint-config@file:/Users/ido/Desktop/server-actions-wrapper/packages/eslint-config":
   version "0.0.0"
   resolved "file:packages/eslint-config"
 
-"@repo/typescript-config@file:/Users/webdevcody/Workspace/zsa/packages/typescript-config":
+"@repo/typescript-config@file:/Users/ido/Desktop/server-actions-wrapper/packages/typescript-config":
   version "0.0.0"
   resolved "file:packages/typescript-config"
 
@@ -8977,11 +8977,10 @@ short-unique-id@^5.0.2:
   resolved "https://registry.npmjs.org/short-unique-id/-/short-unique-id-5.2.0.tgz"
   integrity sha512-cMGfwNyfDZ/nzJ2k2M+ClthBIh//GlZl1JEf47Uoa9XR11bz8Pa2T2wQO4bVrRdH48LrIDWJahQziKo3MjhsWg==
 
-"showcase@file:/Users/webdevcody/Workspace/zsa/examples/showcase":
+"showcase@file:/Users/ido/Desktop/server-actions-wrapper/examples/showcase":
   version "0.0.0"
   resolved "file:examples/showcase"
   dependencies:
-    "@hookform/resolvers" "^3.4.2"
     "@radix-ui/react-alert-dialog" "^1.0.5"
     "@radix-ui/react-aspect-ratio" "^1.0.3"
     "@radix-ui/react-avatar" "^1.0.4"
@@ -10494,8 +10493,8 @@ zod@^3.23.3, zod@^3.23.5, zod@^3.23.8:
   resolved "https://registry.npmjs.org/zod/-/zod-3.23.8.tgz"
   integrity sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==
 
-zsa-openapi@*, "zsa-openapi@file:/Users/webdevcody/Workspace/zsa/packages/zsa-openapi":
-  version "0.0.10"
+zsa-openapi@*, "zsa-openapi@file:/Users/ido/Desktop/server-actions-wrapper/packages/zsa-openapi":
+  version "0.0.8"
   resolved "file:packages/zsa-openapi"
   dependencies:
     openapi-types "^12.1.3"
@@ -10504,7 +10503,7 @@ zsa-openapi@*, "zsa-openapi@file:/Users/webdevcody/Workspace/zsa/packages/zsa-op
     zod "^3.23.5"
     zsa "*"
 
-zsa-react-query@*, "zsa-react-query@file:/Users/webdevcody/Workspace/zsa/packages/zsa-react-query":
+zsa-react-query@*, "zsa-react-query@file:/Users/ido/Desktop/server-actions-wrapper/packages/zsa-react-query":
   version "0.1.0"
   resolved "file:packages/zsa-react-query"
   dependencies:
@@ -10514,7 +10513,7 @@ zsa-react-query@*, "zsa-react-query@file:/Users/webdevcody/Workspace/zsa/package
     zod "^3.23.5"
     zsa "*"
 
-zsa-react@*, "zsa-react@file:/Users/webdevcody/Workspace/zsa/packages/zsa-react":
+zsa-react@*, "zsa-react@file:/Users/ido/Desktop/server-actions-wrapper/packages/zsa-react":
   version "0.1.3"
   resolved "file:packages/zsa-react"
   dependencies:
@@ -10523,7 +10522,7 @@ zsa-react@*, "zsa-react@file:/Users/webdevcody/Workspace/zsa/packages/zsa-react"
     zod "^3.23.5"
     zsa "*"
 
-"zsa-tests@file:/Users/webdevcody/Workspace/zsa/tests/jest":
+"zsa-tests@file:/Users/ido/Desktop/server-actions-wrapper/tests/jest":
   resolved "file:tests/jest"
   dependencies:
     next latest
@@ -10535,8 +10534,8 @@ zsa-react@*, "zsa-react@file:/Users/webdevcody/Workspace/zsa/packages/zsa-react"
     zsa "*"
     zsa-openapi "*"
 
-zsa@*, "zsa@file:/Users/webdevcody/Workspace/zsa/packages/zsa":
-  version "0.3.1"
+zsa@*, "zsa@file:/Users/ido/Desktop/server-actions-wrapper/packages/zsa":
+  version "0.2.3"
   resolved "file:packages/zsa"
   dependencies:
     typescript latest
