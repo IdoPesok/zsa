@@ -5,7 +5,7 @@ import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 import { z } from "zod"
 import { ZSAError, createServerAction } from "zsa"
-import { TEST_DATA } from "./data"
+import { CLIENT_TEST_DATA, TEST_DATA } from "./data"
 import {
   adminAction,
   faultyOutputProcedure,
@@ -42,9 +42,115 @@ export const getAdminGreetingAction = adminAction.handler(async ({ ctx }) => {
   return `Hello, ${ctx.auth.name}!` as const
 })
 
+export const queryAction = publicAction
+  .input(
+    z.object({
+      searchTerm: z.string(),
+    })
+  )
+  .handler(async ({ input }) => {
+    await sleep(CLIENT_TEST_DATA.sleep)
+    return {
+      result: `Query Result: ${input.searchTerm}`,
+    }
+  })
+
+const generateItems = (page: number) => {
+  const items = []
+  const startId = (page - 1) * 10 + 1
+  for (let i = startId; i < startId + 10; i++) {
+    items.push({ id: i, name: `Item ${i}` })
+  }
+  return items
+}
+
+export const infiniteQueryAction = publicAction
+  .input(
+    z.object({
+      page: z.number().min(1),
+    })
+  )
+  .handler(async ({ input }) => {
+    const { page } = input
+    await sleep(CLIENT_TEST_DATA.sleep)
+    const items = generateItems(page)
+    const hasMore = page < 5
+    const nextPage = hasMore ? page + 1 : undefined
+    return {
+      items,
+      hasMore,
+      nextPage,
+    }
+  })
+
+export const mutationAction = publicAction
+  .input(
+    z.object({
+      name: z.string(),
+    })
+  )
+  .handler(async ({ input }) => {
+    await sleep(CLIENT_TEST_DATA.sleep)
+    return {
+      result: `Mutation Result: ${input.name}`,
+    }
+  })
+
+export const statesAction = publicAction
+  .input(
+    z.object({
+      status: z.enum(["success", "error"]),
+    })
+  )
+  .handler(async ({ input }) => {
+    await sleep(CLIENT_TEST_DATA.sleep)
+    if (input.status === "error") {
+      throw new Error("Error")
+    }
+    return "Success"
+  })
+
 export const getPostByIdAction = ownsPostAction.handler(async ({ ctx }) => {
   return ctx.post
 })
+
+export const resetAction = publicAction.handler(async () => {
+  await sleep(CLIENT_TEST_DATA.sleep)
+  return CLIENT_TEST_DATA.resultMessages.resetAction
+})
+
+export const loadingHelloWorldAction = publicAction
+  .input(z.object({ ms: z.number() }))
+  .handler(async ({ input: { ms } }) => {
+    await sleep(ms)
+    return CLIENT_TEST_DATA.resultMessages.helloWorldAction
+  })
+
+export const loadingGetUserGreetingAction = protectedAction
+  .input(z.object({ ms: z.number() }))
+  .handler(async ({ ctx, input: { ms } }) => {
+    await sleep(ms)
+    return `Hello, ${ctx.auth.name}!` as const
+  })
+
+export const optimisticAction = publicAction.handler(async () => {
+  await sleep(CLIENT_TEST_DATA.sleep)
+  return CLIENT_TEST_DATA.resultMessages.optimisticUpdates as string
+})
+
+export const errorAction = publicAction.handler(async () => {
+  throw new Error(TEST_DATA.errors.string)
+})
+
+export const callbacksAction = publicAction
+  .input(z.object({ shouldError: z.boolean() }))
+  .handler(async ({ input: { shouldError } }) => {
+    await sleep(CLIENT_TEST_DATA.sleep)
+    if (shouldError) {
+      throw new Error(CLIENT_TEST_DATA.resultMessages.callbacksAction)
+    }
+    return CLIENT_TEST_DATA.resultMessages.callbacksAction
+  })
 
 export const getPostByIdIsAdminAction = ownsPostIsAdminAction.handler(
   async ({ ctx }) => {
