@@ -10,15 +10,7 @@ export default function IncrementExample() {
   const [counter, setCounter] = useState(0)
 
   const { isPending, execute, data, error, isError } = useServerAction(
-    incrementNumberAction,
-    {
-      onSuccess() {
-        console.log("isPending", isPending)
-        if (isPending) {
-          alert("success was called even before transition was done")
-        }
-      },
-    }
+    incrementNumberAction
   )
 
   return (
