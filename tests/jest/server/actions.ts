@@ -4,7 +4,7 @@ import { sleep } from "lib/utils"
 import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 import { z } from "zod"
-import { ZSAError, createServerAction } from "zsa"
+import { ZSAError, createServerAction, createServerActionProcedure } from "zsa"
 import { TEST_DATA } from "./data"
 import {
   adminAction,
@@ -346,3 +346,31 @@ export const procedureChainAuthActionWithCounter =
         counter: ctx.counter + 1,
       }
     })
+
+const testProcedure = createServerActionProcedure()
+  // .shapeError((err) => {
+  //   return {
+  //     custom: true,
+  //   } as const
+  // })
+  .handler(async ({ input }) => {
+    return
+  })
+  .createServerAction()
+
+const test = publicAction
+  .shapeError((err) => {
+    return {
+      custom: true,
+    } as const
+  })
+  .input(z.object({ name: z.string() }))
+  .handler(async () => {
+    return
+  })
+
+const main = async () => {
+  const [data, err] = await test({
+    name: "12312",
+  })
+}

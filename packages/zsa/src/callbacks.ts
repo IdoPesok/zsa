@@ -1,9 +1,8 @@
 import z from "zod"
-import { ZSAError } from "./errors"
 
 /** An error handler function */
 export interface TOnErrorFn {
-  (err: ZSAError): any
+  (err: unknown): any
 }
 
 /** A start handler function */
@@ -63,7 +62,7 @@ export interface TOnCompleteFn<
           /** The status of the action */
           status: "error"
           /** The error thrown by the handler */
-          error: ZSAError
+          error: unknown
         }
   ): any
 }

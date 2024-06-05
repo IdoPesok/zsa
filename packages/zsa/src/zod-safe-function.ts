@@ -11,7 +11,9 @@ import {
   THandlerOpts,
   TInternals,
   TNoInputHandlerFunc,
+  TShapeErrorFn,
   TStateHandlerFunc,
+  TZodIntersection,
   TZodSafeFunctionDefaultOmitted,
   TimeoutStatus,
   ZSAResponseMeta,
@@ -20,12 +22,13 @@ import { formDataToJson } from "./utils"
 
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
-  extends ZodSafeFunction<any, any, any, any, boolean, any> {}
+  extends ZodSafeFunction<any, any, any, any, any, boolean, any> {}
 
 /** A helper type to wrap ZodSafeFunction in an Omit */
 export type TZodSafeFunction<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
+  TError extends any,
   TOmitted extends string,
   TProcedureChainOutput extends any,
   TIsProcedure extends boolean,
@@ -34,6 +37,7 @@ export type TZodSafeFunction<
   ZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted,
     TProcedureChainOutput,
     TIsProcedure,
@@ -45,6 +49,7 @@ export type TZodSafeFunction<
 export class ZodSafeFunction<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
+  TError extends any,
   TOmitted extends string,
   TProcedureChainOutput extends any,
   TIsProcedure extends boolean,
@@ -146,6 +151,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "timeout",
     TProcedureChainOutput,
     TIsProcedure,
@@ -163,6 +169,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "retry",
     TProcedureChainOutput,
     TIsProcedure,
@@ -195,10 +202,11 @@ export class ZodSafeFunction<
       type?: TType
     }
   ): TZodSafeFunction<
-    TInputSchema extends z.ZodUndefined
-      ? T
-      : z.ZodIntersection<TInputSchema, T>,
+    TZodIntersection<TInputSchema, T>,
     TOutputSchema,
+    TError extends TZSAError<z.ZodUndefined>
+      ? TZSAError<TZodIntersection<TInputSchema, T>>
+      : TError,
     "input" | Exclude<TOmitted, "onInputParseError">, // bring back the onInputParseError
     TProcedureChainOutput,
     TIsProcedure,
@@ -221,6 +229,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     T,
+    TError,
     "output" | Exclude<TOmitted, "onOutputParseError">,
     TProcedureChainOutput,
     TIsProcedure,
@@ -241,6 +250,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     "onInputParseError" | TOmitted,
     TProcedureChainOutput,
     TIsProcedure,
@@ -260,6 +270,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     "onOutputParseError" | TOmitted,
     TProcedureChainOutput,
     TIsProcedure,
@@ -273,10 +284,11 @@ export class ZodSafeFunction<
 
   /** set a handler function for errors */
   public onError(
-    fn: (err: ZSAError) => any
+    fn: (err: unknown) => any
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     "onError" | TOmitted,
     TProcedureChainOutput,
     TIsProcedure,
@@ -289,11 +301,30 @@ export class ZodSafeFunction<
   }
 
   /** set a handler function for when the server action starts */
+  public shapeError<T extends TShapeErrorFn>(
+    fn: T
+  ): TZodSafeFunction<
+    TInputSchema,
+    TOutputSchema,
+    Awaited<ReturnType<T>>,
+    TOmitted | "shapeError",
+    TProcedureChainOutput,
+    TIsProcedure,
+    TInputType
+  > {
+    return new ZodSafeFunction({
+      ...this.$internals,
+      shapeErrorFn: fn,
+    }) as any
+  }
+
+  /** set a handler function for when the server action starts */
   public onStart(
     fn: TOnStartFn<TInputSchema, TIsProcedure>
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "onStart",
     TProcedureChainOutput,
     TIsProcedure,
@@ -311,6 +342,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "onSuccess",
     TProcedureChainOutput,
     TIsProcedure,
@@ -328,6 +360,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "onComplete",
     TProcedureChainOutput,
     TIsProcedure,
@@ -439,7 +472,7 @@ export class ZodSafeFunction<
   }
 
   /** helper function to handle errors with timeout checkpoints */
-  public async handleError(err: any): Promise<[null, TZSAError<TInputSchema>]> {
+  public async handleError(err: any): Promise<[null, TError]> {
     // we need to throw any NEXT_REDIRECT errors so that next can
     // properly handle them.
 
@@ -447,18 +480,15 @@ export class ZodSafeFunction<
       throw err
     }
 
-    const customError =
-      err instanceof ZSAError ? err : new ZSAError("ERROR", err)
-
     if (
       this.$internals.onErrorFromProcedureFn &&
       !this.$internals.isProcedure
     ) {
-      await this.$internals.onErrorFromProcedureFn(customError)
+      await this.$internals.onErrorFromProcedureFn(err)
     }
 
     if (this.$internals.onErrorFn && !this.$internals.isProcedure) {
-      await this.$internals.onErrorFn(customError)
+      await this.$internals.onErrorFn(err)
     }
 
     if (
@@ -469,7 +499,7 @@ export class ZodSafeFunction<
         isSuccess: false,
         isError: true,
         status: "error",
-        error: customError,
+        error: err,
       })
     }
 
@@ -478,14 +508,17 @@ export class ZodSafeFunction<
         isSuccess: false,
         isError: true,
         status: "error",
-        error: customError,
+        error: err,
       })
     }
 
     // the error will get returned to the action level
     if (this.$internals.isProcedure) {
-      return [null, customError as any]
+      return [null, err]
     }
+
+    const customError =
+      err instanceof ZSAError ? err : new ZSAError("ERROR", err)
 
     const stringifyIfNeeded = (data: any) =>
       typeof data === "string" ? data : JSON.stringify(data)
@@ -570,17 +603,19 @@ export class ZodSafeFunction<
     }) => TRet
   ): TIsProcedure extends false
     ? TInputType extends "state"
-      ? TStateHandlerFunc<TInputSchema, TOutputSchema, TRet>
+      ? TStateHandlerFunc<TInputSchema, TOutputSchema, TError, TRet>
       : TInputSchema extends z.ZodUndefined
         ? TNoInputHandlerFunc<
             TRet,
             TInputSchema,
             TOutputSchema,
+            TError,
             TProcedureChainOutput
           >
         : THandlerFunc<
             TInputSchema,
             TOutputSchema,
+            TError,
             TRet,
             TProcedureChainOutput,
             TInputType
@@ -590,6 +625,7 @@ export class ZodSafeFunction<
         THandlerFunc<
           TInputSchema,
           TOutputSchema,
+          TError,
           TRet,
           TProcedureChainOutput,
           "json"
@@ -720,6 +756,7 @@ export class ZodSafeFunction<
       const handler: THandlerFunc<
         TInputSchema,
         TOutputSchema,
+        TError,
         TRet,
         TProcedureChainOutput,
         "json"
@@ -741,6 +778,7 @@ export class ZodSafeFunction<
           this.$internals.onSuccessFromProcedureFn,
         timeout: this.$internals.timeout,
         retryConfig: this.$internals.retryConfig,
+        shapeErrorFn: this.$internals.shapeErrorFn,
       }) as any
     }
 
@@ -760,6 +798,7 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
 ): TZodSafeFunction<
   z.ZodUndefined,
   z.ZodUndefined,
+  TZSAError<z.ZodUndefined>,
   TZodSafeFunctionDefaultOmitted,
   undefined,
   TIsProcedure,
@@ -809,6 +848,7 @@ export type inferServerActionInput<TAction extends TAnyZodSafeFunctionHandler> =
 export function createServerAction(): TZodSafeFunction<
   z.ZodUndefined,
   z.ZodUndefined,
+  TZSAError<z.ZodUndefined>,
   TZodSafeFunctionDefaultOmitted,
   undefined,
   false,

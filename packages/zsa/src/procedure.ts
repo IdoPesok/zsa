@@ -5,16 +5,19 @@ import {
   TOnStartFn,
   TOnSuccessFn,
 } from "./callbacks"
+import { TZSAError } from "./errors"
 import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   THandlerOpts,
+  TShapeErrorFn,
   TZodSafeFunctionDefaultOmitted,
 } from "./types"
 import {
   TZodSafeFunction,
   ZodSafeFunction,
   createZodSafeFunction,
+  inferServerActionError,
   inferServerActionReturnData,
 } from "./zod-safe-function"
 
@@ -41,6 +44,8 @@ export interface TCompleteProcedureInternals<
   timeout: number | undefined
   /** The retry config of the procedure */
   retryConfig: RetryConfig | undefined
+  /** the shape error function */
+  shapeErrorFn: TShapeErrorFn | undefined
 }
 
 /** A completed procedure */
@@ -58,9 +63,8 @@ export class CompleteProcedure<
   createServerAction(): TZodSafeFunction<
     TInputSchema,
     z.ZodUndefined,
-    TInputSchema extends z.ZodUndefined
-      ? TZodSafeFunctionDefaultOmitted
-      : Exclude<TZodSafeFunctionDefaultOmitted, "input" | "onInputParseError">,
+    inferServerActionError<THandler>,
+    TZodSafeFunctionDefaultOmitted,
     inferServerActionReturnData<THandler>,
     false,
     "json"
@@ -88,20 +92,16 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
     ? TZodSafeFunction<
         T["$internals"]["inputSchema"],
         z.ZodUndefined,
+        inferServerActionError<T["$internals"]["lastHandler"]>,
         TZodSafeFunctionDefaultOmitted,
-        inferServerActionReturnData<
-          T["$internals"]["lastHandler"]
-        > extends infer TData
-          ? TData extends void
-            ? undefined
-            : TData
-          : never,
+        inferServerActionReturnData<T["$internals"]["lastHandler"]>,
         true,
         "json"
       >
     : TZodSafeFunction<
         z.ZodUndefined,
         z.ZodUndefined,
+        TZSAError<z.ZodUndefined>,
         TZodSafeFunctionDefaultOmitted,
         undefined,
         true,
@@ -174,5 +174,7 @@ export const chainServerActionProcedures = <
     onSuccessFn: second.$internals.onSuccessFn || first.$internals.onSuccessFn,
     onCompleteFn:
       second.$internals.onCompleteFn || first.$internals.onCompleteFn,
+    shapeErrorFn:
+      second.$internals.shapeErrorFn || first.$internals.shapeErrorFn,
   })
 }

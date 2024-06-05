@@ -3,9 +3,8 @@
 import { useCallback, useRef, useState, useTransition } from "react"
 import {
   TAnyZodSafeFunctionHandler,
-  TZSAError,
   ZSAError,
-  inferInputSchemaFromHandler,
+  inferServerActionError,
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
@@ -28,9 +27,7 @@ export const useServerAction = <
 >(
   serverAction: TServerAction,
   opts?: {
-    onError?: (args: {
-      err: TZSAError<inferInputSchemaFromHandler<TServerAction>>
-    }) => void
+    onError?: (args: { err: inferServerActionError<TServerAction> }) => void
     onSuccess?: (args: { data: Awaited<ReturnType<TServerAction>>[0] }) => void
     onStart?: () => void
 
@@ -44,7 +41,7 @@ export const useServerAction = <
 ) => {
   type TResult = {
     isError: boolean
-    error: undefined | TZSAError<inferInputSchemaFromHandler<TServerAction>>
+    error: undefined | inferServerActionError<TServerAction>
     data: undefined | inferServerActionReturnData<TServerAction>
   }
 

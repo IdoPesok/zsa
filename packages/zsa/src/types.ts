@@ -6,7 +6,7 @@ import {
   TOnStartFn,
   TOnSuccessFn,
 } from "./callbacks"
-import { TZSAError, ZSAError } from "./errors"
+import { ZSAError } from "./errors"
 
 /** Replace void with undefined */
 type TCleanData<T extends Promise<any>> =
@@ -15,18 +15,15 @@ type TCleanData<T extends Promise<any>> =
     : Exclude<Awaited<T>, void> | undefined
 
 /** The return type of a server action */
-export type TDataOrError<
-  TInputSchema extends z.ZodType,
-  TData extends Promise<any>,
-> =
+export type TDataOrError<TError extends any, TData extends Promise<any>> =
   | Promise<[TCleanData<TData>, null]>
-  | Promise<[null, TZSAError<TInputSchema>]>
+  | Promise<[null, TError]>
 
 /** The return type of a server action */
 export type TDataOrErrorOrNull<
-  TInputSchema extends z.ZodType,
+  TError extends any,
   TData extends Promise<any>,
-> = [TCleanData<TData>, null] | [null, TZSAError<TInputSchema>] | [null, null]
+> = [TCleanData<TData>, null] | [null, TError] | [null, null]
 
 /** A configuration object for retrying a server action */
 export interface RetryConfig {
@@ -85,6 +82,7 @@ export interface TNoInputHandlerFunc<
   TRet extends any,
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
+  TError extends any,
   TProcedureChainOutput extends any,
 > {
   (
@@ -92,7 +90,7 @@ export interface TNoInputHandlerFunc<
     $overrideArgs?: undefined,
     $opts?: THandlerOpts<TProcedureChainOutput>
   ): TDataOrError<
-    TInputSchema,
+    TError,
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
 }
@@ -101,6 +99,7 @@ export interface TNoInputHandlerFunc<
 export interface THandlerFunc<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
+  TError extends any,
   TRet extends any,
   TProcedureChainOutput extends any,
   TInputType extends InputTypeOptions,
@@ -113,7 +112,7 @@ export interface THandlerFunc<
     /** Options for the handler */
     $opts?: THandlerOpts<TProcedureChainOutput>
   ): TDataOrError<
-    TInputSchema,
+    TError,
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
 }
@@ -122,6 +121,7 @@ export interface THandlerFunc<
 export interface TStateHandlerFunc<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
+  TError extends any,
   TRet extends any,
 > {
   (
@@ -130,12 +130,17 @@ export interface TStateHandlerFunc<
     /** Override the args */
     formData: FormData
   ): TDataOrErrorOrNull<
-    TInputSchema,
+    TError,
     TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
   >
 }
 
-export type TAnyStateHandlerFunc = TStateHandlerFunc<z.ZodType, z.ZodType, any>
+export type TAnyStateHandlerFunc = TStateHandlerFunc<
+  z.ZodType,
+  z.ZodType,
+  any,
+  any
+>
 
 /** a helper type to hold the status of a timeout */
 export interface TimeoutStatus {
@@ -169,12 +174,12 @@ export type TAnyZodSafeFunctionHandler<
       input: any,
       overrideArgs?: any,
       opts?: THandlerOpts<any>
-    ) => TDataOrError<TInputSchema, TData>)
+    ) => TDataOrError<any, TData>)
   | ((
       placeholder?: undefined,
       overrideArgs?: undefined,
       opts?: THandlerOpts<any>
-    ) => TDataOrError<TInputSchema, TData>)
+    ) => TDataOrError<any, TData>)
 
 /** infer input schema */
 export type inferInputSchemaFromHandler<
@@ -182,7 +187,7 @@ export type inferInputSchemaFromHandler<
 > =
   THandler extends TAnyZodSafeFunctionHandler<infer TInputSchema>
     ? TInputSchema
-    : THandler extends TStateHandlerFunc<infer TInputSchema, any, any>
+    : THandler extends TStateHandlerFunc<infer TInputSchema, any, any, any>
       ? TInputSchema
       : z.ZodType
 
@@ -233,6 +238,9 @@ export interface TInternals<
 
   /** A function to run when the handler starts */
   onStartFn?: TOnStartFn<TInputSchema, TIsProcedure> | undefined
+
+  /** A function to return a custom error */
+  shapeErrorFn?: TShapeErrorFn | undefined
 
   /** A function to run when the handler succeeds */
   onSuccessFn?:
@@ -299,3 +307,12 @@ export type PrettifyNested<T> =
         [K in keyof T]: PrettifyNested<T[K]>
       }
     : T
+
+export interface TShapeErrorFn {
+  (error: unknown): any | Promise<any>
+}
+
+export type TZodIntersection<
+  T1 extends z.ZodType,
+  T2 extends z.ZodType,
+> = T1 extends z.ZodUndefined ? T2 : z.ZodIntersection<T1, T2>

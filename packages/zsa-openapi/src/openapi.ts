@@ -4,10 +4,8 @@ import { pathToRegexp } from "path-to-regexp"
 import { z } from "zod"
 import {
   TAnyZodSafeFunctionHandler,
-  TZSAError,
   ZSAResponseMeta,
   formDataToJson,
-  inferInputSchemaFromHandler,
   inferServerActionInput,
 } from "zsa"
 import {
@@ -22,8 +20,8 @@ const FORM_DATA_CONTENT_TYPE = "application/x-www-form-urlencoded"
 const MULTI_PART_CONTENT_TYPE = "multipart/form-data"
 const JSON_CONTENT_TYPE = "application/json"
 
-interface TShapeError<T extends z.ZodType> {
-  (error: TZSAError<T>): any
+interface TShapeError {
+  (error: unknown): any
 }
 
 export type OpenApiContentType =
@@ -430,7 +428,7 @@ const getResponseFromAction = async <
   request: NextRequest,
   action: TAction,
   input: inferServerActionInput<TAction>,
-  shapeError?: TShapeError<inferInputSchemaFromHandler<TAction>>
+  shapeError?: TShapeError
 ) => {
   const responseMeta = new ZSAResponseMeta()
 
@@ -518,7 +516,7 @@ const getResponseFromAction = async <
 export const createRouteHandlers = (
   router: TOpenApiServerActionRouter,
   opts?: {
-    shapeError?: TShapeError<any>
+    shapeError?: TShapeError
   }
 ) => {
   const parseRequest = async (
@@ -667,7 +665,7 @@ export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
   path: `/${string}`,
   action: THandler,
   opts?: {
-    shapeError?: TShapeError<inferInputSchemaFromHandler<THandler>>
+    shapeError?: TShapeError
   }
 ) {
   const router = createOpenApiServerActionRouter()
@@ -705,7 +703,7 @@ export function createRouteHandlersForAction<
 >(
   action: THandler,
   opts?: {
-    shapeError?: TShapeError<inferInputSchemaFromHandler<THandler>>
+    shapeError?: TShapeError
   }
 ) {
   const handler: ApiRouteHandler = async (
