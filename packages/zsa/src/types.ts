@@ -245,19 +245,19 @@ export interface TInternals<
     | undefined
 
   /** The procedure function to run when an error occurs */
-  onErrorFromProcedureFn?: TOnErrorFn | undefined
+  onErrorFromProcedureFn?: Array<TOnErrorFn> | undefined
 
   /** The procedure function to run when the handler starts */
-  onStartFromProcedureFn?: TOnStartFn<TInputSchema, true> | undefined
+  onStartFromProcedureFn?: Array<TOnStartFn<TInputSchema, true>> | undefined
 
   /** The procedure function to run when the handler succeeds */
   onSuccessFromProcedureFn?:
-    | TOnSuccessFn<TInputSchema, TOutputSchema, true>
+    | Array<TOnSuccessFn<TInputSchema, TOutputSchema, true>>
     | undefined
 
   /** The procedure function to run when the handler completes (success or error) */
   onCompleteFromProcedureFn?:
-    | TOnCompleteFn<TInputSchema, TOutputSchema, true>
+    | Array<TOnCompleteFn<TInputSchema, TOutputSchema, true>>
     | undefined
 
   /** Boolean indicating if the procedure has a parent */
