@@ -77,6 +77,7 @@ export const useServerAction = <
   const resultRef = useRef<TResult>(getEmptyResult())
   const executeRef = useRef<any>()
   const [isTransitioning, startTransition] = useTransition()
+  const [isExecuting, setIsExecuting] = useState(false)
 
   const internalExecute = useCallback(
     async (
@@ -112,6 +113,8 @@ export const useServerAction = <
       lastRetryId.current = retryId
 
       if (opts?.onStart) opts.onStart()
+
+      setIsExecuting(true)
 
       let data, err
 
@@ -152,6 +155,8 @@ export const useServerAction = <
           )
         }
 
+        setIsExecuting(false)
+
         // don't retry => update the result
         if (oldResult.status === "filled") {
           setResult(oldResult.result)
@@ -180,6 +185,7 @@ export const useServerAction = <
       }
 
       setResult(res)
+      setIsExecuting(false)
       resultRef.current = res
 
       // clear the old data
@@ -243,13 +249,15 @@ export const useServerAction = <
   const reset = useCallback(() => {
     setResult(getEmptyResult())
     setOldResult(getEmptyOldResult())
+    setIsExecuting(false)
+    setStatus("idle")
     lastRetryId.current = 0
     retryCount.current = 0
   }, [])
 
   let final: TServerActionResult<TServerAction>
 
-  const isPending = isTransitioning
+  const isPending = isTransitioning || isExecuting
 
   useEffect(() => {
     // we need this effect because we won't know when the next.js server action is
