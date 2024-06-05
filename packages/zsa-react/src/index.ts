@@ -24,7 +24,9 @@ export const useServerAction = <
   serverAction: TServerAction,
   opts?: {
     onError?: (args: { err: inferServerActionError<TServerAction> }) => void
-    onSuccess?: (args: { data: Awaited<ReturnType<TServerAction>>[0] }) => void
+    onSuccess?: (args: {
+      data: inferServerActionReturnData<TServerAction>
+    }) => void
     onStart?: () => void
 
     initialData?: inferServerActionReturnData<TServerAction>
@@ -237,7 +239,7 @@ export const useServerAction = <
       executeRef.current?.([resultRef.current.data, null])
       if (opts?.onSuccess) {
         opts.onSuccess({
-          data: resultRef.current.data,
+          data: resultRef.current.data as any,
         })
       }
     }
