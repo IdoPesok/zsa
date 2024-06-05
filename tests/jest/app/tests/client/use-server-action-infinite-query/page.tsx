@@ -25,7 +25,7 @@ function InfiniteQueryUI() {
       {data &&
         data.pages.map((page, i) => {
           return (
-            <div role={"page-" + i}>
+            <div role={"page-" + i} key={i}>
               {page.items.map((item: { id: number; name: string }) => {
                 return <div key={item.id}>{item.name}</div>
               })}

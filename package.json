@@ -31,6 +31,7 @@
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@tanstack/react-query": "^5.36.2",
+    "@testing-library/react": "^16.0.0",
     "prettier": "^3.2.5",
     "prettier-plugin-organize-imports": "^3.2.4",
     "turbo": "latest",

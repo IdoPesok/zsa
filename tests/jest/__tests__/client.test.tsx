@@ -5,11 +5,14 @@ import UserGreetingUI from "app/tests/client/get-user-greeting-action/page"
 import HelloWorldUI from "app/tests/client/hello-world-action/page"
 import OptimisticUpdatesUI from "app/tests/client/optimistic-updates/page"
 import ResetUI from "app/tests/client/reset/page"
+import RetryStatesUI from "app/tests/client/retry-states/page"
 import StatesUI from "app/tests/client/states/page"
 import InfiniteQueryUI from "app/tests/client/use-server-action-infinite-query/page"
 import MutationUI from "app/tests/client/use-server-action-mutation/page"
 import QueryUI from "app/tests/client/use-server-action-query/page"
+import { sleep } from "lib/utils"
 import { cookies } from "next/headers"
+import { act } from "react"
 import { CLIENT_TEST_DATA, TEST_DATA } from "server/data"
 
 jest.mock("next/headers", () => ({
@@ -242,6 +245,44 @@ describe("client", () => {
 
       const resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
       expect(resultElement).toHaveTextContent(TEST_DATA.errors.string)
+    })
+  })
+
+  describe("useServerAction retries", () => {
+    it.only("handles retry states correctly", async () => {
+      render(<RetryStatesUI />)
+
+      const isErrorElement = screen.getByRole("isError")
+      expect(isErrorElement).toHaveTextContent("false")
+
+      const invokeButton = screen.getByRole("invoke")
+      fireEvent.click(invokeButton)
+
+      // Check that isPending is true immediately after clicking the button
+      const isPendingElement = screen.getByRole("isPending")
+      expect(isPendingElement).toHaveTextContent("yes")
+      expect(isErrorElement).toHaveTextContent("false")
+
+      // Calculate the expected retry time
+      const expectedRetryTime =
+        (TEST_DATA.retries.maxAttempts - 1) * TEST_DATA.retries.delay
+
+      // make sure pending is still true for the entire expected retry time
+      let batches = 10
+      for (let i = 0; i < batches; i++) {
+        await act(async () => {
+          await sleep((expectedRetryTime - batches) / batches)
+          expect(isPendingElement).toHaveTextContent("yes")
+          expect(isErrorElement).toHaveTextContent("false")
+        })
+      }
+
+      await act(async () => {
+        await sleep(50)
+      })
+
+      expect(isPendingElement).toHaveTextContent("no")
+      expect(isErrorElement).toHaveTextContent("true")
     })
   })
 
