@@ -3,7 +3,6 @@
   "private": true,
   "scripts": {
     "test": "jest",
-    "dev": "next dev --port 3000",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit"
   },
