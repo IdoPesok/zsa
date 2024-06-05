@@ -6,6 +6,7 @@ import {
   TZSAError,
   ZSAError,
   inferInputSchemaFromHandler,
+  inferServerActionError,
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
@@ -28,9 +29,7 @@ export const useServerAction = <
 >(
   serverAction: TServerAction,
   opts?: {
-    onError?: (args: {
-      err: TZSAError<inferInputSchemaFromHandler<TServerAction>>
-    }) => void
+    onError?: (args: { err: inferServerActionError<TServerAction> }) => void
     onSuccess?: (args: { data: Awaited<ReturnType<TServerAction>>[0] }) => void
     onStart?: () => void
 
@@ -266,7 +265,7 @@ export const useServerAction = <
     // invoke the onSuccess and onError callbacks.
     if (isPending) return
     if (status === "success") {
-      executeRef.current?.([resultRef.current.data])
+      executeRef.current?.([resultRef.current.data, null])
       if (opts?.onSuccess) {
         opts.onSuccess({
           data: resultRef.current.data,
@@ -275,7 +274,7 @@ export const useServerAction = <
     }
 
     if (status === "error") {
-      executeRef.current?.([undefined, resultRef.current.error])
+      executeRef.current?.([null, resultRef.current.error])
       if (opts?.onError) {
         opts.onError({
           err: resultRef.current.error as any,
