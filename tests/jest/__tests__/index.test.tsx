@@ -34,7 +34,7 @@ import {
 } from "server/actions"
 import { RetryState, TEST_DATA } from "server/data"
 import { z } from "zod"
-import { createServerAction } from "zsa"
+import { createServerActionProcedure } from "zsa"
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(),
@@ -620,29 +620,81 @@ describe("actions", () => {
   })
 
   describe("callbacks", () => {
-    let onStartMock: jest.Mock
-    let onSuccessMock: jest.Mock
-    let onCompleteMock: jest.Mock
-    let onErrorMock: jest.Mock
+    let onStartMockA: jest.Mock
+    let onStartMockB: jest.Mock
+    let onStartMockC: jest.Mock
+
+    let onSuccessMockA: jest.Mock
+    let onSuccessMockB: jest.Mock
+    let onSuccessMockC: jest.Mock
+
+    let onCompleteMockA: jest.Mock
+    let onCompleteMockB: jest.Mock
+    let onCompleteMockC: jest.Mock
+
+    let onErrorMockA: jest.Mock
+    let onErrorMockB: jest.Mock
+    let onErrorMockC: jest.Mock
+
     let onInputParseErrorMock: jest.Mock
+    let onOutputParseErrorMock: jest.Mock
+
     let testCallbacksAction: any
 
     beforeEach(() => {
-      onStartMock = jest.fn()
-      onSuccessMock = jest.fn()
-      onCompleteMock = jest.fn()
-      onErrorMock = jest.fn()
+      onStartMockA = jest.fn()
+      onStartMockB = jest.fn()
+      onStartMockC = jest.fn()
+
+      onSuccessMockA = jest.fn()
+      onSuccessMockB = jest.fn()
+      onSuccessMockC = jest.fn()
+
+      onCompleteMockA = jest.fn()
+      onCompleteMockB = jest.fn()
+      onCompleteMockC = jest.fn()
+
+      onErrorMockA = jest.fn()
+      onErrorMockB = jest.fn()
+      onErrorMockC = jest.fn()
+
       onInputParseErrorMock = jest.fn()
-      testCallbacksAction = createServerAction()
-        .input(z.object({ shouldError: z.boolean() }))
-        .onStart(onStartMock)
-        .onSuccess(onSuccessMock)
-        .onComplete(onCompleteMock)
-        .onError(onErrorMock)
+      onOutputParseErrorMock = jest.fn()
+
+      // create a chained procedure with all callbacks set
+      testCallbacksAction = createServerActionProcedure(
+        createServerActionProcedure()
+          .onStart(onStartMockA)
+          .onSuccess(onSuccessMockA)
+          .onComplete(onCompleteMockA)
+          .onError(onErrorMockA)
+          .handler(() => {})
+      )
+        .onStart(onStartMockB)
+        .onSuccess(onSuccessMockB)
+        .onComplete(onCompleteMockB)
+        .onError(onErrorMockB)
+        .handler(() => {})
+        .createServerAction()
+        .input(
+          z.object({
+            shouldError: z.boolean(),
+            shouldOutputError: z.boolean().optional(),
+          })
+        )
+        .onStart(onStartMockC)
+        .onSuccess(onSuccessMockC)
+        .onComplete(onCompleteMockC)
+        .onError(onErrorMockC)
         .onInputParseError(onInputParseErrorMock)
+        .output(z.string())
+        .onOutputParseError(onOutputParseErrorMock)
         .handler(async ({ input }) => {
           if (input.shouldError) {
             throw new Error("Test error")
+          }
+          if (input.shouldOutputError) {
+            return { wrongOutput: true } as any
           }
           return "Test success"
         })
@@ -652,46 +704,155 @@ describe("actions", () => {
       const [data, err] = await testCallbacksAction({ shouldError: false })
       expect(data).toEqual("Test success")
       expect(err).toBeNull()
-      expect(onStartMock).toHaveBeenCalledWith({ args: { shouldError: false } })
-      expect(onSuccessMock).toHaveBeenCalledWith({
-        args: { shouldError: false },
-        data: "Test success",
-      })
-      expect(onCompleteMock).toHaveBeenCalledWith({
-        isSuccess: true,
-        isError: false,
-        status: "success",
-        args: { shouldError: false },
-        data: "Test success",
-      })
-      expect(onErrorMock).not.toHaveBeenCalled()
+
+      for (const onStartMock of [onStartMockA, onStartMockB, onStartMockC]) {
+        expect(onStartMock).toHaveBeenCalledWith({
+          args: { shouldError: false },
+        })
+      }
+
+      for (const onSuccessMock of [
+        onSuccessMockA,
+        onSuccessMockB,
+        onSuccessMockC,
+      ]) {
+        expect(onSuccessMock).toHaveBeenCalledWith({
+          args: { shouldError: false },
+          data: "Test success",
+        })
+      }
+
+      for (const onCompleteMock of [
+        onCompleteMockA,
+        onCompleteMockB,
+        onCompleteMockC,
+      ]) {
+        expect(onCompleteMock).toHaveBeenCalledWith({
+          isSuccess: true,
+          isError: false,
+          status: "success",
+          args: { shouldError: false },
+          data: "Test success",
+        })
+      }
+
+      for (const onErrorMock of [onErrorMockA, onErrorMockB, onErrorMockC]) {
+        expect(onErrorMock).not.toHaveBeenCalled()
+      }
+
       expect(onInputParseErrorMock).not.toHaveBeenCalled()
+      expect(onOutputParseErrorMock).not.toHaveBeenCalled()
     })
 
     it("executes onStart, onError, and onComplete callbacks on error", async () => {
       const [data, err] = await testCallbacksAction({ shouldError: true })
       expect(data).toBeNull()
       expect(err).not.toBeNull()
-      expect(onStartMock).toHaveBeenCalledWith({ args: { shouldError: true } })
-      expect(onErrorMock).toHaveBeenCalled()
-      expect(onCompleteMock).toHaveBeenCalled()
-      expect(onSuccessMock).not.toHaveBeenCalled()
+
+      for (const onStartMock of [onStartMockA, onStartMockB, onStartMockC]) {
+        expect(onStartMock).toHaveBeenCalledWith({
+          args: { shouldError: true },
+        })
+      }
+
+      for (const onSuccessMock of [
+        onSuccessMockA,
+        onSuccessMockB,
+        onSuccessMockC,
+      ]) {
+        expect(onSuccessMock).not.toHaveBeenCalled()
+      }
+
+      for (const onCompleteMock of [
+        onCompleteMockA,
+        onCompleteMockB,
+        onCompleteMockC,
+      ]) {
+        expect(onCompleteMock).toHaveBeenCalled()
+      }
+
+      for (const onErrorMock of [onErrorMockA, onErrorMockB, onErrorMockC]) {
+        expect(onErrorMock).toHaveBeenCalled()
+      }
+
       expect(onInputParseErrorMock).not.toHaveBeenCalled()
+      expect(onOutputParseErrorMock).not.toHaveBeenCalled()
     })
 
     it("executes onStart, onInputParseError, and onComplete callbacks on input parse error", async () => {
       const [data, err] = await testCallbacksAction({
         shouldError: "invalid",
       } as any)
+
       expect(data).toBeNull()
       expect(err).not.toBeNull()
-      expect(onStartMock).toHaveBeenCalledWith({
-        args: { shouldError: "invalid" },
-      })
+
+      for (const onStartMock of [onStartMockA, onStartMockB, onStartMockC]) {
+        expect(onStartMock).toHaveBeenCalledWith({
+          args: { shouldError: "invalid" },
+        })
+      }
+
+      for (const onSuccessMock of [
+        onSuccessMockA,
+        onSuccessMockB,
+        onSuccessMockC,
+      ]) {
+        expect(onSuccessMock).not.toHaveBeenCalled()
+      }
+
+      for (const onCompleteMock of [
+        onCompleteMockA,
+        onCompleteMockB,
+        onCompleteMockC,
+      ]) {
+        expect(onCompleteMock).toHaveBeenCalled()
+      }
+
+      for (const onErrorMock of [onErrorMockA, onErrorMockB, onErrorMockC]) {
+        expect(onErrorMock).toHaveBeenCalled()
+      }
+
       expect(onInputParseErrorMock).toHaveBeenCalled()
-      expect(onCompleteMock).toHaveBeenCalled()
-      expect(onSuccessMock).not.toHaveBeenCalled()
-      expect(onErrorMock).toHaveBeenCalled()
+      expect(onOutputParseErrorMock).not.toHaveBeenCalled()
+    })
+
+    it("executes onStart, onSuccess, and onComplete callbacks on output parse error", async () => {
+      const [data, err] = await testCallbacksAction({
+        shouldError: false,
+        shouldOutputError: true,
+      })
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+
+      for (const onStartMock of [onStartMockA, onStartMockB, onStartMockC]) {
+        expect(onStartMock).toHaveBeenCalledWith({
+          args: { shouldOutputError: true, shouldError: false },
+        })
+      }
+
+      for (const onSuccessMock of [
+        onSuccessMockA,
+        onSuccessMockB,
+        onSuccessMockC,
+      ]) {
+        expect(onSuccessMock).not.toHaveBeenCalled()
+      }
+
+      for (const onCompleteMock of [
+        onCompleteMockA,
+        onCompleteMockB,
+        onCompleteMockC,
+      ]) {
+        expect(onCompleteMock).toHaveBeenCalled()
+      }
+
+      for (const onErrorMock of [onErrorMockA, onErrorMockB, onErrorMockC]) {
+        expect(onErrorMock).toHaveBeenCalled()
+      }
+
+      expect(onInputParseErrorMock).not.toHaveBeenCalled()
+      expect(onOutputParseErrorMock).toHaveBeenCalled()
     })
   })
 })
