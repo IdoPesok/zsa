@@ -12,7 +12,8 @@ export default function IncrementExample() {
   const { isPending, execute, data, error, isError } = useServerAction(
     incrementNumberAction,
     {
-      onSuccess() {
+      onSuccess({ data: count }) {
+        setCounter(count ?? 0)
         console.log("isPending", isPending)
         if (isPending) {
           alert("success was called even before transition was done")
@@ -29,17 +30,10 @@ export default function IncrementExample() {
       <CardContent className="flex flex-col gap-4">
         <Button
           disabled={isPending}
-          onClick={async () => {
-            const [data, err] = await execute({
+          onClick={() => {
+            execute({
               number: counter,
             })
-
-            if (err) {
-              alert("got error : (")
-              return
-            }
-
-            setCounter(data)
           }}
         >
           Invoke action

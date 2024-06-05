@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import {
   TAnyZodSafeFunctionHandler,
   TZSAError,
@@ -69,10 +69,13 @@ export const useServerAction = <
           data: initialData,
         }
   )
+  const [status, setStatus] =
+    useState<TServerActionResult<TServerAction>["status"]>("idle")
   const [oldResult, setOldResult] = useState<TOldResult>(getEmptyOldResult())
-  const [isExecuting, setIsExecuting] = useState(false)
   const lastRetryId = useRef(0)
   const retryCount = useRef(0)
+  const resultRef = useRef<TResult>(getEmptyResult())
+  const executeRef = useRef<any>()
   const [isTransitioning, startTransition] = useTransition()
 
   const internalExecute = useCallback(
@@ -83,6 +86,7 @@ export const useServerAction = <
       }
     ): Promise<inferServerActionReturnType<TServerAction>> => {
       const { isFromRetryId } = args || {}
+      setStatus("pending")
 
       // if the retry ids don't match, we should not refetch
       if (isFromRetryId && lastRetryId.current !== isFromRetryId) {
@@ -109,8 +113,6 @@ export const useServerAction = <
 
       if (opts?.onStart) opts.onStart()
 
-      setIsExecuting(true)
-
       let data, err
 
       await serverAction(input).then((response) => {
@@ -122,12 +124,7 @@ export const useServerAction = <
       })
 
       if (err) {
-        if (opts?.onError) {
-          opts.onError({
-            err: err as any,
-          })
-        }
-
+        setStatus("error")
         // calculate if we should retry
         const retryConfig = opts?.retry
         const shouldRetry = retryConfig
@@ -155,13 +152,14 @@ export const useServerAction = <
           )
         }
 
-        setIsExecuting(false)
-
         // don't retry => update the result
         if (oldResult.status === "filled") {
           setResult(oldResult.result)
+          resultRef.current = oldResult.result
         } else {
-          setResult({ error: err as any, isError: true, data: undefined })
+          const res = { error: err as any, isError: true, data: undefined }
+          setResult(res)
+          resultRef.current = res
         }
 
         // clear the old data
@@ -173,16 +171,16 @@ export const useServerAction = <
         return [data, err] as any
       }
 
-      opts?.onSuccess?.({
-        data,
-      })
+      setStatus("success")
 
-      setResult({
+      const res = {
         isError: false,
         error: undefined,
         data: data ?? undefined,
-      })
-      setIsExecuting(false)
+      }
+
+      setResult(res)
+      resultRef.current = res
 
       // clear the old data
       setOldResult({
@@ -202,8 +200,9 @@ export const useServerAction = <
         : [Parameters<TServerAction>[0]]
     ): Promise<inferServerActionReturnType<TServerAction>> => {
       return await new Promise((resolve) => {
+        executeRef.current = resolve
         startTransition(() => {
-          internalExecute(opts[0]).then(resolve)
+          internalExecute(opts[0])
         })
       })
     },
@@ -244,14 +243,38 @@ export const useServerAction = <
   const reset = useCallback(() => {
     setResult(getEmptyResult())
     setOldResult(getEmptyOldResult())
-    setIsExecuting(false)
     lastRetryId.current = 0
     retryCount.current = 0
   }, [])
 
   let final: TServerActionResult<TServerAction>
 
-  const isPending = isTransitioning || isExecuting
+  const isPending = isTransitioning
+
+  useEffect(() => {
+    // we need this effect because we won't know when the next.js server action is
+    // actually done until the transition finishes and sets isTransitioning back to false.
+    // when the transition finishes, we call resolve the executeRef.current promise and also
+    // invoke the onSuccess and onError callbacks.
+    if (isPending) return
+    if (status === "success") {
+      executeRef.current?.([resultRef.current.data])
+      if (opts?.onSuccess) {
+        opts.onSuccess({
+          data: resultRef.current.data,
+        })
+      }
+    }
+
+    if (status === "error") {
+      executeRef.current?.([undefined, resultRef.current.error])
+      if (opts?.onError) {
+        opts.onError({
+          err: resultRef.current.error as any,
+        })
+      }
+    }
+  }, [status, isPending])
 
   if (isPending && oldResult.status === "empty") {
     final = {
