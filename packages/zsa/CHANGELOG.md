@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.3.2
+
+### Patch Changes
+
+- 4f5a8da: Callbacks from chained procedures will run sequentially, like handlers, rather than overwrite each other
+
 ## 0.3.1
 
 ### Patch Changes
