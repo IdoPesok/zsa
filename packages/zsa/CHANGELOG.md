@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.3.3
+
+### Patch Changes
+
+- 0816106: remove stack from error
+
 ## 0.3.2
 
 ### Patch Changes
