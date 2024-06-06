@@ -33,6 +33,7 @@ export const useServerAction = <
     }) => void
     onSuccess?: (args: { data: Awaited<ReturnType<TServerAction>>[0] }) => void
     onStart?: () => void
+    onFinish?: () => void
 
     initialData?: inferServerActionReturnData<TServerAction>
 
@@ -126,6 +127,7 @@ export const useServerAction = <
           opts.onError({
             err: err as any,
           })
+          opts?.onFinish?.()
         }
 
         // calculate if we should retry
@@ -176,6 +178,8 @@ export const useServerAction = <
       opts?.onSuccess?.({
         data,
       })
+
+      opts?.onFinish?.()
 
       setResult({
         isError: false,
