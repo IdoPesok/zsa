@@ -28,6 +28,7 @@ export const useServerAction = <
       data: inferServerActionReturnData<TServerAction>
     }) => void
     onStart?: () => void
+    onFinish?: () => void
 
     initialData?: inferServerActionReturnData<TServerAction>
 
@@ -242,6 +243,7 @@ export const useServerAction = <
           data: resultRef.current.data as any,
         })
       }
+      opts?.onFinish?.()
     }
 
     // handle the error state
@@ -252,6 +254,7 @@ export const useServerAction = <
           err: resultRef.current.error as any,
         })
       }
+      opts?.onFinish?.()
     }
   }, [status, isPending])
 
