@@ -1,5 +1,13 @@
 # server-actions-wrapper
 
+## 0.1.4
+
+### Patch Changes
+
+- 4f5a8da: Fixes case where useServerAction would invoke onSuccess before the server action was done running revalidatePath or redirect
+- Updated dependencies [4f5a8da]
+  - zsa@0.3.2
+
 ## 0.1.3
 
 ### Patch Changes
