@@ -1,11 +1,9 @@
 "use client"
 
 import {
-  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
   GetNextPageParamFunction,
   InfiniteData,
-  UseInfiniteQueryResult,
   UseQueryResult,
 } from "@tanstack/react-query"
 import {
@@ -81,15 +79,15 @@ export const setupServerActionHooks = <
       initialData?: TInitialData
     },
     queryClient?: Parameters<typeof useInfiniteQuery>[1]
-  ): TInitialData extends undefined
-    ? UseInfiniteQueryResult<
-        inferServerActionReturnData<THandler>,
-        inferServerActionError<THandler>
-      >
-    : DefinedUseInfiniteQueryResult<
-        inferServerActionReturnData<THandler>,
-        inferServerActionError<THandler>
-      > => {
+  ): ReturnType<
+    typeof useInfiniteQuery<
+      inferServerActionReturnData<THandler>,
+      inferServerActionError<THandler>,
+      InfiniteData<inferServerActionReturnData<THandler>>,
+      TQueryKey,
+      TPageParam
+    >
+  > => {
     return useInfiniteQuery(
       {
         ...options,

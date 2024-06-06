@@ -1,79 +1,78 @@
 "use client"
 
-import { useCallback, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import {
   TAnyZodSafeFunctionHandler,
-  TZSAError,
-  ZSAError,
-  inferInputSchemaFromHandler,
+  inferServerActionError,
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
-import { TServerActionResult } from "./results"
-
-const getEmptyResult = () => ({
-  isError: false,
-  error: undefined,
-  data: undefined,
-})
-
-const getEmptyOldResult = () =>
-  ({
-    status: "empty",
-    result: undefined,
-  }) as const
+import { TSetOptimisticInput, evaluateOptimisticInput } from "./optimistic"
+import {
+  TInnerResult,
+  TOldResult,
+  TServerActionResult,
+  calculateResultFromState,
+  getEmptyOldResult,
+  getEmptyResult,
+} from "./results"
+import { RetryConfig, getRetryDelay } from "./retries"
 
 export const useServerAction = <
   const TServerAction extends TAnyZodSafeFunctionHandler,
 >(
   serverAction: TServerAction,
   opts?: {
-    onError?: (args: {
-      err: TZSAError<inferInputSchemaFromHandler<TServerAction>>
+    onError?: (args: { err: inferServerActionError<TServerAction> }) => void
+    onSuccess?: (args: {
+      data: inferServerActionReturnData<TServerAction>
     }) => void
-    onSuccess?: (args: { data: Awaited<ReturnType<TServerAction>>[0] }) => void
     onStart?: () => void
+    onFinish?: (result: inferServerActionReturnType<TServerAction>) => void
 
     initialData?: inferServerActionReturnData<TServerAction>
 
-    retry?: {
-      maxAttempts: number
-      delay?: number | ((currentAttempt: number, err: ZSAError) => number)
-    }
+    retry?: RetryConfig<TServerAction>
   }
 ) => {
-  type TResult = {
-    isError: boolean
-    error: undefined | TZSAError<inferInputSchemaFromHandler<TServerAction>>
-    data: undefined | inferServerActionReturnData<TServerAction>
-  }
-
-  type TOldResult =
-    | {
-        status: "empty"
-        result: undefined
-      }
-    | {
-        status: "filled"
-        result: TResult
-      }
-
   const initialData = opts?.initialData
 
-  const [result, setResult] = useState<TResult>(
-    !initialData
-      ? getEmptyResult()
-      : {
-          isError: false,
-          error: undefined,
-          data: initialData,
-        }
+  // store the result in state and a ref
+  const [result, $setResult] = useState<TInnerResult<TServerAction>>(
+    getEmptyResult(initialData)
   )
-  const [oldResult, setOldResult] = useState<TOldResult>(getEmptyOldResult())
-  const [isExecuting, setIsExecuting] = useState(false)
+  const resultRef = useRef<TInnerResult<TServerAction>>(
+    getEmptyResult(initialData)
+  )
+
+  // store the old result in state and a ref
+  const [oldResult, $setOldResult] =
+    useState<TOldResult<TServerAction>>(getEmptyOldResult())
+  const oldResultRef = useRef<TOldResult<TServerAction>>(getEmptyOldResult())
+
+  // store retry data
   const lastRetryId = useRef(0)
   const retryCount = useRef(0)
+
+  // store the resolve function for execute
+  const executeRef = useRef<any>()
+
+  // keep track of pending states
   const [isTransitioning, startTransition] = useTransition()
+  const [status, setStatus] =
+    useState<TServerActionResult<TServerAction>["status"]>("idle")
+
+  // set the result state and ref
+  const setResult = useCallback((result: TInnerResult<TServerAction>) => {
+    $setResult(result)
+    resultRef.current = result
+  }, [])
+
+  // set the old result state and ref
+  const setOldResult = useCallback((oldResult: TOldResult<TServerAction>) => {
+    $setOldResult(oldResult)
+    oldResultRef.current = oldResult
+  }, [])
 
   const internalExecute = useCallback(
     async (
@@ -81,7 +80,7 @@ export const useServerAction = <
       args?: {
         isFromRetryId?: number
       }
-    ): Promise<inferServerActionReturnType<TServerAction>> => {
+    ) => {
       const { isFromRetryId } = args || {}
 
       // if the retry ids don't match, we should not refetch
@@ -109,7 +108,7 @@ export const useServerAction = <
 
       if (opts?.onStart) opts.onStart()
 
-      setIsExecuting(true)
+      setStatus("pending")
 
       let data, err
 
@@ -122,27 +121,8 @@ export const useServerAction = <
       })
 
       if (err) {
-        if (opts?.onError) {
-          opts.onError({
-            err: err as any,
-          })
-        }
-
-        // calculate if we should retry
-        const retryConfig = opts?.retry
-        const shouldRetry = retryConfig
-          ? retryCount.current + 1 < retryConfig.maxAttempts
-          : false
-
-        let retryDelay = 0
-        const retryDelayOpt = retryConfig?.delay
-        if (retryDelayOpt && typeof retryDelayOpt === "function") {
-          retryDelay = retryDelayOpt(retryCount.current + 1, err)
-        } else if (retryDelayOpt && typeof retryDelayOpt === "number") {
-          retryDelay = retryDelayOpt
-        }
-
-        if (shouldRetry) {
+        let retryDelay = getRetryDelay(opts?.retry, retryCount.current, err)
+        if (retryDelay >= 0) {
           // execute the retry logic
           retryCount.current += 1
           return await new Promise((resolve) =>
@@ -155,13 +135,13 @@ export const useServerAction = <
           )
         }
 
-        setIsExecuting(false)
+        setStatus("error")
 
         // don't retry => update the result
         if (oldResult.status === "filled") {
           setResult(oldResult.result)
         } else {
-          setResult({ error: err as any, isError: true, data: undefined })
+          setResult({ error: err, isError: true, data: undefined })
         }
 
         // clear the old data
@@ -173,16 +153,16 @@ export const useServerAction = <
         return [data, err] as any
       }
 
-      opts?.onSuccess?.({
-        data,
-      })
+      // success state
+      setStatus("success")
 
-      setResult({
+      const res = {
         isError: false,
         error: undefined,
         data: data ?? undefined,
-      })
-      setIsExecuting(false)
+      }
+
+      setResult(res)
 
       // clear the old data
       setOldResult({
@@ -202,8 +182,9 @@ export const useServerAction = <
         : [Parameters<TServerAction>[0]]
     ): Promise<inferServerActionReturnType<TServerAction>> => {
       return await new Promise((resolve) => {
+        executeRef.current = resolve
         startTransition(() => {
-          internalExecute(opts[0]).then(resolve)
+          internalExecute(opts[0])
         })
       })
     },
@@ -211,19 +192,12 @@ export const useServerAction = <
   )
 
   const setOptimistic = useCallback(
-    async (
-      fn:
-        | ((
-            current: typeof result.data
-          ) => NonNullable<Awaited<ReturnType<TServerAction>>[0]>)
-        | NonNullable<Awaited<ReturnType<TServerAction>>[0]>
-    ) => {
-      function isFunction(value: any): value is Function {
-        return typeof value === "function"
-      }
-      const data = isFunction(fn)
-        ? fn(oldResult.status === "empty" ? result.data : oldResult.result.data)
-        : fn
+    async (fn: TSetOptimisticInput<TServerAction>) => {
+      const data = evaluateOptimisticInput(
+        fn,
+        oldResultRef.current,
+        resultRef.current
+      )
 
       if (oldResult.status === "empty") {
         setOldResult({
@@ -244,69 +218,55 @@ export const useServerAction = <
   const reset = useCallback(() => {
     setResult(getEmptyResult())
     setOldResult(getEmptyOldResult())
-    setIsExecuting(false)
+    setStatus("idle")
     lastRetryId.current = 0
     retryCount.current = 0
   }, [])
 
-  let final: TServerActionResult<TServerAction>
+  // check if the status is pending
+  // NOTE: during retries, the status is "pending" but the transition is not
+  //       complete, so we need to check the status to see if it is pending
+  const isPending = isTransitioning || status === "pending"
 
-  const isPending = isTransitioning || isExecuting
+  useEffect(() => {
+    // we need this effect because we won't know when the next.js server action is
+    // actually done until the transition finishes and sets isTransitioning back to false.
+    // when the transition finishes, we call resolve the executeRef.current promise and also
+    // invoke the onSuccess and onError callbacks.
+    if (isPending) return
 
-  if (isPending && oldResult.status === "empty") {
-    final = {
-      isPending: true,
-      isOptimistic: false,
-      data: undefined,
-      isError: false,
-      error: undefined,
-      isSuccess: false,
-      status: "pending",
+    // handle the success state
+    if (status === "success") {
+      executeRef.current?.([resultRef.current.data, null])
+
+      // call success callback
+      opts?.onSuccess?.({
+        data: resultRef.current.data as any,
+      })
+
+      // call finish callback
+      opts?.onFinish?.([resultRef.current.data, null] as any)
     }
-  } else if (isPending && oldResult.status === "filled" && result.data) {
-    final = {
-      isPending: true,
-      isOptimistic: true,
-      data: result.data,
-      isError: false,
-      error: undefined,
-      isSuccess: false,
-      status: "pending",
+
+    // handle the error state
+    if (status === "error") {
+      executeRef.current?.([null, resultRef.current.error])
+
+      // call error callback
+      opts?.onError?.({
+        err: resultRef.current.error as any,
+      })
+
+      // call finish callback
+      opts?.onFinish?.([null, resultRef.current.error] as any)
     }
-  } else if (!result.isError && result.data) {
-    // success state
-    final = {
-      isPending: false,
-      isOptimistic: false,
-      data: result.data,
-      isError: false,
-      error: undefined,
-      isSuccess: true,
-      status: "success",
-    }
-  } else if (result.isError) {
-    // error state
-    final = {
-      isPending: false,
-      data: undefined,
-      isError: true,
-      error: result.error as any,
-      isOptimistic: false,
-      isSuccess: false,
-      status: "error",
-    }
-  } else {
-    // idle state
-    final = {
-      isPending: false,
-      data: undefined,
-      isOptimistic: false,
-      isError: false,
-      error: undefined,
-      isSuccess: false,
-      status: "idle",
-    }
-  }
+  }, [status, isPending])
+
+  const final = calculateResultFromState<TServerAction>({
+    isPending,
+    oldResult,
+    result: resultRef.current,
+  })
 
   return {
     ...final,

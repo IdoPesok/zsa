@@ -11,6 +11,7 @@ import {
   THandlerOpts,
   TZodSafeFunctionDefaultOmitted,
 } from "./types"
+import { mergeArraysAndRemoveDuplicates } from "./utils"
 import {
   TZodSafeFunction,
   ZodSafeFunction,
@@ -29,14 +30,14 @@ export interface TCompleteProcedureInternals<
   handlerChain: TAnyZodSafeFunctionHandler[]
   /** The last handler in the chain */
   lastHandler: THandler
-  /** The most recent error handler */
-  onErrorFn: TOnErrorFn | undefined
-  /** The most recent onStart handler */
-  onStartFn: TOnStartFn<any, true> | undefined
-  /** The most recent onSuccess handler */
-  onSuccessFn: TOnSuccessFn<any, any, true> | undefined
-  /** The most recent onComplete handler */
-  onCompleteFn: TOnCompleteFn<any, any, true> | undefined
+  /** A chain of error handlers */
+  onErrorFns: Array<TOnErrorFn> | undefined
+  /** A chain of start handlers */
+  onStartFns: Array<TOnStartFn<any, true>> | undefined
+  /** A chain of success handlers */
+  onSuccessFns: Array<TOnSuccessFn<any, any, true>> | undefined
+  /** A chain of complete handlers */
+  onCompleteFns: Array<TOnCompleteFn<any, any, true>> | undefined
   /** The timeout of the procedure */
   timeout: number | undefined
   /** The retry config of the procedure */
@@ -69,10 +70,10 @@ export class CompleteProcedure<
       inputSchema: this.$internals.inputSchema,
       outputSchema: z.undefined(),
       procedureHandlerChain: this.$internals.handlerChain,
-      onErrorFromProcedureFn: this.$internals.onErrorFn,
-      onStartFromProcedureFn: this.$internals.onStartFn,
-      onSuccessFromProcedureFn: this.$internals.onSuccessFn,
-      onCompleteFromProcedureFn: this.$internals.onCompleteFn,
+      onErrorFromProcedureFn: this.$internals.onErrorFns,
+      onStartFromProcedureFn: this.$internals.onStartFns,
+      onSuccessFromProcedureFn: this.$internals.onSuccessFns,
+      onCompleteFromProcedureFn: this.$internals.onCompleteFns,
       timeout: this.$internals.timeout,
       retryConfig: this.$internals.retryConfig,
     }) as any
@@ -169,10 +170,21 @@ export const chainServerActionProcedures = <
     lastHandler: newLastHandler,
     timeout: second.$internals.timeout || first.$internals.timeout,
     retryConfig: second.$internals.retryConfig || first.$internals.retryConfig,
-    onErrorFn: second.$internals.onErrorFn || first.$internals.onErrorFn,
-    onStartFn: second.$internals.onStartFn || first.$internals.onStartFn,
-    onSuccessFn: second.$internals.onSuccessFn || first.$internals.onSuccessFn,
-    onCompleteFn:
-      second.$internals.onCompleteFn || first.$internals.onCompleteFn,
+    onErrorFns: mergeArraysAndRemoveDuplicates(
+      first.$internals.onErrorFns,
+      second.$internals.onErrorFns
+    ),
+    onStartFns: mergeArraysAndRemoveDuplicates(
+      first.$internals.onStartFns,
+      second.$internals.onStartFns
+    ),
+    onSuccessFns: mergeArraysAndRemoveDuplicates(
+      first.$internals.onSuccessFns,
+      second.$internals.onSuccessFns
+    ),
+    onCompleteFns: mergeArraysAndRemoveDuplicates(
+      first.$internals.onCompleteFns,
+      second.$internals.onCompleteFns
+    ),
   })
 }
