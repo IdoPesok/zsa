@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react"
-import { toast } from "sonner"
 import { useServerAction } from "zsa-react"
 import { incrementNumberAction } from "./actions"
 
@@ -32,7 +31,6 @@ export default function IncrementExample() {
               return
             }
 
-            toast("got data" + data)
             setCounter(data)
           }}
         >

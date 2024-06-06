@@ -1,6 +1,5 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
 import z from "zod"
 import { createServerAction } from "zsa"
 
@@ -12,10 +11,7 @@ export const incrementNumberAction = createServerAction()
   )
   .handler(async ({ input }) => {
     await new Promise((resolve) => setTimeout(resolve, 500))
-
-    revalidatePath("/revalidate", "page")
-
-    return input.number + 2
+    return input.number + 1
   })
 
 export const plainAction = createServerAction().handler(async () => {
