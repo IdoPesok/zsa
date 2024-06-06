@@ -41,7 +41,7 @@ throw new ZSAError(
 
 The first argument to the `ZSAError` constructor is the error code, and the second argument is the error data. The error data can be any value, but it is typically a string or an object.
 
-If the error data is an instance of the built-in `Error` class, the `ZSAError` instance will inherit the `message`, `stack`, `name`, and `cause` properties from the error data.
+If the error data is an instance of the built-in `Error` class, the `ZSAError` instance will inherit the `message`, `name`, and `cause` properties from the error data.
 
 If the error data is a string and the `message` property is not set, the `message` property will be set to the error data.
 
