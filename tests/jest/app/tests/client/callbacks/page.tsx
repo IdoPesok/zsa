@@ -11,10 +11,12 @@ export default function CallbacksUI() {
     onStart: string
     onSuccess: string
     onError: string
+    onFinish: string
   }>({
     onStart: CLIENT_TEST_DATA.initialMessage,
     onSuccess: CLIENT_TEST_DATA.initialMessage,
     onError: CLIENT_TEST_DATA.initialMessage,
+    onFinish: CLIENT_TEST_DATA.initialMessage,
   })
 
   const { execute } = useServerAction(callbacksAction, {
@@ -33,6 +35,12 @@ export default function CallbacksUI() {
         ...prev,
         onError: CLIENT_TEST_DATA.dummyMessage,
       })),
+    onFinish: ([data, err]) => {
+      setCallbackData((prev) => ({
+        ...prev,
+        onFinish: data ? data : err.code,
+      }))
+    },
   })
 
   return (
@@ -63,6 +71,7 @@ export default function CallbacksUI() {
       <div role="onStart">{callbackData.onStart.toString()}</div>
       <div role="onSuccess">{callbackData.onSuccess.toString()}</div>
       <div role="onError">{callbackData.onError.toString()}</div>
+      <div role="onFinish">{callbackData.onFinish.toString()}</div>
     </div>
   )
 }

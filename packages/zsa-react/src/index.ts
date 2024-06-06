@@ -28,7 +28,7 @@ export const useServerAction = <
       data: inferServerActionReturnData<TServerAction>
     }) => void
     onStart?: () => void
-    onFinish?: () => void
+    onFinish?: (result: inferServerActionReturnType<TServerAction>) => void
 
     initialData?: inferServerActionReturnData<TServerAction>
 
@@ -238,23 +238,27 @@ export const useServerAction = <
     // handle the success state
     if (status === "success") {
       executeRef.current?.([resultRef.current.data, null])
-      if (opts?.onSuccess) {
-        opts.onSuccess({
-          data: resultRef.current.data as any,
-        })
-      }
-      opts?.onFinish?.()
+
+      // call success callback
+      opts?.onSuccess?.({
+        data: resultRef.current.data as any,
+      })
+
+      // call finish callback
+      opts?.onFinish?.([resultRef.current.data, null] as any)
     }
 
     // handle the error state
     if (status === "error") {
       executeRef.current?.([null, resultRef.current.error])
-      if (opts?.onError) {
-        opts.onError({
-          err: resultRef.current.error as any,
-        })
-      }
-      opts?.onFinish?.()
+
+      // call error callback
+      opts?.onError?.({
+        err: resultRef.current.error as any,
+      })
+
+      // call finish callback
+      opts?.onFinish?.([null, resultRef.current.error] as any)
     }
   }, [status, isPending])
 

@@ -76,7 +76,7 @@ describe("client", () => {
   })
 
   describe("useServerAction callbacks", () => {
-    it("successful example: calls onStart, onSuccess, and onError callbacks", async () => {
+    it("successful example: calls onStart, onSuccess, onError, and onFinish callbacks", async () => {
       render(<CallbacksUI />)
 
       let resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
@@ -90,6 +90,8 @@ describe("client", () => {
       )
       const onErrorElement = screen.getByRole("onError")
       expect(onErrorElement).toHaveTextContent(CLIENT_TEST_DATA.initialMessage)
+      const onFinishElement = screen.getByRole("onFinish")
+      expect(onFinishElement).toHaveTextContent(CLIENT_TEST_DATA.initialMessage)
 
       const invokeButton = screen.getByRole(CLIENT_TEST_DATA.roles.invoke)
       fireEvent.click(invokeButton)
@@ -110,6 +112,13 @@ describe("client", () => {
         const onErrorElement = screen.getByRole("onError")
         expect(onErrorElement).toHaveTextContent(
           CLIENT_TEST_DATA.initialMessage
+        )
+      })
+
+      await waitFor(() => {
+        const onFinishElement = screen.getByRole("onFinish")
+        expect(onFinishElement).toHaveTextContent(
+          CLIENT_TEST_DATA.resultMessages.callbacksAction
         )
       })
 
@@ -135,6 +144,8 @@ describe("client", () => {
       )
       const onErrorElement = screen.getByRole("onError")
       expect(onErrorElement).toHaveTextContent(CLIENT_TEST_DATA.initialMessage)
+      const onFinishElement = screen.getByRole("onFinish")
+      expect(onFinishElement).toHaveTextContent(CLIENT_TEST_DATA.initialMessage)
 
       const invokeErrorButton = screen.getByRole(
         CLIENT_TEST_DATA.roles.invokeError
@@ -156,6 +167,11 @@ describe("client", () => {
       await waitFor(() => {
         const onErrorElement = screen.getByRole("onError")
         expect(onErrorElement).toHaveTextContent(CLIENT_TEST_DATA.dummyMessage)
+      })
+
+      await waitFor(() => {
+        const onFinishElement = screen.getByRole("onFinish")
+        expect(onFinishElement).toHaveTextContent("ERROR")
       })
 
       await waitFor(() => {

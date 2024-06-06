@@ -93,7 +93,7 @@ function MyComponent() {
     onStart: () => {
       console.log("Server action started")
     },
-    onFinish: () => {
+    onFinish: ([data, err]) => {
       console.log("Server action finished (invoked after onError/onSuccess)")
     },
     initialData: {/* ... */},
