@@ -93,6 +93,9 @@ function MyComponent() {
     onStart: () => {
       console.log("Server action started")
     },
+    onFinish: () => {
+      console.log("Server action finished (invoked after onError/onSuccess)")
+    },
     initialData: {/* ... */},
     retry: {
       maxAttempts: 3,
@@ -118,6 +121,7 @@ function MyComponent() {
   - `onError`: A callback function to be called when the server action encounters an error. It receives an object with the `err` property containing the error.
   - `onSuccess`: A callback function to be called when the server action succeeds. It receives an object with the `data` property containing the returned data.
   - `onStart`: A callback function to be called when the server action starts executing.
+  - `onFinish`: A callback function to be called when the server action finishes executing, regardless of the outcome.
   - `initialData`: Initial data to be used as the `data` value before the server action is executed.
   - `retry`: An object specifying the retry behavior:
     - `maxAttempts`: The maximum number of retry attempts.
