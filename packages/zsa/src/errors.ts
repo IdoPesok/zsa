@@ -57,7 +57,6 @@ export type TZSAError<TInputSchema extends z.ZodType> = Error &
     | {
         code: Exclude<keyof typeof ERROR_CODES, "INPUT_PARSE_ERROR">
         message?: string
-        stack: string
         data: string
         name: string
         fieldErrors?: undefined
@@ -66,7 +65,6 @@ export type TZSAError<TInputSchema extends z.ZodType> = Error &
       }
     | {
         message?: string
-        stack: string
         code: "INPUT_PARSE_ERROR"
         data: string
         name: string

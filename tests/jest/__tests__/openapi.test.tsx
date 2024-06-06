@@ -165,7 +165,6 @@ describe("openapi", () => {
       const json = await response.json()
       expect(json.code).toBe("INPUT_PARSE_ERROR")
       expect(json.message).toBeDefined()
-      expect(json.stack).not.toBeDefined()
     })
 
     it("should multiply two numbers [POST]", async () => {
@@ -387,7 +386,6 @@ describe("openapi", () => {
       const json = await response.json()
       expect(json.code).toBe("INPUT_PARSE_ERROR")
       expect(json.message).toBeDefined()
-      expect(json.stack).toBeDefined()
       expect(json.name).toBeDefined()
     })
 
@@ -419,7 +417,6 @@ describe("openapi", () => {
       const json = await response.json()
       expect(json.code).toBe("INPUT_PARSE_ERROR")
       expect(json.message).toBeDefined()
-      expect(json.stack).not.toBeDefined()
     })
   })
 

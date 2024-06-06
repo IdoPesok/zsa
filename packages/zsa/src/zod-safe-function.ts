@@ -512,7 +512,6 @@ export class ZodSafeFunction<
       {
         data: stringifyIfNeeded(customError.data),
         name: customError.name,
-        stack: JSON.stringify(customError.stack),
         message: stringifyIfNeeded(customError.message),
         code: customError.code,
         fieldErrors: flattenedErrors?.fieldErrors,
