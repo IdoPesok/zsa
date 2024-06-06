@@ -52,7 +52,10 @@ export class ZSAError extends Error {
 /**
  * A TZSAError is a ZSAError that is thrown by a server action that has a type
  */
-export type TZSAError<TInputSchema extends z.ZodType> = Error &
+export type TZSAError<TInputSchema extends z.ZodType> = Omit<
+  Error,
+  "stack" | "cause"
+> &
   (
     | {
         code: Exclude<keyof typeof ERROR_CODES, "INPUT_PARSE_ERROR">

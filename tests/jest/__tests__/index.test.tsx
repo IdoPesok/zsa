@@ -74,6 +74,7 @@ describe("actions", () => {
       const [data, err] = await getUserIdAction()
       expect(data).toBeNull()
       expect(err?.code).toEqual(TEST_DATA.errors.notAuthorized)
+      expect((err as any)?.stack).not.toBeDefined()
     })
   })
 
