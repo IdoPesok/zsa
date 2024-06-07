@@ -432,6 +432,21 @@ export const multiEntryFormDataAction = publicAction
     return input.name
   })
 
+export const multiEntryStateAction = publicAction
+  .input(
+    z.object({
+      name: z
+        .array(z.string())
+        .refine((n) => !n.includes("invalid"), "invalid name"),
+    }),
+    {
+      type: "state",
+    }
+  )
+  .handler(async ({ input }) => {
+    return input.name
+  })
+
 export const emptyFormDataAction = publicAction
   .input(z.object({ value: z.string() }).default({ value: "hello world" }), {
     type: "formData",
