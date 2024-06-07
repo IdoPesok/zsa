@@ -10,6 +10,7 @@ import {
   adminAction,
   faultyOutputProcedure,
   inputNumberProcedure,
+  intersectedInputProcedureC,
   ownsPostAction,
   ownsPostIsAdminAction,
   previousStateAction,
@@ -505,5 +506,15 @@ export const multiplyActionWithDefaultValues = publicAction
   .handler(async ({ input }) => {
     return {
       result: input.number1 * input.number2,
+    }
+  })
+
+export const intersectedInputAction = intersectedInputProcedureC
+  .createServerAction()
+  .input(z.object({ c: z.string() }))
+  .handler(async ({ input, ctx }) => {
+    return {
+      input,
+      ctx,
     }
   })

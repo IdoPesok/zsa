@@ -323,3 +323,19 @@ export const setAuthToTwoProcedureWithCounter = createServerActionProcedure(
       counter: ctx.counter + 1,
     }
   })
+
+export const intersectedInputProcedureA = createServerActionProcedure().handler(
+  () => 1
+)
+
+export const intersectedInputProcedureB = createServerActionProcedure(
+  intersectedInputProcedureA
+)
+  .input(z.object({ a: z.string() }))
+  .handler(({ ctx }) => ctx + 1)
+
+export const intersectedInputProcedureC = createServerActionProcedure(
+  intersectedInputProcedureB
+)
+  .input(z.object({ b: z.string() }))
+  .handler(({ ctx }) => ctx + 1)

@@ -22,6 +22,7 @@ import {
   helloWorldTimeoutAction,
   inputLargeNumberAction,
   inputNumberAction,
+  intersectedInputAction,
   multiEntryFormDataAction,
   nextNotFoundAction,
   nextRedirectAction,
@@ -542,6 +543,23 @@ describe("actions", () => {
           state = v
         },
       })
+    })
+
+    it("should return the correct result after intersecting input", async () => {
+      const [data, err] = await intersectedInputAction({
+        a: "a",
+        b: "b",
+        c: "c",
+      })
+      expect(data).toEqual({
+        input: {
+          a: "a",
+          b: "b",
+          c: "c",
+        },
+        ctx: 3,
+      })
+      expect(err).toBeNull()
     })
 
     it("should throw an error if the first procedure is invalid [no counter]", async () => {
