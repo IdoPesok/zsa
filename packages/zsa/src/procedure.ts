@@ -9,6 +9,8 @@ import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   THandlerOpts,
+  TShapeErrorFn,
+  TShapeErrorNotSet,
   TZodSafeFunctionDefaultOmitted,
 } from "./types"
 import { ZodTypeLikeVoid, mergeArraysAndRemoveDuplicates } from "./utils"
@@ -31,17 +33,19 @@ export interface TCompleteProcedureInternals<
   /** The last handler in the chain */
   lastHandler: THandler
   /** A chain of error handlers */
-  onErrorFns: Array<TOnErrorFn> | undefined
+  onErrorFns: Array<TOnErrorFn<any, true>> | undefined
   /** A chain of start handlers */
   onStartFns: Array<TOnStartFn<any, true>> | undefined
   /** A chain of success handlers */
   onSuccessFns: Array<TOnSuccessFn<any, any, true>> | undefined
   /** A chain of complete handlers */
-  onCompleteFns: Array<TOnCompleteFn<any, any, true>> | undefined
+  onCompleteFns: Array<TOnCompleteFn<any, any, any, true>> | undefined
   /** The timeout of the procedure */
   timeout: number | undefined
   /** The retry config of the procedure */
   retryConfig: RetryConfig | undefined
+  /** A function to run when the handler errors to customize the error */
+  shapeErrorFn: TShapeErrorFn | TShapeErrorNotSet
 }
 
 /** A completed procedure */

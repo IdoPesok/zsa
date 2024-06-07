@@ -29,6 +29,8 @@ export class ZSAError extends Error {
   /** the error code */
   public readonly code: keyof typeof ERROR_CODES
 
+  /** something */
+
   constructor(
     code: keyof typeof ERROR_CODES = ERROR_CODES.ERROR,
     data?: unknown
