@@ -11,7 +11,7 @@ import {
   THandlerOpts,
   TZodSafeFunctionDefaultOmitted,
 } from "./types"
-import { mergeArraysAndRemoveDuplicates } from "./utils"
+import { ZodTypeLikeVoid, mergeArraysAndRemoveDuplicates } from "./utils"
 import {
   TZodSafeFunction,
   ZodSafeFunction,
@@ -21,7 +21,7 @@ import {
 
 /** Internal data stored inside a server action procedure */
 export interface TCompleteProcedureInternals<
-  TInputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
   THandler extends TAnyZodSafeFunctionHandler,
 > {
   /** The chained input schema */
@@ -46,7 +46,7 @@ export interface TCompleteProcedureInternals<
 
 /** A completed procedure */
 export class CompleteProcedure<
-  TInputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
   THandler extends TAnyZodSafeFunctionHandler,
 > {
   $internals: TCompleteProcedureInternals<TInputSchema, THandler>
@@ -58,17 +58,15 @@ export class CompleteProcedure<
   /** make a server action with the current procedure */
   createServerAction(): TZodSafeFunction<
     TInputSchema,
-    z.ZodUndefined,
-    TInputSchema extends z.ZodUndefined
-      ? TZodSafeFunctionDefaultOmitted
-      : Exclude<TZodSafeFunctionDefaultOmitted, "input" | "onInputParseError">,
+    undefined,
+    TZodSafeFunctionDefaultOmitted,
     inferServerActionReturnData<THandler>,
     false,
     "json"
   > {
     return new ZodSafeFunction({
       inputSchema: this.$internals.inputSchema,
-      outputSchema: z.undefined(),
+      outputSchema: undefined,
       procedureHandlerChain: this.$internals.handlerChain,
       onErrorFromProcedureFn: this.$internals.onErrorFns,
       onStartFromProcedureFn: this.$internals.onStartFns,
@@ -88,21 +86,15 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
   T extends TAnyCompleteProcedure
     ? TZodSafeFunction<
         T["$internals"]["inputSchema"],
-        z.ZodUndefined,
+        undefined,
         TZodSafeFunctionDefaultOmitted,
-        inferServerActionReturnData<
-          T["$internals"]["lastHandler"]
-        > extends infer TData
-          ? TData extends void
-            ? undefined
-            : TData
-          : never,
+        inferServerActionReturnData<T["$internals"]["lastHandler"]>,
         true,
         "json"
       >
     : TZodSafeFunction<
-        z.ZodUndefined,
-        z.ZodUndefined,
+        undefined,
+        undefined,
         TZodSafeFunctionDefaultOmitted,
         undefined,
         true,
@@ -141,7 +133,7 @@ export const chainServerActionProcedures = <
   first: T1,
   second: T2
 ): CompleteProcedure<
-  T1["$internals"]["inputSchema"] extends z.ZodUndefined
+  T1["$internals"]["inputSchema"] extends undefined | ZodTypeLikeVoid
     ? T2["$internals"]["inputSchema"]
     : z.ZodIntersection<
         T1["$internals"]["inputSchema"],
@@ -150,7 +142,7 @@ export const chainServerActionProcedures = <
   T2["$internals"]["lastHandler"]
 > => {
   let inputSchema =
-    first.$internals.inputSchema instanceof z.ZodUndefined
+    first.$internals.inputSchema === undefined
       ? second.$internals.inputSchema
       : first.$internals.inputSchema.and(second.$internals.inputSchema)
 

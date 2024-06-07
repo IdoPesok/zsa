@@ -23,18 +23,6 @@ export const instanceofZodTypeOptional = (
   return instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodOptional)
 }
 
-export type ZodTypeLikeVoid = z.ZodVoid | z.ZodUndefined | z.ZodNever
-
-export const instanceofZodTypeLikeVoid = (
-  type: z.ZodTypeAny
-): type is ZodTypeLikeVoid => {
-  return (
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodVoid) ||
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodUndefined) ||
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodNever)
-  )
-}
-
 type NativeEnumType = {
   [k: string]: string | number
   [nu: number]: string

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { TSchemaOrUndefined } from "./types"
 
 /** An enum of error codes */
 const ERROR_CODES = {
@@ -52,7 +53,7 @@ export class ZSAError extends Error {
 /**
  * A TZSAError is a ZSAError that is thrown by a server action that has a type
  */
-export type TZSAError<TInputSchema extends z.ZodType> = Omit<
+export type TZSAError<TInputSchema extends z.ZodType | undefined> = Omit<
   Error,
   "stack" | "cause"
 > &
@@ -71,8 +72,12 @@ export type TZSAError<TInputSchema extends z.ZodType> = Omit<
         code: "INPUT_PARSE_ERROR"
         data: string
         name: string
-        fieldErrors: z.inferFlattenedErrors<TInputSchema>["fieldErrors"]
-        formErrors: z.inferFlattenedErrors<TInputSchema>["formErrors"]
-        formattedErrors: z.inferFormattedError<TInputSchema>
+        fieldErrors: z.inferFlattenedErrors<
+          TSchemaOrUndefined<TInputSchema>
+        >["fieldErrors"]
+        formErrors: z.inferFlattenedErrors<
+          TSchemaOrUndefined<TInputSchema>
+        >["formErrors"]
+        formattedErrors: z.inferFormattedError<TSchemaOrUndefined<TInputSchema>>
       }
   )

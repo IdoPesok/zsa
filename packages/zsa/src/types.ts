@@ -8,6 +8,17 @@ import {
 } from "./callbacks"
 import { TZSAError, ZSAError } from "./errors"
 
+export type TSchemaOrUndefined<T extends z.ZodType | undefined> =
+  T extends z.ZodType ? T : z.ZodUndefined
+
+export type TSchemaInput<T extends z.ZodType | undefined> = T extends z.ZodType
+  ? T["_input"]
+  : undefined
+
+export type TSchemaOutput<T extends z.ZodType | undefined> = T extends z.ZodType
+  ? T["_output"]
+  : undefined
+
 /** Replace void with undefined */
 type TCleanData<T extends Promise<any>> =
   Extract<Awaited<T>, void> extends never
@@ -16,7 +27,7 @@ type TCleanData<T extends Promise<any>> =
 
 /** The return type of a server action */
 export type TDataOrError<
-  TInputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
   TData extends Promise<any>,
 > =
   | Promise<[TCleanData<TData>, null]>
@@ -24,7 +35,7 @@ export type TDataOrError<
 
 /** The return type of a server action */
 export type TDataOrErrorOrNull<
-  TInputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
   TData extends Promise<any>,
 > = [TCleanData<TData>, null] | [null, TZSAError<TInputSchema>] | [null, null]
 
@@ -83,8 +94,8 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
 /** A function type for a handler that does not have an input */
 export interface TNoInputHandlerFunc<
   TRet extends any,
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends undefined,
+  TOutputSchema extends z.ZodType | undefined,
   TProcedureChainOutput extends any,
 > {
   (
@@ -93,35 +104,35 @@ export interface TNoInputHandlerFunc<
     $opts?: THandlerOpts<TProcedureChainOutput>
   ): TDataOrError<
     TInputSchema,
-    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
+    TOutputSchema extends z.ZodType ? TOutputSchema["_output"] : TRet
   >
 }
 
 /** A function type for a handler that has an input */
 export interface THandlerFunc<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
   TRet extends any,
   TProcedureChainOutput extends any,
   TInputType extends InputTypeOptions,
 > {
   (
     /** The input to the handler */
-    args: TInputType extends "json" ? TInputSchema["_input"] : FormData,
+    args: TInputType extends "json" ? TSchemaInput<TInputSchema> : FormData,
     /** Override the args */
-    $overrideArgs?: Partial<TInputSchema["_input"]>,
+    $overrideArgs?: Partial<TSchemaInput<TInputSchema>>,
     /** Options for the handler */
     $opts?: THandlerOpts<TProcedureChainOutput>
   ): TDataOrError<
     TInputSchema,
-    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
+    TOutputSchema extends z.ZodType ? TOutputSchema["_output"] : TRet
   >
 }
 
 /** A function type for a handler that has an input */
 export interface TStateHandlerFunc<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
   TRet extends any,
 > {
   (
@@ -131,7 +142,7 @@ export interface TStateHandlerFunc<
     formData: FormData
   ): TDataOrErrorOrNull<
     TInputSchema,
-    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
+    TOutputSchema extends z.ZodType ? TOutputSchema["_output"] : TRet
   >
 }
 
@@ -162,7 +173,7 @@ export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
 
 /** A combination of both a no input handler and a handler */
 export type TAnyZodSafeFunctionHandler<
-  TInputSchema extends z.ZodType = z.ZodType,
+  TInputSchema extends z.ZodType | undefined = any,
   TData extends Promise<any> = Promise<any>,
 > =
   | ((
@@ -190,8 +201,8 @@ export type inferInputSchemaFromHandler<
  * A data type for the internals of a Zod Safe Function
  */
 export interface TInternals<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
   TIsProcedure extends boolean,
 > {
   /**

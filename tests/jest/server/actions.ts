@@ -110,9 +110,11 @@ export const statesAction = publicAction
     return "Success"
   })
 
-export const getPostByIdAction = ownsPostAction.handler(async ({ ctx }) => {
-  return ctx.post
-})
+export const getPostByIdAction = ownsPostAction.handler(
+  async ({ ctx, input }) => {
+    return ctx.post
+  }
+)
 
 export const resetAction = publicAction.handler(async () => {
   await sleep(CLIENT_TEST_DATA.sleep)
@@ -430,6 +432,14 @@ export const multiEntryFormDataAction = publicAction
     return input.name
   })
 
+export const emptyFormDataAction = publicAction
+  .input(z.object({ value: z.string() }).default({ value: "hello world" }), {
+    type: "formData",
+  })
+  .handler(async ({ input }) => {
+    return input.value
+  })
+
 export const procedureChainAuthAction = setAuthToTwoProcedure
   .createServerAction()
   .input(z.object({ three: z.enum(["valid", "invalid"]) }))
@@ -454,3 +464,31 @@ export const procedureChainAuthActionWithCounter =
         counter: ctx.counter + 1,
       }
     })
+
+export const multiplyActionWithDefaultObject = publicAction
+  .input(
+    z
+      .object({
+        number2: z.coerce.number(),
+        number1: z.coerce.number(),
+      })
+      .default({ number1: 2, number2: 5 })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 * input.number2,
+    }
+  })
+
+export const multiplyActionWithDefaultValues = publicAction
+  .input(
+    z.object({
+      number2: z.coerce.number().default(5),
+      number1: z.coerce.number().default(2),
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 * input.number2,
+    }
+  })

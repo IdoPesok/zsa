@@ -6,6 +6,7 @@ import {
   TAnyZodSafeFunctionHandler,
   TZSAError,
   ZSAResponseMeta,
+  canDataBeUndefinedForSchema,
   formDataToJson,
   inferInputSchemaFromHandler,
   inferServerActionInput,
@@ -601,7 +602,12 @@ export const createRouteHandlers = (
         ...params,
       }
 
-      if (Object.keys(final).length === 0) {
+      console.log(final, canDataBeUndefinedForSchema(inputSchema))
+
+      if (
+        Object.keys(final).length === 0 &&
+        canDataBeUndefinedForSchema(inputSchema)
+      ) {
         return {
           input: undefined,
           params: {},
@@ -727,7 +733,10 @@ export function createRouteHandlersForAction<
       ...(args?.params || {}),
     }
 
-    if (Object.keys(input).length === 0) {
+    if (
+      Object.keys(input).length === 0 &&
+      canDataBeUndefinedForSchema(inputSchema)
+    ) {
       input = undefined
     }
 

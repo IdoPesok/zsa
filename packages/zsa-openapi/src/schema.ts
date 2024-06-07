@@ -13,13 +13,17 @@
 import { OpenAPIV3 } from "openapi-types"
 import { z } from "zod"
 import zodToJsonSchema from "zod-to-json-schema"
-import { ZSAError, instanceofZodTypeObject, unwrapZodType } from "zsa"
+import {
+  ZSAError,
+  instanceofZodTypeLikeVoid,
+  instanceofZodTypeObject,
+  unwrapZodType,
+} from "zsa"
 import { OpenApiContentType } from "./openapi"
 import {
   instanceofZodType,
   instanceofZodTypeCoercible,
   instanceofZodTypeLikeString,
-  instanceofZodTypeLikeVoid,
   instanceofZodTypeOptional,
   zodSupportsCoerce,
 } from "./zod"
@@ -240,4 +244,12 @@ export const getResponsesObject = (
       $ref: "#/components/responses/error",
     },
   }
+}
+
+export const canSchemaBeUndefined = (schema: z.ZodType) => {
+  if (schema instanceof z.ZodUndefined) {
+    return true
+  }
+
+  return
 }

@@ -3,6 +3,7 @@
  */
 import { cookies } from "next/headers"
 import {
+  emptyFormDataAction,
   faultyAction,
   faultyOutputAction,
   faultyOutputInProcedureAction,
@@ -479,6 +480,24 @@ describe("actions", () => {
 
       expect(data).toEqual(["test", "test2"])
       expect(err).toBeNull()
+    })
+
+    it("returns the default input schema", async () => {
+      const formData = new FormData()
+      const [data, err] = await emptyFormDataAction(formData)
+
+      expect(data).toEqual("hello world")
+      expect(err).toBeNull()
+    })
+
+    it("returns an input schema error with default input schema", async () => {
+      const formData = new FormData()
+      formData.append("wrong input", "hello world")
+      const [data, err] = await emptyFormDataAction(formData)
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
     })
   })
 

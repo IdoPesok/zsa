@@ -340,6 +340,40 @@ describe("openapi", () => {
       const response = await POST(request)
       expect(response.status).toBe(400)
     })
+
+    it("it should succeed in multiplying two numbers with default values [POST]", async () => {
+      const { POST } = createRouteHandlers(openapiRouter)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/multiplyWithDefaultValues",
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
+        result: 2 * 5,
+      })
+    })
+
+    it("it should succeed in multiplying two numbers with default object [POST]", async () => {
+      const { POST } = createRouteHandlers(openapiRouter)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/multiplyWithDefaultObject",
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
+        result: 2 * 5,
+      })
+    })
   })
 
   describe("setupApiHandler", () => {
