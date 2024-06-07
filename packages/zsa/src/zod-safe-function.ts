@@ -396,7 +396,17 @@ export class ZodSafeFunction<
       if (this.$internals.onOutputParseError) {
         await this.$internals.onOutputParseError(safe.error)
       }
-      throw new ZSAError("OUTPUT_PARSE_ERROR", safe.error)
+
+      const flattenedErrors = safe.error.flatten()
+      const formattedErrors = safe.error.format()
+
+      throw new ZSAError("OUTPUT_PARSE_ERROR", safe.error, {
+        outputParseErrors: {
+          fieldErrors: flattenedErrors?.fieldErrors,
+          formErrors: flattenedErrors?.formErrors,
+          formattedErrors: formattedErrors,
+        },
+      })
     }
     return safe.data
   }
@@ -475,8 +485,13 @@ export class ZodSafeFunction<
       throw err
     }
 
-    const customError =
-      err instanceof ZSAError ? err : new ZSAError("ERROR", err)
+    let customError
+
+    if (this.$internals.shapeErrorFn !== ShapeErrorNotSet) {
+      customError = await this.$internals.shapeErrorFn(err)
+    } else {
+      customError = err instanceof ZSAError ? err : new ZSAError("ERROR", err)
+    }
 
     // callbacks run on the main action thread
     // error will get returned at the action level
@@ -557,7 +572,17 @@ export class ZodSafeFunction<
       if (this.$internals.onInputParseError) {
         await this.$internals.onInputParseError(safe.error)
       }
-      throw new ZSAError("INPUT_PARSE_ERROR", safe.error)
+
+      const flattenedErrors = safe.error.flatten()
+      const formattedErrors = safe.error.format()
+
+      throw new ZSAError("INPUT_PARSE_ERROR", safe.error, {
+        inputParseErrors: {
+          fieldErrors: flattenedErrors?.fieldErrors,
+          formErrors: flattenedErrors?.formErrors,
+          formattedErrors: formattedErrors,
+        },
+      })
     }
 
     return safe.data
@@ -634,7 +659,8 @@ export class ZodSafeFunction<
           TRet,
           TProcedureChainOutput,
           "json"
-        >
+        >,
+        TError
       > {
     // keep state of the timeout
     const timeoutStatus: TimeoutStatus = {

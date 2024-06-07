@@ -20,6 +20,12 @@ const ERROR_CODES = {
   CLIENT_CLOSED_REQUEST: "CLIENT_CLOSED_REQUEST",
 } as const
 
+interface TZodSchemaErrors {
+  fieldErrors: z.inferFlattenedErrors<z.ZodType>["fieldErrors"]
+  formErrors: z.inferFlattenedErrors<z.ZodType>["formErrors"]
+  formattedErrors: z.inferFormattedError<z.ZodType>
+}
+
 /**
  *  A ZSAError is an error that can be thrown by a server action.
  */
@@ -29,11 +35,16 @@ export class ZSAError extends Error {
   /** the error code */
   public readonly code: keyof typeof ERROR_CODES
 
-  /** something */
+  public readonly inputParseErrors?: TZodSchemaErrors
+  public readonly outputParseErrors?: TZodSchemaErrors
 
   constructor(
     code: keyof typeof ERROR_CODES = ERROR_CODES.ERROR,
-    data?: unknown
+    data?: unknown,
+    more?: {
+      inputParseErrors?: TZodSchemaErrors
+      outputParseErrors?: TZodSchemaErrors
+    }
   ) {
     super()
     this.data = data
@@ -49,6 +60,9 @@ export class ZSAError extends Error {
     if (!this.message && typeof this.data === "string") {
       this.message = this.data
     }
+
+    this.inputParseErrors = more?.inputParseErrors
+    this.outputParseErrors = more?.outputParseErrors
   }
 }
 

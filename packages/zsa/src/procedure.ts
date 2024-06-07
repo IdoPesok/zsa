@@ -52,6 +52,7 @@ export interface TCompleteProcedureInternals<
 export class CompleteProcedure<
   TInputSchema extends z.ZodType | undefined,
   THandler extends TAnyZodSafeFunctionHandler,
+  TError extends any,
 > {
   $internals: TCompleteProcedureInternals<TInputSchema, THandler>
 
@@ -63,6 +64,7 @@ export class CompleteProcedure<
   createServerAction(): TZodSafeFunction<
     TInputSchema,
     undefined,
+    TError,
     TZodSafeFunctionDefaultOmitted,
     inferServerActionReturnData<THandler>,
     false,
@@ -78,12 +80,14 @@ export class CompleteProcedure<
       onCompleteFromProcedureFn: this.$internals.onCompleteFns,
       timeout: this.$internals.timeout,
       retryConfig: this.$internals.retryConfig,
+      shapeErrorFn: this.$internals.shapeErrorFn,
     }) as any
   }
 }
 
 /** a helper type to hold any complete procedure */
-export interface TAnyCompleteProcedure extends CompleteProcedure<any, any> {}
+export interface TAnyCompleteProcedure
+  extends CompleteProcedure<any, any, any> {}
 
 /** The return type of `createServerActionProcedure` given a parent procedure */
 type TRet<T extends TAnyCompleteProcedure | undefined> =
@@ -91,6 +95,7 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
     ? TZodSafeFunction<
         T["$internals"]["inputSchema"],
         undefined,
+        T["$internals"]["shapeErrorFn"],
         TZodSafeFunctionDefaultOmitted,
         inferServerActionReturnData<T["$internals"]["lastHandler"]>,
         true,
@@ -99,6 +104,7 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
     : TZodSafeFunction<
         undefined,
         undefined,
+        TShapeErrorNotSet,
         TZodSafeFunctionDefaultOmitted,
         undefined,
         true,
@@ -132,7 +138,11 @@ export const chainServerActionProcedures = <
   TContext extends TOpts extends { ctx?: any }
     ? NonNullable<TOpts["ctx"]>
     : undefined,
-  T1 extends CompleteProcedure<any, TAnyZodSafeFunctionHandler<any, TContext>>,
+  T1 extends CompleteProcedure<
+    any,
+    TAnyZodSafeFunctionHandler<any, TContext>,
+    any
+  >,
 >(
   first: T1,
   second: T2
@@ -143,7 +153,8 @@ export const chainServerActionProcedures = <
         T1["$internals"]["inputSchema"],
         T2["$internals"]["inputSchema"]
       >,
-  T2["$internals"]["lastHandler"]
+  T2["$internals"]["lastHandler"],
+  T2["$internals"]["shapeErrorFn"]
 > => {
   let inputSchema =
     first.$internals.inputSchema === undefined
@@ -166,6 +177,8 @@ export const chainServerActionProcedures = <
     lastHandler: newLastHandler,
     timeout: second.$internals.timeout || first.$internals.timeout,
     retryConfig: second.$internals.retryConfig || first.$internals.retryConfig,
+    shapeErrorFn:
+      second.$internals.shapeErrorFn || first.$internals.shapeErrorFn,
     onErrorFns: mergeArraysAndRemoveDuplicates(
       first.$internals.onErrorFns,
       second.$internals.onErrorFns

@@ -8,6 +8,11 @@ import {
 } from "./callbacks"
 import { TZSAError, ZSAError } from "./errors"
 
+export type TFinalError<
+  TInputSchema extends z.ZodType | undefined,
+  TError extends any,
+> = TError extends TShapeErrorNotSet ? TZSAError<TInputSchema> : TError
+
 export type TSchemaOrZodUndefined<T extends z.ZodType | undefined> =
   T extends z.ZodType ? T : z.ZodUndefined
 
@@ -35,12 +40,7 @@ export type TDataOrError<
   TError extends any,
 > =
   | Promise<[TCleanData<TData>, null]>
-  | Promise<
-      [
-        null,
-        TError extends TShapeErrorNotSet ? TZSAError<TInputSchema> : TError,
-      ]
-    >
+  | Promise<[null, TFinalError<TInputSchema, TError>]>
 
 /** The return type of a server action */
 export type TDataOrErrorOrNull<
@@ -49,7 +49,7 @@ export type TDataOrErrorOrNull<
   TError extends any,
 > =
   | [TCleanData<TData>, null]
-  | [null, TError extends TShapeErrorNotSet ? TZSAError<TInputSchema> : TError]
+  | [null, TFinalError<TInputSchema, TError>]
   | [null, null]
 
 /** A configuration object for retrying a server action */
@@ -335,7 +335,7 @@ export type PrettifyNested<T> =
       }
     : T
 
-export const ShapeErrorNotSet = Symbol("ShapeErrorNotSet")
+export const ShapeErrorNotSet = "ShapeErrorNotSet" as const
 export type TShapeErrorNotSet = typeof ShapeErrorNotSet
 
 export interface TShapeErrorFn {
