@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-test("should navigate to the about page", async ({ page }) => {
+test("should correctly show data from useActionState", async ({ page }) => {
   await page.goto("/tests/client/use-action-state")
 
   // Check that there is no data or error element initially
@@ -28,7 +28,9 @@ test("should navigate to the about page", async ({ page }) => {
   await expect(page.locator("#error")).toHaveCount(0)
 })
 
-test("should navigate to the multi-entry page", async ({ page }) => {
+test("should correctly show data and error from multi entry useActionState", async ({
+  page,
+}) => {
   await page.goto("/tests/client/use-action-state?id=multientry")
 
   // Check that there is no data or error element initially
