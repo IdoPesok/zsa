@@ -220,7 +220,7 @@ export const getResponsesObject = (
     | Record<string, OpenAPIV3.HeaderObject | OpenAPIV3.ReferenceObject>
     | undefined
 ): OpenAPIV3.ResponsesObject => {
-  if (!instanceofZodType(schema)) {
+  if (schema !== undefined && !instanceofZodType(schema)) {
     throw new ZSAError(
       "INTERNAL_SERVER_ERROR",
       "Output parser must be a ZodObject"
@@ -232,7 +232,7 @@ export const getResponsesObject = (
     headers: headers,
     content: {
       "application/json": {
-        schema: zodSchemaToOpenApiSchemaObject(schema),
+        schema: zodSchemaToOpenApiSchemaObject(schema || z.unknown()),
         example,
       },
     },
