@@ -4,7 +4,7 @@ import { sleep } from "lib/utils"
 import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 import { z } from "zod"
-import { ZSAError, createServerAction } from "zsa"
+import { ZSAError, createServerAction, createServerActionProcedure } from "zsa"
 import { CLIENT_TEST_DATA, TEST_DATA } from "./data"
 import {
   adminAction,
@@ -518,3 +518,40 @@ export const intersectedInputAction = intersectedInputProcedureC
       ctx,
     }
   })
+
+const test = z.object({
+  test: z.string(),
+})
+
+const procedure = createServerActionProcedure()
+  .input(z.object({ test2: z.string() }))
+  .shapeError(async ({ err, zsaError }) => {
+    if (zsaError) {
+      return {
+        fieldErrors: zsaError.inputParseErrors?.fieldErrors,
+        formErrors: zsaError.inputParseErrors?.formErrors,
+        formattedErrors: zsaError.inputParseErrors?.formattedErrors,
+        inputRaw: zsaError.inputRaw,
+      }
+    }
+
+    return {
+      fieldErrors: undefined,
+    }
+  })
+  .handler(async () => {
+    throw new ZSAError("ERROR", "test")
+  })
+
+const action = procedure
+  .createServerAction()
+  .input(z.object({ test: z.string() }))
+  .handler(async () => {
+    return
+  })
+
+const main = async () => {
+  const [data, err] = await action({ test: "test", test2: "test" })
+
+  err?.inputRaw?.test
+}

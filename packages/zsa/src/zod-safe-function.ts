@@ -640,7 +640,8 @@ export class ZodSafeFunction<
             undefined,
             TOutputSchema,
             TError,
-            TProcedureChainOutput
+            TProcedureChainOutput,
+            TIsProcedure
           >
         : THandlerFunc<
             TInputSchema,
@@ -648,7 +649,8 @@ export class ZodSafeFunction<
             TError,
             TRet,
             TProcedureChainOutput,
-            TInputType
+            TInputType,
+            TIsProcedure
           >
     : CompleteProcedure<
         TInputSchema,
@@ -658,7 +660,8 @@ export class ZodSafeFunction<
           TError,
           TRet,
           TProcedureChainOutput,
-          "json"
+          "json",
+          TIsProcedure
         >,
         TError
       > {
