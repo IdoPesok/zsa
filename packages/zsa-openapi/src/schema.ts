@@ -245,11 +245,3 @@ export const getResponsesObject = (
     },
   }
 }
-
-export const canSchemaBeUndefined = (schema: z.ZodType) => {
-  if (schema instanceof z.ZodUndefined) {
-    return true
-  }
-
-  return
-}

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { TSchemaOrUndefined } from "./types"
+import { TSchemaOrZodUndefined } from "./types"
 
 /** An enum of error codes */
 const ERROR_CODES = {
@@ -73,11 +73,13 @@ export type TZSAError<TInputSchema extends z.ZodType | undefined> = Omit<
         data: string
         name: string
         fieldErrors: z.inferFlattenedErrors<
-          TSchemaOrUndefined<TInputSchema>
+          TSchemaOrZodUndefined<TInputSchema>
         >["fieldErrors"]
         formErrors: z.inferFlattenedErrors<
-          TSchemaOrUndefined<TInputSchema>
+          TSchemaOrZodUndefined<TInputSchema>
         >["formErrors"]
-        formattedErrors: z.inferFormattedError<TSchemaOrUndefined<TInputSchema>>
+        formattedErrors: z.inferFormattedError<
+          TSchemaOrZodUndefined<TInputSchema>
+        >
       }
   )

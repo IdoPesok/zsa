@@ -602,8 +602,6 @@ export const createRouteHandlers = (
         ...params,
       }
 
-      console.log(final, canDataBeUndefinedForSchema(inputSchema))
-
       if (
         Object.keys(final).length === 0 &&
         canDataBeUndefinedForSchema(inputSchema)

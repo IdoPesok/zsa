@@ -1,6 +1,6 @@
 import z from "zod"
 import { ZSAError } from "./errors"
-import { TSchemaInput, TSchemaOutput } from "./types"
+import { TSchemaInput, TSchemaOutput, TSchemaOutputOrUnknown } from "./types"
 
 /** An error handler function */
 export interface TOnErrorFn {
@@ -28,7 +28,9 @@ export interface TOnSuccessFn<
     /** The known args passed to the handler */
     args: TIsProcedure extends false ? TSchemaOutput<TInputSchema> : unknown
     /** The successful data returned from the handler */
-    data: TIsProcedure extends false ? TSchemaOutput<TOutputSchema> : unknown
+    data: TIsProcedure extends false
+      ? TSchemaOutputOrUnknown<TOutputSchema>
+      : unknown
   }): any
 }
 
@@ -57,9 +59,7 @@ export interface TOnCompleteFn<
             : unknown
           /** The successful data returned from the handler */
           data: TIsProcedure extends false
-            ? TOutputSchema extends z.ZodType
-              ? TSchemaOutput<TOutputSchema>
-              : unknown
+            ? TSchemaOutputOrUnknown<TOutputSchema>
             : unknown
         }
       | {

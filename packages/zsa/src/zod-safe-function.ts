@@ -12,7 +12,7 @@ import {
   TInternals,
   TNoInputHandlerFunc,
   TSchemaInput,
-  TSchemaOrUndefined,
+  TSchemaOrZodUndefined,
   TSchemaOutput,
   TStateHandlerFunc,
   TZodSafeFunctionDefaultOmitted,
@@ -242,7 +242,7 @@ export class ZodSafeFunction<
   public onInputParseError(
     fn: (
       err: z.ZodError<
-        TIsProcedure extends false ? TSchemaOrUndefined<TInputSchema> : any
+        TIsProcedure extends false ? TSchemaOrZodUndefined<TInputSchema> : any
       >
     ) => any
   ): TZodSafeFunction<

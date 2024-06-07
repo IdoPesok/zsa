@@ -8,7 +8,7 @@ import {
 } from "./callbacks"
 import { TZSAError, ZSAError } from "./errors"
 
-export type TSchemaOrUndefined<T extends z.ZodType | undefined> =
+export type TSchemaOrZodUndefined<T extends z.ZodType | undefined> =
   T extends z.ZodType ? T : z.ZodUndefined
 
 export type TSchemaInput<T extends z.ZodType | undefined> = T extends z.ZodType
@@ -18,6 +18,9 @@ export type TSchemaInput<T extends z.ZodType | undefined> = T extends z.ZodType
 export type TSchemaOutput<T extends z.ZodType | undefined> = T extends z.ZodType
   ? T["_output"]
   : undefined
+
+export type TSchemaOutputOrUnknown<T extends z.ZodType | undefined> =
+  T extends z.ZodType ? T["_output"] : unknown
 
 /** Replace void with undefined */
 type TCleanData<T extends Promise<any>> =
