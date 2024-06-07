@@ -7,6 +7,8 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "test": {},
+    "test:playwright": {},
+    "test:jest": {},
     "test:watch": {
       "cache": false
     },
@@ -14,7 +16,9 @@
       "cache": false,
       "persistent": true
     },
-    "typecheck": {},
+    "typecheck": {
+      "cache": false
+    },
     "clean": {
       "cache": false
     },

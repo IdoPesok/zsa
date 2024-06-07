@@ -13,7 +13,9 @@
     "publish-packages": "npm run build && changeset version && changeset publish",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next && rm -rf packages/*/dist",
     "test": "turbo run test",
-    "test:watch": "turbo run test:watch"
+    "test:watch": "turbo run test:watch",
+    "test:playwright": "turbo run test:playwright",
+    "test:jest": "turbo run test:jest"
   },
   "engines": {
     "node": ">=18"

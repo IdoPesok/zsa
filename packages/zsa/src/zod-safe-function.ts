@@ -14,6 +14,7 @@ import {
   TSchemaInput,
   TSchemaOrZodUndefined,
   TSchemaOutput,
+  TSchemaOutputOrUnknown,
   TStateHandlerFunc,
   TZodSafeFunctionDefaultOmitted,
   TimeoutStatus,
@@ -358,7 +359,7 @@ export class ZodSafeFunction<
   public async parseOutputData(
     data: any,
     timeoutStatus: TimeoutStatus
-  ): Promise<TOutputSchema extends z.ZodType ? TOutputSchema["_output"] : any> {
+  ): Promise<TSchemaOutputOrUnknown<TOutputSchema>> {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
     // no output schema, return data
@@ -389,11 +390,9 @@ export class ZodSafeFunction<
 
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
-    if (this.$internals.onStartFn) {
-      await this.$internals.onStartFn({
-        args,
-      })
-    }
+    await this.$internals.onStartFn?.({
+      args,
+    })
   }
 
   /** helper function to handle success with timeout checkpoints */
