@@ -64,7 +64,7 @@ export type TReplaceErrorPlaceholders<
       [K in keyof TError]: NonNullable<TError[K]> extends infer TKey
         ? TKey extends keyof TReplaceMap<any, any>
           ? TReplaceMap<TInputSchema, TOutputSchema>[TKey]
-          : TError[K]
+          : TReplaceErrorPlaceholders<TInputSchema, TOutputSchema, TError[K]>
         : TError[K]
     }
   : TError
