@@ -6,7 +6,12 @@ import {
   TOnStartFn,
   TOnSuccessFn,
 } from "./callbacks"
-import { TReplaceErrorPlaceholders, TZSAError, ZSAError } from "./errors"
+import {
+  TReplaceErrorPlaceholders,
+  TZSAError,
+  TypedProxyError,
+  ZSAError,
+} from "./errors"
 
 export type TFinalError<
   TInputSchema extends z.ZodType | undefined,
@@ -14,14 +19,14 @@ export type TFinalError<
   TError extends any,
   TIsProcedure extends boolean,
 > = TError extends TShapeErrorNotSet
-  ? TZSAError<TInputSchema>
+  ? TZSAError<TInputSchema> // if there is no shapeError, return a ZSAError
   : TIsProcedure extends true
-    ? TError
+    ? TError // if we are in a procedure, return the error to keep the placeholders
     : TReplaceErrorPlaceholders<
         TSchemaOrZodUndefined<TInputSchema>,
         TSchemaOrZodUnknown<TOutputSchema>,
         TError
-      >
+      > // if we are not in a procedure, return the error without the placeholders
 
 export type TSchemaOrZodUndefined<T extends z.ZodType | undefined> =
   T extends z.ZodType ? T : z.ZodUndefined
@@ -120,6 +125,10 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   attempts?: number
   /** the previous state */
   previousState?: any
+  /** on args */
+  onArgs?: (args: any) => void
+  /** on parsed args */
+  onParsedArgs?: (args: any) => void
 }
 
 /** A function type for a handler that does not have an input */
@@ -285,39 +294,19 @@ export interface TInternals<
   retryConfig?: RetryConfig | undefined
 
   /** A function to run when the handler errors */
-  onErrorFn?: TOnErrorFn<TError, TIsProcedure> | undefined
+  onErrorFns?: Array<TOnErrorFn<any, any>> | undefined
 
   /** the type of input */
   inputType?: InputTypeOptions
 
   /** A function to run when the handler starts */
-  onStartFn?: TOnStartFn<TInputSchema, TIsProcedure> | undefined
+  onStartFns?: Array<TOnStartFn<any, any>> | undefined
 
   /** A function to run when the handler succeeds */
-  onSuccessFn?:
-    | TOnSuccessFn<TInputSchema, TOutputSchema, TIsProcedure>
-    | undefined
+  onSuccessFns?: Array<TOnSuccessFn<any, any, any>> | undefined
 
   /** A function to run when the handler completes (success or error) */
-  onCompleteFn?:
-    | TOnCompleteFn<TInputSchema, TOutputSchema, TError, TIsProcedure>
-    | undefined
-
-  /** The procedure function to run when an error occurs */
-  onErrorFromProcedureFn?: Array<TOnErrorFn<TError, true>> | undefined
-
-  /** The procedure function to run when the handler starts */
-  onStartFromProcedureFn?: Array<TOnStartFn<TInputSchema, true>> | undefined
-
-  /** The procedure function to run when the handler succeeds */
-  onSuccessFromProcedureFn?:
-    | Array<TOnSuccessFn<TInputSchema, TOutputSchema, true>>
-    | undefined
-
-  /** The procedure function to run when the handler completes (success or error) */
-  onCompleteFromProcedureFn?:
-    | Array<TOnCompleteFn<TInputSchema, TOutputSchema, TError, true>>
-    | undefined
+  onCompleteFns?: Array<TOnCompleteFn<any, any, any, any>> | undefined
 
   /** Boolean indicating if the procedure has a parent */
   isChained?: boolean | undefined
@@ -329,7 +318,7 @@ export interface TInternals<
   handler?: TAnyZodSafeFunctionHandler | undefined
 
   /** A function to run when the handler errors to customize the error */
-  shapeErrorFn: TShapeErrorFn | TShapeErrorNotSet
+  shapeErrorFns: Array<TShapeErrorFn> | undefined
 }
 
 export type InputTypeOptions = "formData" | "json" | "state"
@@ -365,6 +354,10 @@ export type PrettifyNested<T> =
 export const ShapeErrorNotSet = "ShapeErrorNotSet" as const
 export type TShapeErrorNotSet = typeof ShapeErrorNotSet
 
-export interface TShapeErrorFn {
-  (args: { err: unknown; zsaError: ZSAError<any, any, true> | undefined }): any
+export interface TShapeErrorFn<TError extends any = TShapeErrorNotSet> {
+  (args: {
+    err: unknown
+    typedData: TypedProxyError
+    ctx: TError extends TShapeErrorNotSet ? undefined : TError
+  }): any
 }

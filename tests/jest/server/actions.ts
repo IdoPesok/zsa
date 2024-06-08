@@ -525,18 +525,13 @@ const test = z.object({
 
 const procedure = createServerActionProcedure()
   .input(z.object({ test2: z.string() }))
-  .shapeError(async ({ err, zsaError }) => {
-    if (zsaError) {
-      return {
-        fieldErrors: zsaError.inputParseErrors?.fieldErrors,
-        formErrors: zsaError.inputParseErrors?.formErrors,
-        formattedErrors: zsaError.inputParseErrors?.formattedErrors,
-        inputRaw: zsaError.inputRaw,
-      }
-    }
-
+  .shapeError(async ({ err, typedData }) => {
     return {
-      fieldErrors: undefined,
+      fieldErrors: typedData.inputParseErrors?.fieldErrors,
+      formErrors: typedData.inputParseErrors?.formErrors,
+      formattedErrors: typedData.inputParseErrors?.formattedErrors,
+      inputRaw: typedData.inputRaw,
+      inputParsed: typedData.inputParsed,
     }
   })
   .handler(async () => {
@@ -549,9 +544,3 @@ const action = procedure
   .handler(async () => {
     return
   })
-
-const main = async () => {
-  const [data, err] = await action({ test: "test", test2: "test" })
-
-  err?.inputRaw?.test
-}

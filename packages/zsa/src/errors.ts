@@ -52,7 +52,7 @@ export interface TReplaceMap<
   ["$outputFormErrors$"]: z.inferFlattenedErrors<TOutputSchema>["formErrors"]
   ["$outputFormattedErrors$"]: z.inferFormattedError<TOutputSchema>
   ["$inputRaw$"]: TSchemaInput<TInputSchema>
-  ["$inputParsed$"]: TSchemaOrZodUndefined<TInputSchema> | undefined
+  ["$inputParsed$"]: TSchemaOutput<TInputSchema> | undefined
 }
 
 export type TReplaceErrorPlaceholders<
@@ -75,35 +75,19 @@ export type TReplaceErrorPlaceholders<
 export class ZSAError<
   TInputSchema extends z.ZodType | undefined = any,
   TOutputSchema extends z.ZodType | undefined = any,
-  TPlaceholder extends boolean = false,
 > extends Error {
   /** the Error object thrown */
   public readonly data: unknown
   /** the error code */
   public readonly code: keyof typeof ERROR_CODES
 
-  public readonly inputParseErrors?: TPlaceholder extends false
-    ? TZodSchemaErrors<TSchemaOrZodUndefined<TInputSchema>>
-    : {
-        fieldErrors: TInputFieldErrors
-        formErrors: TInputFormErrors
-        formattedErrors: TInputFormattedErrors
-      }
+  public readonly inputParseErrors?: TZodSchemaErrors<
+    TSchemaOrZodUndefined<TInputSchema>
+  >
 
-  public readonly outputParseErrors?: TPlaceholder extends false
-    ? TZodSchemaErrors<TSchemaOrZodUnknown<TOutputSchema>>
-    : {
-        fieldErrors: TOutputFieldErrors
-        formErrors: TOutputFormErrors
-        formattedErrors: TOutputFormattedErrors
-      }
-
-  public inputRaw: TPlaceholder extends false
-    ? TSchemaInput<TInputSchema>
-    : TInputRaw
-  public inputParsed: TPlaceholder extends false
-    ? TSchemaOutput<TInputSchema> | undefined
-    : TInputParsed
+  public readonly outputParseErrors?: TZodSchemaErrors<
+    TSchemaOrZodUnknown<TOutputSchema>
+  >
 
   constructor(
     code: keyof typeof ERROR_CODES = ERROR_CODES.ERROR,
@@ -111,7 +95,6 @@ export class ZSAError<
     more?: {
       inputParseErrors?: TZodSchemaErrors<TSchemaOrZodUndefined<TInputSchema>>
       outputParseErrors?: TZodSchemaErrors<TSchemaOrZodUnknown<TOutputSchema>>
-      inputParsed?: TSchemaOutput<TInputSchema>
     }
   ) {
     super()
@@ -129,18 +112,24 @@ export class ZSAError<
       this.message = this.data
     }
 
-    // @ts-expect-error
     this.inputParseErrors = more?.inputParseErrors
-
-    // @ts-expect-error
     this.outputParseErrors = more?.outputParseErrors
-
-    // @ts-expect-error
-    this.inputParsed = more?.inputParsed
-
-    // @ts-expect-error
-    this.inputRaw = "123"
   }
+}
+
+export interface TypedProxyError {
+  inputParseErrors?: {
+    fieldErrors: TInputFieldErrors
+    formErrors: TInputFormErrors
+    formattedErrors: TInputFormattedErrors
+  }
+  outputParseErrors?: {
+    fieldErrors: TOutputFieldErrors
+    formErrors: TOutputFormErrors
+    formattedErrors: TOutputFormattedErrors
+  }
+  inputRaw: TInputRaw
+  inputParsed: TInputParsed
 }
 
 /**
