@@ -1,33 +1,46 @@
 import z from "zod"
-import { ZSAError } from "./errors"
+import {
+  TSchemaInput,
+  TSchemaOutput,
+  TSchemaOutputOrUnknown,
+  TShapeErrorNotSet,
+} from "./types"
 
 /** An error handler function */
-export interface TOnErrorFn {
-  (err: ZSAError): any
+export interface TOnErrorFn<TError, TIsProcedure> {
+  (
+    err: TIsProcedure extends true
+      ? unknown
+      : TError extends TShapeErrorNotSet
+        ? unknown
+        : TError
+  ): any
 }
 
 /** A start handler function */
 export interface TOnStartFn<
-  TInputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
   TIsProcedure extends boolean,
 > {
   (value: {
     /** The known args passed to the handler */
-    args: TIsProcedure extends false ? TInputSchema["_input"] : unknown
+    args: TIsProcedure extends false ? TSchemaInput<TInputSchema> : unknown
   }): any
 }
 
 /** A success handler function */
 export interface TOnSuccessFn<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
   TIsProcedure extends boolean,
 > {
   (value: {
     /** The known args passed to the handler */
-    args: TIsProcedure extends false ? TInputSchema["_output"] : unknown
+    args: TIsProcedure extends false ? TSchemaOutput<TInputSchema> : unknown
     /** The successful data returned from the handler */
-    data: TIsProcedure extends false ? TOutputSchema["_output"] : unknown
+    data: TIsProcedure extends false
+      ? TSchemaOutputOrUnknown<TOutputSchema>
+      : unknown
   }): any
 }
 
@@ -37,8 +50,9 @@ export interface TOnSuccessFn<
  * Runs after onSuccess or onError
  */
 export interface TOnCompleteFn<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
+  TError extends any,
   TIsProcedure extends boolean,
 > {
   (
@@ -51,9 +65,13 @@ export interface TOnCompleteFn<
           /** The status of the action */
           status: "success"
           /** The known args passed to the handler */
-          args: TIsProcedure extends false ? TInputSchema["_output"] : unknown
+          args: TIsProcedure extends false
+            ? TSchemaOutput<TInputSchema>
+            : unknown
           /** The successful data returned from the handler */
-          data: TIsProcedure extends false ? TOutputSchema["_output"] : unknown
+          data: TIsProcedure extends false
+            ? TSchemaOutputOrUnknown<TOutputSchema>
+            : unknown
         }
       | {
           /** A boolean indicating if the action was successful */
@@ -63,7 +81,11 @@ export interface TOnCompleteFn<
           /** The status of the action */
           status: "error"
           /** The error thrown by the handler */
-          error: ZSAError
+          error: TIsProcedure extends true
+            ? unknown
+            : TError extends TShapeErrorNotSet
+              ? unknown
+              : TError
         }
   ): any
 }

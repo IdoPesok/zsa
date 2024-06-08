@@ -87,9 +87,9 @@ export const formDataToJson = (formData: FormData, inputSchema: z.ZodType) => {
   return json
 }
 
-export const addToNullishArray = <T>(
-  array: Array<T> | undefined,
-  value: T | undefined
+export const addToNullishArray = (
+  array: Array<any> | undefined,
+  value: any | undefined
 ) => {
   if (!array && !value) return undefined
   if (!value) return array
@@ -110,4 +110,49 @@ export const mergeArraysAndRemoveDuplicates = <T>(
 
   const temp = [...(array1 || []), ...(array2 || [])]
   return [...new Set(temp)]
+}
+
+export type ZodTypeLikeVoid = z.ZodVoid | z.ZodUndefined | z.ZodNever
+
+export const instanceofZodTypeLikeVoid = (
+  type: z.ZodTypeAny
+): type is ZodTypeLikeVoid => {
+  return (
+    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodVoid) ||
+    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodUndefined) ||
+    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodNever)
+  )
+}
+
+export const canDataBeUndefinedForSchema = (
+  schema: z.ZodType | undefined
+): boolean => {
+  if (!schema) return true
+
+  if (instanceofZodTypeLikeVoid(schema)) return true
+
+  if (instanceofZodTypeKind(schema, z.ZodFirstPartyTypeKind.ZodOptional)) {
+    return true
+  }
+  if (instanceofZodTypeKind(schema, z.ZodFirstPartyTypeKind.ZodDefault)) {
+    return true
+  }
+
+  if (instanceofZodTypeKind(schema, z.ZodFirstPartyTypeKind.ZodLazy)) {
+    return canDataBeUndefinedForSchema(schema._def.getter())
+  }
+
+  if (instanceofZodTypeKind(schema, z.ZodFirstPartyTypeKind.ZodEffects)) {
+    if (schema._def.effect.type === "refinement") {
+      return canDataBeUndefinedForSchema(schema._def.schema)
+    }
+    if (schema._def.effect.type === "transform") {
+      return canDataBeUndefinedForSchema(schema._def.schema)
+    }
+    if (schema._def.effect.type === "preprocess") {
+      return canDataBeUndefinedForSchema(schema._def.schema)
+    }
+  }
+
+  return false
 }

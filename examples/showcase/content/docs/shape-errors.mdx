@@ -1,0 +1,171 @@
+---
+title: "Custom Errors (experimental)"
+group: "Errors"
+groupOrder: 1
+---
+
+`zsa` provides an experimental feature that allows you to shape and customize the error object returned by your server actions. This feature enables you to include additional information or modify the structure of the error object to better suit your application's needs.
+
+<Note>
+This feature is experimental and we may change the API in the future.
+</Note>
+
+## Shaping Error Objects
+
+To shape the error object, you can use the `experimental_shapeError` method when creating a server action or procedure. This method takes a callback function that receives the `err` (the original error object) and `typedData` (an object containing the parsed and raw input data) as arguments.
+
+The callback function should return an object that represents the desired shape of the error. 
+
+```typescript
+const shapeErrorAction = createServerAction()
+  .input(z.object({ number: z.number().refine((n) => n > 0) }))
+  .experimental_shapeError(({ err, typedData }) => {
+    function getKey(key: string, defaultValue: string) {
+      return typeof err === "object" && key in err ? err[key] : defaultValue
+    }
+
+    return {
+      code: getKey("code", "ERROR"), // [!code highlight]
+      message: getKey("message", "Something went wrong"), // [!code highlight]
+      myCustomProperty: true // [!code highlight]
+    }
+  })
+  .handler(async ({ input }) => {
+    return input.number
+  })
+
+const [, err] = await shapeErrorAction({ number: 0 })
+//   ^? { code: string, message: string, myCustomProperty: true }
+```
+
+<Warning>
+Make sure to not return any vulnerable data in your custom errors such as stack traces or sensitive information.
+</Warning>
+
+## Typed Errors
+
+You are probably going to define your shape error functions before Typescript will have access to the input/output schemas of your actions.
+
+To get around this, you can use the `typedData` object that is passed to the shape error function. This object contains the parsed and raw input data of the action.
+
+```typescript
+const shapeErrorAction = createServerAction()
+  .input(z.object({ number: z.number().refine((n) => n > 0) }))
+  .experimental_shapeError(({ err, typedData }) => {
+    return {
+      inputRaw: typedData.inputRaw, // [!code highlight]
+      inputParsed: typedData.inputParsed, // [!code highlight]
+      inputParseErrors: typedData.inputParseErrors, // [!code highlight]
+      outputParseErrors: typedData.outputParseErrors // [!code highlight]
+    }
+  })
+  .handler(async ({ input }) => {
+    return input.number
+  })
+```
+
+When using `typedData`, it must be returned as values in an object. So for example, you can't return `typedData.inputRaw` as the error, but you can return an object such as `{ values: typedData.inputRaw }`.
+
+## Chaining Shaped Errors
+
+Shaped errors can be chained together when using procedures. When shaping an error in a procedure, you have access to the `ctx` object from the previous chained error.
+
+```typescript title="actions.ts"
+"use server"
+import z from "zod"
+import { createServerActionProcedure } from "zsa"
+
+const procedureA = createServerActionProcedure()
+  .experimental_shapeError(({ err, typedData }) => {
+    return {
+      isError: true
+    }
+  })
+  .handler(() => {})
+
+const procedureB = createServerActionProcedure(procedureA)
+  .experimental_shapeError(({ err, typedData, ctx }) => {
+    return {
+      ...ctx, // [!code highlight]
+      addingOn: true
+    }
+  })
+  .handler(() => {})
+
+const action = procedureB.createServerAction()
+  .experimental_shapeError(({ err, typedData, ctx }) => {
+    return {
+      ...ctx, // [!code highlight]
+      addingOnFromAction: true
+    }
+  })
+  .handler(() => {})
+
+const [data, err] = await action()
+type ERROR = typeof err
+//   ^? { isError: true; addingOn: true; addingOnFromAction: true } | null
+```
+
+## Custom React Hook Form Example
+
+Here's an example of how you can use the custom error shaping feature with React Hook Form:
+
+```typescript title="actions.ts"
+"use server"
+import z from "zod"
+import { createServerAction, ZSAError } from "zsa"
+export const publicAction = createServerActionProcedure()
+  .experimental_shapeError(({ err, typedData }) => {
+    if (err instanceof ZSAError) {
+      const { code: type, inputParseErrors, message } = err
+      return {
+        message: err.message,
+        code: err.code,
+        rhfErrors: { // [!code highlight]
+          root: {
+            type,
+            message: message ?? inputParseErrors?.fieldErrors?.[0],
+          },
+          ...Object.fromEntries(
+            Object.entries(inputParseErrors?.fieldErrors ?? {}).map(
+              ([name, errors]) => [name, { message: errors?.[0] }]
+            )
+          ),
+        },
+        values: typedData.inputRaw, // [!code highlight]
+      }
+    }
+    return {
+      message: "Something went wrong",
+      code: "ERROR",
+      values: typedData.inputRaw, // [!code highlight]
+    }
+  })
+  .handler(() => {})
+  .createServerAction()
+export const produceNewMessage = publicAction
+  .input(
+    z.object({
+      name: z.string().min(5),
+    })
+  )
+  .handler(async ({ input }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return "Hello, " + input.name
+  })
+```
+
+In this example, we shape the error object to include `rhfErrors` and `values` properties, which can be used directly with React Hook Form.
+
+```typescript title="react-hook-form-example.tsx"
+const { isPending, execute, data, error } = useServerAction(produceNewMessage)
+const form = useForm<z.infer<typeof formSchema>>({
+  resolver: zodResolver(formSchema),
+  defaultValues: error?.values, // [!code highlight]
+  errors: error?.rhfErrors, // [!code highlight]
+})
+```
+
+By shaping the error object, you can easily integrate it with React Hook Form, providing default values and error messages based on the error object.
+
+The custom error shaping feature in `zsa` provides flexibility in structuring error objects to meet your application's specific needs, making it easier to handle and display errors in your user interface.

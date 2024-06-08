@@ -1,31 +1,65 @@
 import { z } from "zod"
 import { NextRequest } from "./api"
-import { TOnCompleteFn, TOnStartFn, TOnSuccessFn } from "./callbacks"
+import {
+  TOnCompleteFn,
+  TOnErrorFn,
+  TOnStartFn,
+  TOnSuccessFn,
+} from "./callbacks"
 import { TZSAError, ZSAError } from "./errors"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 import {
   InputTypeOptions,
   RetryConfig,
+  TAnyStateHandlerFunc,
   TAnyZodSafeFunctionHandler,
   THandlerFunc,
   THandlerOpts,
   TInternals,
   TNoInputHandlerFunc,
+  TOptsSource,
+  TSchemaInput,
+  TSchemaOrZodUndefined,
+  TSchemaOutput,
+  TSchemaOutputOrUnknown,
+  TShapeErrorFn,
+  TShapeErrorNotSet,
   TStateHandlerFunc,
   TZodSafeFunctionDefaultOmitted,
   TimeoutStatus,
   ZSAResponseMeta,
 } from "./types"
-import { addToNullishArray, formDataToJson } from "./utils"
+import {
+  ZodTypeLikeVoid,
+  canDataBeUndefinedForSchema,
+  formDataToJson,
+} from "./utils"
+
+const validateOpts = (opts?: THandlerOpts<any>) => {
+  // log if someone is trying to manipulate the opts
+  // NOTE: even without this new check it is safe => no need for advisory because
+  // - attacker can try to manipulate ctx but procedures will still run safely
+  //     -> this is because the opts ctx always comes from procedure (check for isProcedure)
+  // - schemas can't be returned (classes will be blocked)
+  // - override input schema can't be passed in (classes will be blocked)
+  // adding this to throw an auto not authorized error and an extra layer of protection can't hurt
+  if (
+    opts &&
+    (!(opts.source instanceof TOptsSource) || !opts.source.validate())
+  ) {
+    throw new Error("Invalid opts, must originate from the server")
+  }
+}
 
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
-  extends ZodSafeFunction<any, any, any, any, boolean, any> {}
+  extends ZodSafeFunction<any, any, any, any, any, boolean, any> {}
 
 /** A helper type to wrap ZodSafeFunction in an Omit */
 export type TZodSafeFunction<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
+  TError extends any,
   TOmitted extends string,
   TProcedureChainOutput extends any,
   TIsProcedure extends boolean,
@@ -34,6 +68,7 @@ export type TZodSafeFunction<
   ZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted,
     TProcedureChainOutput,
     TIsProcedure,
@@ -43,18 +78,24 @@ export type TZodSafeFunction<
 >
 
 export class ZodSafeFunction<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
+  TError extends any,
   TOmitted extends string,
   TProcedureChainOutput extends any,
   TIsProcedure extends boolean,
   TInputType extends InputTypeOptions,
 > {
   /** The internals of the Zod Safe Function */
-  public $internals: TInternals<TInputSchema, TOutputSchema, TIsProcedure>
+  public $internals: TInternals<
+    TInputSchema,
+    TOutputSchema,
+    TError,
+    TIsProcedure
+  >
 
   constructor(
-    internals: TInternals<TInputSchema, TOutputSchema, TIsProcedure>
+    internals: TInternals<TInputSchema, TOutputSchema, TError, TIsProcedure>
   ) {
     this.$internals = internals
   }
@@ -111,7 +152,7 @@ export class ZodSafeFunction<
    *  Run through the procedure chain and get the final context
    */
   public async getProcedureChainOutput(
-    args: TInputSchema["_input"],
+    args: TSchemaInput<TInputSchema>,
     timeoutStatus: TimeoutStatus,
     request: NextRequest | undefined,
     responseMeta: ZSAResponseMeta | undefined,
@@ -128,6 +169,7 @@ export class ZodSafeFunction<
         request,
         responseMeta,
         previousState,
+        source: new TOptsSource(() => true),
       })
       if (err) {
         throw err
@@ -146,6 +188,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "timeout",
     TProcedureChainOutput,
     TIsProcedure,
@@ -163,6 +206,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "retry",
     TProcedureChainOutput,
     TIsProcedure,
@@ -195,10 +239,9 @@ export class ZodSafeFunction<
       type?: TType
     }
   ): TZodSafeFunction<
-    TInputSchema extends z.ZodUndefined
-      ? T
-      : z.ZodIntersection<TInputSchema, T>,
+    TInputSchema extends z.ZodType ? z.ZodIntersection<TInputSchema, T> : T,
     TOutputSchema,
+    TError,
     "input" | Exclude<TOmitted, "onInputParseError">, // bring back the onInputParseError
     TProcedureChainOutput,
     TIsProcedure,
@@ -207,10 +250,9 @@ export class ZodSafeFunction<
     return new ZodSafeFunction({
       ...this.$internals,
       // @ts-expect-error
-      inputSchema:
-        this.$internals.inputSchema instanceof z.ZodUndefined
-          ? schema
-          : schema.and(this.$internals.inputSchema),
+      inputSchema: !this.$internals.inputSchema
+        ? schema
+        : schema.and(this.$internals.inputSchema),
       inputType: opts?.type,
     }) as any
   }
@@ -221,6 +263,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     T,
+    TError,
     "output" | Exclude<TOmitted, "onOutputParseError">,
     TProcedureChainOutput,
     TIsProcedure,
@@ -236,16 +279,20 @@ export class ZodSafeFunction<
   /** set a handler function for input parse errors */
   public onInputParseError(
     fn: (
-      err: z.ZodError<TIsProcedure extends false ? TInputSchema : any>
+      err: z.ZodError<
+        TIsProcedure extends false ? TSchemaOrZodUndefined<TInputSchema> : any
+      >
     ) => any
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     "onInputParseError" | TOmitted,
     TProcedureChainOutput,
     TIsProcedure,
     TInputType
   > {
+    // @ts-expect-error
     return new ZodSafeFunction({
       ...this.$internals,
       onInputParseError: fn,
@@ -255,16 +302,24 @@ export class ZodSafeFunction<
   /** set a handler function for output parse errors */
   public onOutputParseError(
     fn: (
-      err: z.ZodError<TIsProcedure extends false ? TOutputSchema : any>
+      err: z.ZodError<
+        TIsProcedure extends false
+          ? TOutputSchema extends z.ZodType
+            ? TOutputSchema
+            : any
+          : any
+      >
     ) => any
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     "onOutputParseError" | TOmitted,
     TProcedureChainOutput,
     TIsProcedure,
     TInputType
   > {
+    // @ts-expect-error
     return new ZodSafeFunction({
       ...this.$internals,
       onOutputParseError: fn,
@@ -273,10 +328,11 @@ export class ZodSafeFunction<
 
   /** set a handler function for errors */
   public onError(
-    fn: (err: ZSAError) => any
+    fn: TOnErrorFn<TError, TIsProcedure>
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     "onError" | TOmitted,
     TProcedureChainOutput,
     TIsProcedure,
@@ -284,7 +340,7 @@ export class ZodSafeFunction<
   > {
     return new ZodSafeFunction({
       ...this.$internals,
-      onErrorFn: fn,
+      onErrorFns: [...(this.$internals.onErrorFns || []), fn],
     }) as any
   }
 
@@ -294,6 +350,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "onStart",
     TProcedureChainOutput,
     TIsProcedure,
@@ -301,7 +358,7 @@ export class ZodSafeFunction<
   > {
     return new ZodSafeFunction({
       ...this.$internals,
-      onStartFn: fn,
+      onStartFns: [...(this.$internals.onStartFns || []), fn],
     }) as any
   }
 
@@ -311,6 +368,7 @@ export class ZodSafeFunction<
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "onSuccess",
     TProcedureChainOutput,
     TIsProcedure,
@@ -318,16 +376,17 @@ export class ZodSafeFunction<
   > {
     return new ZodSafeFunction({
       ...this.$internals,
-      onSuccessFn: fn,
+      onSuccessFns: [...(this.$internals.onSuccessFns || []), fn],
     }) as any
   }
 
   /** set a handler function for when the server action completes (success or error) */
   public onComplete(
-    fn: TOnCompleteFn<TInputSchema, TOutputSchema, TIsProcedure>
+    fn: TOnCompleteFn<TInputSchema, TOutputSchema, TError, TIsProcedure>
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
+    TError,
     TOmitted | "onComplete",
     TProcedureChainOutput,
     TIsProcedure,
@@ -335,7 +394,7 @@ export class ZodSafeFunction<
   > {
     return new ZodSafeFunction({
       ...this.$internals,
-      onCompleteFn: fn,
+      onCompleteFns: [...(this.$internals.onCompleteFns || []), fn],
     }) as any
   }
 
@@ -343,20 +402,28 @@ export class ZodSafeFunction<
   public async parseOutputData(
     data: any,
     timeoutStatus: TimeoutStatus
-  ): Promise<TOutputSchema["_output"]> {
+  ): Promise<TSchemaOutputOrUnknown<TOutputSchema>> {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
-    if (
-      !this.$internals.outputSchema ||
-      this.$internals.outputSchema instanceof z.ZodUndefined
-    )
-      return data
+
+    // no output schema, return data
+    if (!this.$internals.outputSchema) return data
+
     const safe = await this.$internals.outputSchema.safeParseAsync(data)
     if (!safe.success) {
       if (this.$internals.onOutputParseError) {
         await this.$internals.onOutputParseError(safe.error)
       }
-      safe.error.flatten()
-      throw new ZSAError("OUTPUT_PARSE_ERROR", safe.error)
+
+      const flattenedErrors = safe.error.flatten()
+      const formattedErrors = safe.error.format()
+
+      throw new ZSAError("OUTPUT_PARSE_ERROR", safe.error, {
+        outputParseErrors: {
+          fieldErrors: flattenedErrors?.fieldErrors,
+          formErrors: flattenedErrors?.formErrors,
+          formattedErrors: formattedErrors,
+        },
+      })
     }
     return safe.data
   }
@@ -365,21 +432,12 @@ export class ZodSafeFunction<
   public async handleStart(args: any, timeoutStatus: TimeoutStatus) {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
-    if (
-      this.$internals.onStartFromProcedureFn &&
-      !this.$internals.isProcedure
-    ) {
-      for (const fn of this.$internals.onStartFromProcedureFn) {
-        await fn({ args })
-      }
-    }
+    // callbacks run on the main action thread
+    if (this.$internals.isProcedure) return
 
-    this.checkTimeoutStatus(timeoutStatus) // checkpoint
-
-    if (this.$internals.onStartFn && !this.$internals.isProcedure) {
-      await this.$internals.onStartFn({
-        args,
-      })
+    for (const fn of this.$internals.onStartFns || []) {
+      await fn({ args })
+      this.checkTimeoutStatus(timeoutStatus) // checkpoint
     }
   }
 
@@ -391,56 +449,36 @@ export class ZodSafeFunction<
   ) {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
-    if (
-      this.$internals.onSuccessFromProcedureFn &&
-      !this.$internals.isProcedure
-    ) {
-      for (const fn of this.$internals.onSuccessFromProcedureFn) {
-        await fn({ args, data })
-      }
+    // callbacks run on the main action thread
+    if (this.$internals.isProcedure) return
+
+    // run on success callbacks
+    for (const fn of this.$internals.onSuccessFns || []) {
+      await fn({ args, data })
+      this.checkTimeoutStatus(timeoutStatus) // checkpoint
     }
 
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
-    if (this.$internals.onSuccessFn && !this.$internals.isProcedure) {
-      await this.$internals.onSuccessFn({
-        args,
-        data,
-      })
-    }
-
-    this.checkTimeoutStatus(timeoutStatus) // checkpoint
-
-    if (
-      this.$internals.onCompleteFromProcedureFn &&
-      !this.$internals.isProcedure
-    ) {
-      for (const fn of this.$internals.onCompleteFromProcedureFn) {
-        await fn({
-          isSuccess: true,
-          isError: false,
-          status: "success",
-          args,
-          data,
-        })
-      }
-    }
-
-    this.checkTimeoutStatus(timeoutStatus) // checkpoint
-
-    if (this.$internals.onCompleteFn && !this.$internals.isProcedure) {
-      await this.$internals.onCompleteFn({
+    // run on complete callbacks
+    for (const fn of this.$internals.onCompleteFns || []) {
+      await fn({
         isSuccess: true,
         isError: false,
         status: "success",
         args,
         data,
       })
+      this.checkTimeoutStatus(timeoutStatus) // checkpoint
     }
   }
 
   /** helper function to handle errors with timeout checkpoints */
-  public async handleError(err: any): Promise<[null, TZSAError<TInputSchema>]> {
+  public async handleError(
+    err: any,
+    inputRaw: any,
+    inputParsed: any
+  ): Promise<[null, TZSAError<TInputSchema>]> {
     // we need to throw any NEXT_REDIRECT errors so that next can
     // properly handle them.
 
@@ -448,38 +486,43 @@ export class ZodSafeFunction<
       throw err
     }
 
-    const customError =
-      err instanceof ZSAError ? err : new ZSAError("ERROR", err)
+    // callbacks run on the main action thread
+    // error will get returned at the action level
+    if (this.$internals.isProcedure) return [null, err as any]
 
-    if (
-      this.$internals.onErrorFromProcedureFn &&
-      !this.$internals.isProcedure
-    ) {
-      for (const fn of this.$internals.onErrorFromProcedureFn) {
-        await fn(customError)
-      }
-    }
+    let customError
 
-    if (this.$internals.onErrorFn && !this.$internals.isProcedure) {
-      await this.$internals.onErrorFn(customError)
-    }
-
-    if (
-      this.$internals.onCompleteFromProcedureFn &&
-      !this.$internals.isProcedure
-    ) {
-      for (const fn of this.$internals.onCompleteFromProcedureFn) {
-        await fn({
-          isSuccess: false,
-          isError: true,
-          status: "error",
-          error: customError,
+    if (this.$internals.shapeErrorFns !== undefined) {
+      let accData = undefined
+      for (const fn of this.$internals.shapeErrorFns) {
+        accData = await fn({
+          err,
+          typedData: {
+            // @ts-expect-error
+            inputParseErrors:
+              err instanceof ZSAError ? err.inputParseErrors : undefined,
+            // @ts-expect-error
+            outputParseErrors:
+              err instanceof ZSAError ? err.outputParseErrors : undefined,
+            inputParsed: inputParsed,
+            inputRaw: inputRaw,
+          },
+          ctx: accData,
         })
       }
+      customError = accData as any
+    } else {
+      customError = err instanceof ZSAError ? err : new ZSAError("ERROR", err)
     }
 
-    if (this.$internals.onCompleteFn && !this.$internals.isProcedure) {
-      await this.$internals.onCompleteFn({
+    // run on error callbacks
+    for (const fn of this.$internals.onErrorFns || []) {
+      await fn(customError)
+    }
+
+    // run on complete callbacks
+    for (const fn of this.$internals.onCompleteFns || []) {
+      await fn({
         isSuccess: false,
         isError: true,
         status: "error",
@@ -487,17 +530,16 @@ export class ZodSafeFunction<
       })
     }
 
-    // the error will get returned to the action level
-    if (this.$internals.isProcedure) {
+    if (this.$internals.shapeErrorFns !== undefined) {
       return [null, customError as any]
     }
 
     const stringifyIfNeeded = (data: any) =>
       typeof data === "string" ? data : JSON.stringify(data)
 
+    // get zod errors
     let formattedErrors
     let flattenedErrors
-
     const data = err.data
     if (
       data instanceof z.ZodError &&
@@ -507,6 +549,7 @@ export class ZodSafeFunction<
       flattenedErrors = data.flatten()
     }
 
+    // finally return the error
     return [
       null,
       {
@@ -526,25 +569,60 @@ export class ZodSafeFunction<
     data: any,
     timeoutStatus: TimeoutStatus,
     $overrideInputSchema?: z.ZodType
-  ): Promise<TInputSchema["_output"]> {
+  ): Promise<TSchemaOutput<TInputSchema>> {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
+    // get the input schema
     const inputSchema = $overrideInputSchema || this.$internals.inputSchema
 
-    if (!inputSchema) return data
+    // WEIRD CASE
+    // the procedure input schema is undefined but the action input schema is not
+    // thus if we try to parse z.undefined(object) we get an error
+    // we can safely skip this because it will get validated by the action
+    if (!inputSchema && data !== undefined && this.$internals.isProcedure) {
+      return data
+    }
 
-    if (inputSchema instanceof z.ZodUndefined) return undefined
-
-    const safe = await inputSchema.safeParseAsync(data)
+    // parse the input data
+    const safe = await (inputSchema || z.undefined()).safeParseAsync(data)
 
     if (!safe.success) {
       if (this.$internals.onInputParseError) {
         await this.$internals.onInputParseError(safe.error)
       }
-      throw new ZSAError("INPUT_PARSE_ERROR", safe.error)
+
+      const flattenedErrors = safe.error.flatten()
+      const formattedErrors = safe.error.format()
+
+      throw new ZSAError("INPUT_PARSE_ERROR", safe.error, {
+        inputParseErrors: {
+          fieldErrors: flattenedErrors?.fieldErrors,
+          formErrors: flattenedErrors?.formErrors,
+          formattedErrors: formattedErrors,
+        },
+      })
     }
 
     return safe.data
+  }
+
+  /** set a handler function for when the server action starts */
+  public experimental_shapeError<T extends TShapeErrorFn<TError>>(
+    fn: T
+  ): TZodSafeFunction<
+    TInputSchema,
+    TOutputSchema,
+    Awaited<ReturnType<T>>,
+    TOmitted | "experimental_shapeError",
+    TProcedureChainOutput,
+    TIsProcedure,
+    TInputType
+  > {
+    return new ZodSafeFunction({
+      ...this.$internals,
+      // @ts-expect-error
+      shapeErrorFns: [...(this.$internals.shapeErrorFns || []), fn],
+    }) as any
   }
 
   public getTimeoutErrorPromise = (timeoutMs: number) =>
@@ -556,13 +634,13 @@ export class ZodSafeFunction<
 
   /** set the handler function for the server action */
   public handler<
-    TRet extends TOutputSchema extends z.ZodUndefined
-      ? any | Promise<any>
-      : TOutputSchema["_output"] | Promise<TOutputSchema["_output"]>,
+    TRet extends TOutputSchema extends z.ZodType
+      ? TOutputSchema["_output"] | Promise<TOutputSchema["_output"]>
+      : any | Promise<any>,
   >(
     fn: (v: {
       /** the parsed input to the action */
-      input: TInputSchema["_output"]
+      input: TSchemaOutput<TInputSchema>
       /** the final context of the action */
       ctx: TProcedureChainOutput
       /** a request object if the action is run from an Open API route `createOpenApiServerActionRouter` */
@@ -574,49 +652,65 @@ export class ZodSafeFunction<
     }) => TRet
   ): TIsProcedure extends false
     ? TInputType extends "state"
-      ? TStateHandlerFunc<TInputSchema, TOutputSchema, TRet>
-      : TInputSchema extends z.ZodUndefined
+      ? TStateHandlerFunc<TInputSchema, TOutputSchema, TError, TRet>
+      : TInputSchema extends undefined | ZodTypeLikeVoid
         ? TNoInputHandlerFunc<
             TRet,
-            TInputSchema,
+            undefined,
             TOutputSchema,
-            TProcedureChainOutput
+            TError,
+            TProcedureChainOutput,
+            TIsProcedure
           >
         : THandlerFunc<
             TInputSchema,
             TOutputSchema,
+            TError,
             TRet,
             TProcedureChainOutput,
-            TInputType
+            TInputType,
+            TIsProcedure
           >
     : CompleteProcedure<
         TInputSchema,
         THandlerFunc<
           TInputSchema,
           TOutputSchema,
+          TError,
           TRet,
           TProcedureChainOutput,
-          "json"
-        >
+          "json",
+          TIsProcedure
+        >,
+        TError
       > {
+    // keep state of the timeout
     const timeoutStatus: TimeoutStatus = {
       isTimeout: false,
     }
 
-    type TArgs = TInputType extends "json" ? TInputSchema["_input"] : FormData
+    // type of args
+    type TArgs = TInputType extends "json"
+      ? TSchemaInput<TInputSchema>
+      : FormData
 
     const wrapper = async (
       $args: TArgs,
-      overrideArgs?: Partial<TInputSchema["_input"]>,
+      overrideArgs?: Partial<TSchemaInput<TInputSchema>>,
       opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
+      validateOpts(opts)
+
       if (opts?.returnInputSchema) {
-        return this.$internals.inputSchema
+        // return the input schema
+        return this.$internals.inputSchema || z.undefined()
       } else if (opts?.returnOutputSchema) {
+        // return the output schema
         return this.$internals.outputSchema
       }
 
       let args
+      let parsedArgs
 
       if (this.$internals.inputType === "state") {
         args = overrideArgs // the second argument is the form data
@@ -637,23 +731,33 @@ export class ZodSafeFunction<
         // if args is formData
         if (args instanceof FormData) {
           args = {
-            ...formDataToJson(args, this.$internals.inputSchema),
+            ...formDataToJson(
+              args,
+              this.$internals.inputSchema || z.undefined()
+            ),
             ...(this.$internals.inputType !== "state"
               ? overrideArgs || {}
               : {}),
           }
+
+          if (
+            Object.keys(args).length === 0 &&
+            canDataBeUndefinedForSchema(this.$internals.inputSchema)
+          ) {
+            args = undefined
+          }
         }
 
-        await this.handleStart(args, timeoutStatus)
+        opts?.onArgs?.(args)
 
-        if (!this.$internals.inputSchema && !this.$internals.isChained)
-          throw new Error("No input schema")
+        await this.handleStart(args, timeoutStatus)
 
         // run the procedure chain to get the context
         const ctx =
           this.$internals.isProcedure && opts
             ? (opts.ctx as TProcedureChainOutput)
             : await this.getProcedureChainOutput(
+                // @ts-expect-error
                 args,
                 timeoutStatus,
                 opts?.request,
@@ -667,6 +771,10 @@ export class ZodSafeFunction<
           timeoutStatus,
           opts?.overrideInputSchema
         )
+
+        opts?.onParsedArgs?.(input)
+
+        parsedArgs = input
 
         // timeout checkpoint
         this.checkTimeoutStatus(timeoutStatus) // checkpoint
@@ -692,63 +800,61 @@ export class ZodSafeFunction<
           return await wrapper($args, overrideArgs, {
             ...(opts || {}),
             attempts: (opts?.attempts || 1) + 1,
+            source: new TOptsSource(() => true),
           })
         }
 
-        return await this.handleError(err)
+        return await this.handleError(err, args, parsedArgs)
       }
     }
 
     // helper function to run a Promise race between the timeout and the wrapper
     const withTimeout = async (
       args: TArgs,
-      overrideArgs?: Partial<TInputSchema["_input"]>,
+      overrideArgs?: Partial<TSchemaInput<TInputSchema>>,
       opts?: THandlerOpts<TProcedureChainOutput>
     ) => {
       const timeoutMs = this.$internals.timeout
       if (!timeoutMs) return await wrapper(args, overrideArgs, opts)
 
+      validateOpts(opts)
+
+      let gotArgs: any = undefined
+      let gotParsedArgs: any = undefined
+
       return await Promise.race([
-        wrapper(args, overrideArgs, opts),
+        wrapper(args, overrideArgs, {
+          ...(opts || {}),
+          onArgs: (args) => {
+            gotArgs = args
+          },
+          onParsedArgs: (parsedArgs) => {
+            gotParsedArgs = parsedArgs
+          },
+          source: new TOptsSource(() => true),
+        }),
         this.getTimeoutErrorPromise(timeoutMs),
       ])
         .then((r) => r)
         .catch((err) => {
           timeoutStatus.isTimeout = true
-          return this.handleError(err)
+          return this.handleError(err, gotArgs, gotParsedArgs)
         })
     }
 
     // if this is a procedure, we need to return the complete procedure
     if (this.$internals.isProcedure) {
-      const handler: THandlerFunc<
-        TInputSchema,
-        TOutputSchema,
-        TRet,
-        TProcedureChainOutput,
-        "json"
-      > = this.$internals.timeout ? withTimeout : wrapper
+      const handler = this.$internals.timeout ? withTimeout : wrapper
 
       return new CompleteProcedure({
         inputSchema: this.$internals.inputSchema,
         handlerChain: [...this.$internals.procedureHandlerChain, handler],
+        shapeErrorFns: this.$internals.shapeErrorFns,
         lastHandler: handler,
-        onCompleteFns: addToNullishArray(
-          this.$internals.onCompleteFromProcedureFn,
-          this.$internals.onCompleteFn
-        ),
-        onErrorFns: addToNullishArray(
-          this.$internals.onErrorFromProcedureFn,
-          this.$internals.onErrorFn
-        ),
-        onStartFns: addToNullishArray(
-          this.$internals.onStartFromProcedureFn,
-          this.$internals.onStartFn
-        ),
-        onSuccessFns: addToNullishArray(
-          this.$internals.onSuccessFromProcedureFn,
-          this.$internals.onSuccessFn
-        ),
+        onCompleteFns: this.$internals.onCompleteFns,
+        onErrorFns: this.$internals.onErrorFns,
+        onStartFns: this.$internals.onStartFns,
+        onSuccessFns: this.$internals.onSuccessFns,
         timeout: this.$internals.timeout,
         retryConfig: this.$internals.retryConfig,
       }) as any
@@ -768,65 +874,73 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
   isProcedure?: TIsProcedure,
   parentProcedure?: TAnyCompleteProcedure
 ): TZodSafeFunction<
-  z.ZodUndefined,
-  z.ZodUndefined,
+  undefined,
+  undefined,
+  TShapeErrorNotSet,
   TZodSafeFunctionDefaultOmitted,
   undefined,
   TIsProcedure,
   "json"
 > {
   return new ZodSafeFunction({
-    inputSchema: parentProcedure?.$internals.inputSchema || z.undefined(),
-    outputSchema: z.undefined(),
+    inputSchema: parentProcedure?.$internals.inputSchema || undefined,
+    outputSchema: undefined,
+    shapeErrorFns: parentProcedure?.$internals.shapeErrorFns || undefined,
     isChained: parentProcedure !== undefined,
     isProcedure: isProcedure === true,
     procedureHandlerChain: parentProcedure?.$internals.handlerChain || [],
-    onCompleteFromProcedureFn: parentProcedure?.$internals.onCompleteFns,
-    onErrorFromProcedureFn: parentProcedure?.$internals.onErrorFns,
-    onStartFromProcedureFn: parentProcedure?.$internals.onStartFns,
-    onSuccessFromProcedureFn: parentProcedure?.$internals.onSuccessFns,
+    onCompleteFns: parentProcedure?.$internals.onCompleteFns,
+    onErrorFns: parentProcedure?.$internals.onErrorFns,
+    onStartFns: parentProcedure?.$internals.onStartFns,
+    onSuccessFns: parentProcedure?.$internals.onSuccessFns,
   }) as any
 }
 
 // helper type to infer the return data of a server action
 export type inferServerActionReturnData<
-  TAction extends TAnyZodSafeFunctionHandler,
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
 > =
   NonNullable<Awaited<ReturnType<TAction>>[0]> extends never
     ? undefined
     : NonNullable<Awaited<ReturnType<TAction>>[0]>
 
 // helper type to infer the error of a server action
-export type inferServerActionError<TAction extends TAnyZodSafeFunctionHandler> =
-  NonNullable<Awaited<ReturnType<TAction>>[1]>
+export type inferServerActionError<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> = NonNullable<Awaited<ReturnType<TAction>>[1]>
 
 // helper type to infer the return type of a server action
 export type inferServerActionReturnType<
-  TAction extends TAnyZodSafeFunctionHandler,
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
 > = Awaited<ReturnType<TAction>>
 
 // helper type to infer the return type of a server action
 // hot promise
 export type inferServerActionReturnTypeHot<
-  TAction extends TAnyZodSafeFunctionHandler,
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
 > = ReturnType<TAction>
 
 // helper type to infer the input of a server action
-export type inferServerActionInput<TAction extends TAnyZodSafeFunctionHandler> =
-  Parameters<TAction>[0]
+export type inferServerActionInput<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> = TAction extends TAnyZodSafeFunctionHandler
+  ? Parameters<TAction>[0]
+  : [Parameters<TAction>[0], Parameters<TAction>[1]]
 
 // create a server action without a procedure
 export function createServerAction(): TZodSafeFunction<
-  z.ZodUndefined,
-  z.ZodUndefined,
+  undefined,
+  undefined,
+  TShapeErrorNotSet,
   TZodSafeFunctionDefaultOmitted,
   undefined,
   false,
   "json"
 > {
   return new ZodSafeFunction({
-    inputSchema: z.undefined(),
-    outputSchema: z.undefined(),
+    inputSchema: undefined,
+    outputSchema: undefined,
+    shapeErrorFns: undefined,
     procedureHandlerChain: [],
   }) as any
 }

@@ -10,6 +10,7 @@ import {
   adminAction,
   faultyOutputProcedure,
   inputNumberProcedure,
+  intersectedInputProcedureC,
   ownsPostAction,
   ownsPostIsAdminAction,
   previousStateAction,
@@ -21,6 +22,7 @@ import {
   retryAction,
   setAuthToTwoProcedure,
   setAuthToTwoProcedureWithCounter,
+  shapeErrorAction,
   timeoutAction,
 } from "./procedures"
 
@@ -110,9 +112,11 @@ export const statesAction = publicAction
     return "Success"
   })
 
-export const getPostByIdAction = ownsPostAction.handler(async ({ ctx }) => {
-  return ctx.post
-})
+export const getPostByIdAction = ownsPostAction.handler(
+  async ({ ctx, input }) => {
+    return ctx.post
+  }
+)
 
 export const resetAction = publicAction.handler(async () => {
   await sleep(CLIENT_TEST_DATA.sleep)
@@ -361,7 +365,7 @@ export const divideAction = publicAction
   })
 
 export const nextRedirectAction = publicAction.handler(async () => {
-  redirect("/123")
+  redirect("/slow")
   return "123"
 })
 
@@ -430,6 +434,29 @@ export const multiEntryFormDataAction = publicAction
     return input.name
   })
 
+export const multiEntryStateAction = publicAction
+  .input(
+    z.object({
+      name: z
+        .array(z.string())
+        .refine((n) => !n.includes("invalid"), "invalid name"),
+    }),
+    {
+      type: "state",
+    }
+  )
+  .handler(async ({ input }) => {
+    return input.name
+  })
+
+export const emptyFormDataAction = publicAction
+  .input(z.object({ value: z.string() }).default({ value: "hello world" }), {
+    type: "formData",
+  })
+  .handler(async ({ input }) => {
+    return input.value
+  })
+
 export const procedureChainAuthAction = setAuthToTwoProcedure
   .createServerAction()
   .input(z.object({ three: z.enum(["valid", "invalid"]) }))
@@ -454,3 +481,75 @@ export const procedureChainAuthActionWithCounter =
         counter: ctx.counter + 1,
       }
     })
+
+export const multiplyActionWithDefaultObject = publicAction
+  .input(
+    z
+      .object({
+        number2: z.coerce.number(),
+        number1: z.coerce.number(),
+      })
+      .default({ number1: 2, number2: 5 })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 * input.number2,
+    }
+  })
+
+export const multiplyActionWithDefaultValues = publicAction
+  .input(
+    z.object({
+      number2: z.coerce.number().default(5),
+      number1: z.coerce.number().default(2),
+    })
+  )
+  .handler(async ({ input }) => {
+    return {
+      result: input.number1 * input.number2,
+    }
+  })
+
+export const intersectedInputAction = intersectedInputProcedureC
+  .createServerAction()
+  .input(z.object({ c: z.string() }))
+  .handler(async ({ input, ctx }) => {
+    return {
+      input,
+      ctx,
+    }
+  })
+
+export const shapeErrorActionThatReturnsInput = publicAction
+  .input(z.object({ number: z.number().transform((n) => 100) }))
+  .experimental_shapeError(({ err, typedData }) => {
+    return {
+      inputRaw: typedData.inputRaw,
+      inputParsed: typedData.inputParsed,
+    }
+  })
+  .handler(async ({ input }) => {
+    if (input.number > 0) {
+      throw new ZSAError("NOT_AUTHORIZED", "number")
+    }
+    return input
+  })
+
+export const shapeErrorActionThatReturnsOutput = publicAction
+  .output(z.object({ number: z.number().refine((n) => n > 0) }))
+  .experimental_shapeError(({ err, typedData }) => {
+    return {
+      fieldErrors: typedData.outputParseErrors?.fieldErrors,
+    }
+  })
+  .handler(async () => {
+    return {
+      number: 0,
+    }
+  })
+
+export const faultyShapeErrorAction = shapeErrorAction
+  .input(z.object({ number: z.number().refine((n) => n > 0) }))
+  .handler(async ({ input }) => {
+    return input.number
+  })

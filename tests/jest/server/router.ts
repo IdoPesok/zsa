@@ -4,6 +4,8 @@ import {
   multiplyAction,
   multiplyActionWithArray,
   multiplyActionWithCustomResponse,
+  multiplyActionWithDefaultObject,
+  multiplyActionWithDefaultValues,
   protectedMultiplyAction,
   subtractAction,
 } from "./actions"
@@ -23,6 +25,14 @@ const publicRouter = createOpenApiServerActionRouter({
   .post("/calculations/multiply/{number1}", multiplyAction)
   .all("/calculations/divide/{number1}", divideAction)
   .all("/calculations/subtract/:number1/:number2", subtractAction)
+  .all(
+    "/calculations/multiplyWithDefaultObject",
+    multiplyActionWithDefaultObject
+  )
+  .all(
+    "/calculations/multiplyWithDefaultValues",
+    multiplyActionWithDefaultValues
+  )
 
 const protectedRouter = createOpenApiServerActionRouter({
   pathPrefix: "/api/protected",

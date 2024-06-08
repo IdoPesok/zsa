@@ -1,6 +1,6 @@
 "use client"
 
-import { openApiRouter } from "@/app/api/[[...openapi]]/openapi"
+import { generateSpec } from "@/app/api/[[...openapi]]/actions"
 import { useEffect, useState } from "react"
 import SwaggerUI from "swagger-ui-react"
 import "swagger-ui-react/swagger-ui.css"
@@ -13,12 +13,7 @@ export default function DocsPage() {
 
   useEffect(() => {
     const generate = async () => {
-      const spec = await generateOpenApiDocument(openApiRouter, {
-        title: "ZSA OpenAPI",
-        version: "1.0.0",
-        baseUrl: "http://localhost:3000",
-      })
-
+      const spec = await generateSpec()
       setSpec(spec)
     }
 

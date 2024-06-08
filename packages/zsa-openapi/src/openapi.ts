@@ -4,8 +4,10 @@ import { pathToRegexp } from "path-to-regexp"
 import { z } from "zod"
 import {
   TAnyZodSafeFunctionHandler,
+  TOptsSource,
   TZSAError,
   ZSAResponseMeta,
+  canDataBeUndefinedForSchema,
   formDataToJson,
   inferInputSchemaFromHandler,
   inferServerActionInput,
@@ -441,6 +443,7 @@ const getResponseFromAction = async <
     const [data, err] = await action(input, undefined, {
       request: request,
       responseMeta,
+      source: new TOptsSource(() => true),
     })
 
     if (data instanceof Response) {
@@ -558,6 +561,7 @@ export const createRouteHandlers = (
 
       const inputSchema = await foundMatch.action(undefined, undefined, {
         returnInputSchema: true,
+        source: new TOptsSource(() => true),
       })
 
       const { data, searchParamsJson } = await getDataFromRequest(
@@ -601,7 +605,10 @@ export const createRouteHandlers = (
         ...params,
       }
 
-      if (Object.keys(final).length === 0) {
+      if (
+        Object.keys(final).length === 0 &&
+        canDataBeUndefinedForSchema(inputSchema)
+      ) {
         return {
           input: undefined,
           params: {},
@@ -714,6 +721,7 @@ export function createRouteHandlersForAction<
   ) => {
     const inputSchema = (await action(undefined, undefined, {
       returnInputSchema: true,
+      source: new TOptsSource(() => true),
     })) as any
 
     const { data, searchParamsJson } = await getDataFromRequest(
@@ -727,7 +735,10 @@ export function createRouteHandlersForAction<
       ...(args?.params || {}),
     }
 
-    if (Object.keys(input).length === 0) {
+    if (
+      Object.keys(input).length === 0 &&
+      canDataBeUndefinedForSchema(inputSchema)
+    ) {
       input = undefined
     }
 

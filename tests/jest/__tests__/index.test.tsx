@@ -3,9 +3,11 @@
  */
 import { cookies } from "next/headers"
 import {
+  emptyFormDataAction,
   faultyAction,
   faultyOutputAction,
   faultyOutputInProcedureAction,
+  faultyShapeErrorAction,
   formDataAction,
   getAdminGreetingAction,
   getPostByIdAction,
@@ -21,12 +23,16 @@ import {
   helloWorldTimeoutAction,
   inputLargeNumberAction,
   inputNumberAction,
+  intersectedInputAction,
   multiEntryFormDataAction,
+  multiplyAction,
   nextNotFoundAction,
   nextRedirectAction,
   nextRedirectInProcedureAction,
   procedureChainAuthAction,
   procedureChainAuthActionWithCounter,
+  shapeErrorActionThatReturnsInput,
+  shapeErrorActionThatReturnsOutput,
   stateInputAction,
   stateInputProcedureAction,
   transformedOutputAction,
@@ -34,7 +40,12 @@ import {
 } from "server/actions"
 import { RetryState, TEST_DATA } from "server/data"
 import { z } from "zod"
-import { createServerActionProcedure } from "zsa"
+import {
+  createServerActionProcedure,
+  inferServerActionError,
+  inferServerActionInput,
+  inferServerActionReturnData,
+} from "zsa"
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(),
@@ -52,6 +63,14 @@ describe("actions", () => {
       expect(data).toEqual("hello world")
       expect(testType).toEqual("hello world")
       expect(err).toBeNull()
+    })
+
+    it("throws an error when trying to attack opts", async () => {
+      expect(async () => {
+        await helloWorldAction(undefined, undefined, {
+          ctx: "attacker",
+        } as any)
+      }).rejects.toThrow()
     })
   })
 
@@ -480,6 +499,24 @@ describe("actions", () => {
       expect(data).toEqual(["test", "test2"])
       expect(err).toBeNull()
     })
+
+    it("returns the default input schema", async () => {
+      const formData = new FormData()
+      const [data, err] = await emptyFormDataAction(formData)
+
+      expect(data).toEqual("hello world")
+      expect(err).toBeNull()
+    })
+
+    it("returns an input schema error with default input schema", async () => {
+      const formData = new FormData()
+      formData.append("wrong input", "hello world")
+      const [data, err] = await emptyFormDataAction(formData)
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+    })
   })
 
   describe("state input", () => {
@@ -523,6 +560,23 @@ describe("actions", () => {
           state = v
         },
       })
+    })
+
+    it("should return the correct result after intersecting input", async () => {
+      const [data, err] = await intersectedInputAction({
+        a: "a",
+        b: "b",
+        c: "c",
+      })
+      expect(data).toEqual({
+        input: {
+          a: "a",
+          b: "b",
+          c: "c",
+        },
+        ctx: 3,
+      })
+      expect(err).toBeNull()
     })
 
     it("should throw an error if the first procedure is invalid [no counter]", async () => {
@@ -856,6 +910,106 @@ describe("actions", () => {
 
       expect(onInputParseErrorMock).not.toHaveBeenCalled()
       expect(onOutputParseErrorMock).toHaveBeenCalled()
+    })
+  })
+
+  describe("shapeError", () => {
+    it("returns the correct shape error from the main procedure", async () => {
+      const [data, err] = await shapeErrorActionThatReturnsInput({ number: 0 })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+
+      expect(err?.inputParsed?.number).toBe(100)
+      expect(err?.inputRaw?.number).toBe(0)
+    })
+
+    it("returns the correct output shape error from the main procedure", async () => {
+      const [data, err] = await shapeErrorActionThatReturnsOutput()
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+
+      expect(err?.fieldErrors?.number).toBeDefined()
+    })
+
+    it("returns the correct shape error from the chained procedure", async () => {
+      const [data, err] = await faultyShapeErrorAction({ number: 0 })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+
+      expect(err?.isError).toBe(true)
+      expect(err?.fieldErrors?.number).toBeDefined()
+    })
+  })
+
+  describe("infer types", () => {
+    it("should infer the correct data type", () => {
+      type TData = inferServerActionReturnData<typeof multiplyAction>
+      const data: TData = {
+        result: 100,
+      }
+      expect(data).toEqual({
+        result: 100,
+      })
+    })
+
+    it("should infer the correct state data type", () => {
+      type TStateData = inferServerActionReturnData<typeof stateInputAction>
+      const stateData: TStateData = 100
+
+      expect(stateData).toEqual(100)
+    })
+
+    it("should infer the correct input type", () => {
+      type TInput = inferServerActionInput<typeof multiplyAction>
+      const input: TInput = {
+        number1: 100,
+        number2: 200,
+      }
+
+      expect(input).toEqual({
+        number1: 100,
+        number2: 200,
+      })
+    })
+
+    it("should infer the correct error type", () => {
+      type TReturn = inferServerActionError<typeof multiplyAction>
+      const err: TReturn["fieldErrors"] = {
+        number1: ["invalid"],
+        number2: ["invalid"],
+      }
+
+      expect(err).toEqual({
+        number1: ["invalid"],
+        number2: ["invalid"],
+      })
+    })
+
+    it("should infer the correct error type from state action", () => {
+      type TReturn = inferServerActionError<typeof stateInputAction>
+      const err: TReturn["fieldErrors"] = {
+        number: ["invalid"],
+      }
+
+      expect(err).toEqual({
+        number: ["invalid"],
+      })
+    })
+
+    it("should infer the correct custom error type", () => {
+      type TReturn = inferServerActionError<
+        typeof shapeErrorActionThatReturnsInput
+      >
+      const err: TReturn["inputRaw"] = {
+        number: 100,
+      }
+
+      expect(err).toEqual({
+        number: 100,
+      })
     })
   })
 })

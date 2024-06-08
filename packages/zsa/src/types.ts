@@ -6,7 +6,44 @@ import {
   TOnStartFn,
   TOnSuccessFn,
 } from "./callbacks"
-import { TZSAError, ZSAError } from "./errors"
+import {
+  TReplaceErrorPlaceholders,
+  TZSAError,
+  TypedProxyError,
+  ZSAError,
+} from "./errors"
+
+export type TFinalError<
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
+  TError extends any,
+  TIsProcedure extends boolean,
+> = TError extends TShapeErrorNotSet
+  ? TZSAError<TInputSchema> // if there is no shapeError, return a ZSAError
+  : TIsProcedure extends true
+    ? TError // if we are in a procedure, return the error to keep the placeholders
+    : TReplaceErrorPlaceholders<
+        TSchemaOrZodUndefined<TInputSchema>,
+        TSchemaOrZodUnknown<TOutputSchema>,
+        TError
+      > // if we are not in a procedure, return the error without the placeholders
+
+export type TSchemaOrZodUndefined<T extends z.ZodType | undefined> =
+  T extends z.ZodType ? T : z.ZodUndefined
+
+export type TSchemaOrZodUnknown<T extends z.ZodType | undefined> =
+  T extends z.ZodType ? T : z.ZodUnknown
+
+export type TSchemaInput<T extends z.ZodType | undefined> = T extends z.ZodType
+  ? T["_input"]
+  : undefined
+
+export type TSchemaOutput<T extends z.ZodType | undefined> = T extends z.ZodType
+  ? T["_output"]
+  : undefined
+
+export type TSchemaOutputOrUnknown<T extends z.ZodType | undefined> =
+  T extends z.ZodType ? T["_output"] : unknown
 
 /** Replace void with undefined */
 type TCleanData<T extends Promise<any>> =
@@ -16,17 +53,27 @@ type TCleanData<T extends Promise<any>> =
 
 /** The return type of a server action */
 export type TDataOrError<
-  TInputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
   TData extends Promise<any>,
+  TError extends any,
+  TIsProcedure extends boolean,
 > =
   | Promise<[TCleanData<TData>, null]>
-  | Promise<[null, TZSAError<TInputSchema>]>
+  | Promise<
+      [null, TFinalError<TInputSchema, TOutputSchema, TError, TIsProcedure>]
+    >
 
 /** The return type of a server action */
 export type TDataOrErrorOrNull<
-  TInputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
   TData extends Promise<any>,
-> = [TCleanData<TData>, null] | [null, TZSAError<TInputSchema>] | [null, null]
+  TError extends any,
+> =
+  | [TCleanData<TData>, null]
+  | [null, TFinalError<TInputSchema, TOutputSchema, TError, false>]
+  | [null, null]
 
 /** A configuration object for retrying a server action */
 export interface RetryConfig {
@@ -61,6 +108,14 @@ export interface RetryConfig {
   delay?: number | ((currentAttempt: number, err: ZSAError) => number)
 }
 
+// this class can only be made on the server side
+export class TOptsSource {
+  public validate: () => boolean
+  constructor(validate: () => true) {
+    this.validate = validate
+  }
+}
+
 export interface THandlerOpts<TProcedureChainOutput extends any> {
   /** The context of the handler */
   ctx?: TProcedureChainOutput
@@ -78,14 +133,22 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   attempts?: number
   /** the previous state */
   previousState?: any
+  /** on args */
+  onArgs?: (args: any) => void
+  /** on parsed args */
+  onParsedArgs?: (args: any) => void
+  /** the source of the opts */
+  source: TOptsSource
 }
 
 /** A function type for a handler that does not have an input */
 export interface TNoInputHandlerFunc<
   TRet extends any,
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends undefined,
+  TOutputSchema extends z.ZodType | undefined,
+  TError extends any,
   TProcedureChainOutput extends any,
+  TIsProcedure extends boolean,
 > {
   (
     placeholder?: undefined,
@@ -93,35 +156,44 @@ export interface TNoInputHandlerFunc<
     $opts?: THandlerOpts<TProcedureChainOutput>
   ): TDataOrError<
     TInputSchema,
-    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
+    TOutputSchema,
+    TOutputSchema extends z.ZodType ? TOutputSchema["_output"] : TRet,
+    TError,
+    TIsProcedure
   >
 }
 
 /** A function type for a handler that has an input */
 export interface THandlerFunc<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
+  TError extends any,
   TRet extends any,
   TProcedureChainOutput extends any,
   TInputType extends InputTypeOptions,
+  TIsProcedure extends boolean,
 > {
   (
     /** The input to the handler */
-    args: TInputType extends "json" ? TInputSchema["_input"] : FormData,
+    args: TInputType extends "json" ? TSchemaInput<TInputSchema> : FormData,
     /** Override the args */
-    $overrideArgs?: Partial<TInputSchema["_input"]>,
+    $overrideArgs?: Partial<TSchemaInput<TInputSchema>>,
     /** Options for the handler */
     $opts?: THandlerOpts<TProcedureChainOutput>
   ): TDataOrError<
     TInputSchema,
-    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
+    TOutputSchema,
+    TOutputSchema extends z.ZodType ? TOutputSchema["_output"] : TRet,
+    TError,
+    TIsProcedure
   >
 }
 
 /** A function type for a handler that has an input */
 export interface TStateHandlerFunc<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
+  TError extends any,
   TRet extends any,
 > {
   (
@@ -131,11 +203,13 @@ export interface TStateHandlerFunc<
     formData: FormData
   ): TDataOrErrorOrNull<
     TInputSchema,
-    TOutputSchema extends z.ZodUndefined ? TRet : TOutputSchema["_output"]
+    TOutputSchema,
+    TOutputSchema extends z.ZodType ? TOutputSchema["_output"] : TRet,
+    TError
   >
 }
 
-export type TAnyStateHandlerFunc = TStateHandlerFunc<z.ZodType, z.ZodType, any>
+export type TAnyStateHandlerFunc = TStateHandlerFunc<any, any, any, any>
 
 /** a helper type to hold the status of a timeout */
 export interface TimeoutStatus {
@@ -162,19 +236,22 @@ export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
 
 /** A combination of both a no input handler and a handler */
 export type TAnyZodSafeFunctionHandler<
-  TInputSchema extends z.ZodType = z.ZodType,
+  TInputSchema extends z.ZodType | undefined = any,
+  TOutputSchema extends z.ZodType | undefined = any,
   TData extends Promise<any> = Promise<any>,
+  TError extends any = any,
+  TIsProcedure extends boolean = boolean,
 > =
   | ((
       input: any,
       overrideArgs?: any,
       opts?: THandlerOpts<any>
-    ) => TDataOrError<TInputSchema, TData>)
+    ) => TDataOrError<TInputSchema, TOutputSchema, TData, TError, TIsProcedure>)
   | ((
       placeholder?: undefined,
       overrideArgs?: undefined,
       opts?: THandlerOpts<any>
-    ) => TDataOrError<TInputSchema, TData>)
+    ) => TDataOrError<TInputSchema, TOutputSchema, TData, TError, TIsProcedure>)
 
 /** infer input schema */
 export type inferInputSchemaFromHandler<
@@ -182,16 +259,17 @@ export type inferInputSchemaFromHandler<
 > =
   THandler extends TAnyZodSafeFunctionHandler<infer TInputSchema>
     ? TInputSchema
-    : THandler extends TStateHandlerFunc<infer TInputSchema, any, any>
+    : THandler extends TStateHandlerFunc<infer TInputSchema, any, any, any>
       ? TInputSchema
-      : z.ZodType
+      : z.ZodType | undefined
 
 /**
  * A data type for the internals of a Zod Safe Function
  */
 export interface TInternals<
-  TInputSchema extends z.ZodType,
-  TOutputSchema extends z.ZodType,
+  TInputSchema extends z.ZodType | undefined,
+  TOutputSchema extends z.ZodType | undefined,
+  TError extends any,
   TIsProcedure extends boolean,
 > {
   /**
@@ -226,39 +304,19 @@ export interface TInternals<
   retryConfig?: RetryConfig | undefined
 
   /** A function to run when the handler errors */
-  onErrorFn?: TOnErrorFn | undefined
+  onErrorFns?: Array<TOnErrorFn<any, any>> | undefined
 
   /** the type of input */
   inputType?: InputTypeOptions
 
   /** A function to run when the handler starts */
-  onStartFn?: TOnStartFn<TInputSchema, TIsProcedure> | undefined
+  onStartFns?: Array<TOnStartFn<any, any>> | undefined
 
   /** A function to run when the handler succeeds */
-  onSuccessFn?:
-    | TOnSuccessFn<TInputSchema, TOutputSchema, TIsProcedure>
-    | undefined
+  onSuccessFns?: Array<TOnSuccessFn<any, any, any>> | undefined
 
   /** A function to run when the handler completes (success or error) */
-  onCompleteFn?:
-    | TOnCompleteFn<TInputSchema, TOutputSchema, TIsProcedure>
-    | undefined
-
-  /** The procedure function to run when an error occurs */
-  onErrorFromProcedureFn?: Array<TOnErrorFn> | undefined
-
-  /** The procedure function to run when the handler starts */
-  onStartFromProcedureFn?: Array<TOnStartFn<TInputSchema, true>> | undefined
-
-  /** The procedure function to run when the handler succeeds */
-  onSuccessFromProcedureFn?:
-    | Array<TOnSuccessFn<TInputSchema, TOutputSchema, true>>
-    | undefined
-
-  /** The procedure function to run when the handler completes (success or error) */
-  onCompleteFromProcedureFn?:
-    | Array<TOnCompleteFn<TInputSchema, TOutputSchema, true>>
-    | undefined
+  onCompleteFns?: Array<TOnCompleteFn<any, any, any, any>> | undefined
 
   /** Boolean indicating if the procedure has a parent */
   isChained?: boolean | undefined
@@ -268,6 +326,9 @@ export interface TInternals<
 
   /** The handler function */
   handler?: TAnyZodSafeFunctionHandler | undefined
+
+  /** A function to run when the handler errors to customize the error */
+  shapeErrorFns: Array<TShapeErrorFn> | undefined
 }
 
 export type InputTypeOptions = "formData" | "json" | "state"
@@ -299,3 +360,14 @@ export type PrettifyNested<T> =
         [K in keyof T]: PrettifyNested<T[K]>
       }
     : T
+
+export const ShapeErrorNotSet = "ShapeErrorNotSet" as const
+export type TShapeErrorNotSet = typeof ShapeErrorNotSet
+
+export interface TShapeErrorFn<TError extends any = TShapeErrorNotSet> {
+  (args: {
+    err: unknown
+    typedData: TypedProxyError
+    ctx: TError extends TShapeErrorNotSet ? undefined : TError
+  }): any
+}

@@ -2,11 +2,15 @@
   "name": "zsa-tests",
   "private": true,
   "scripts": {
-    "test": "jest",
+    "test": "jest && playwright test",
     "test:watch": "jest --watch",
-    "typecheck": "tsc --noEmit"
+    "test:jest": "jest",
+    "test:playwright": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "dev": "next dev -p 3001"
   },
   "dependencies": {
+    "@playwright/test": "^1.44.1",
     "next": "latest",
     "node-mocks-http": "^1.14.1",
     "react": "^18.3.1",

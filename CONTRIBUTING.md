@@ -63,6 +63,9 @@ To get started with development, follow these steps:
    npm run test
    ```
 
+   NOTE: The Jest tests are in the `__tests__` folder.
+   NOTE: The Playwright tests are in the `e2e` folder.
+
    This command will run the test package and all the tests inside.
 
 ## Getting Hands Dirty with the Project
