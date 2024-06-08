@@ -4,7 +4,7 @@ import { sleep } from "lib/utils"
 import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 import { z } from "zod"
-import { ZSAError, createServerAction, createServerActionProcedure } from "zsa"
+import { ZSAError, createServerAction } from "zsa"
 import { CLIENT_TEST_DATA, TEST_DATA } from "./data"
 import {
   adminAction,
@@ -22,6 +22,7 @@ import {
   retryAction,
   setAuthToTwoProcedure,
   setAuthToTwoProcedureWithCounter,
+  shapeErrorAction,
   timeoutAction,
 } from "./procedures"
 
@@ -519,28 +520,24 @@ export const intersectedInputAction = intersectedInputProcedureC
     }
   })
 
-const test = z.object({
-  test: z.string(),
-})
-
-const procedure = createServerActionProcedure()
-  .input(z.object({ test2: z.string() }))
-  .shapeError(async ({ err, typedData }) => {
+export const shapeErrorActionThatReturnsInput = publicAction
+  .input(z.object({ number: z.number().transform((n) => 100) }))
+  .experimental_shapeError(({ err, typedData }) => {
     return {
-      fieldErrors: typedData.inputParseErrors?.fieldErrors,
-      formErrors: typedData.inputParseErrors?.formErrors,
-      formattedErrors: typedData.inputParseErrors?.formattedErrors,
       inputRaw: typedData.inputRaw,
       inputParsed: typedData.inputParsed,
     }
   })
-  .handler(async () => {
-    throw new ZSAError("ERROR", "test")
+  .handler(async ({ input }) => {
+    if (input.number > 0) {
+      throw new ZSAError("NOT_AUTHORIZED", "number")
+    }
+
+    return input
   })
 
-const action = procedure
-  .createServerAction()
-  .input(z.object({ test: z.string() }))
-  .handler(async () => {
-    return
+export const faultyShapeErrorAction = shapeErrorAction
+  .input(z.object({ number: z.number().refine((n) => n > 0) }))
+  .handler(async ({ input }) => {
+    return input.number
   })

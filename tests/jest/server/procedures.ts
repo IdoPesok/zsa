@@ -340,40 +340,25 @@ export const intersectedInputProcedureC = createServerActionProcedure(
   .input(z.object({ b: z.string() }))
   .handler(({ ctx }) => ctx + 1)
 
-const procedure = createServerActionProcedure()
-  .input(z.object({ test2: z.string() }))
-  .shapeError(async ({ err, typedData }) => {
+const shapeErrorProcedureA = createServerActionProcedure()
+  .experimental_shapeError(() => {
     return {
-      fieldErrors: typedData.inputParseErrors?.fieldErrors,
-      formErrors: typedData.inputParseErrors?.formErrors,
-      formattedErrors: typedData.inputParseErrors?.formattedErrors,
-      inputRaw: typedData.inputRaw,
-      inputParsed: typedData.inputParsed,
+      isError: true,
     }
   })
   .handler(async () => {
-    throw new ZSAError("ERROR", "test")
+    return 1
   })
 
-const two = createServerActionProcedure(procedure)
-  .input(z.object({ test2: z.string() }))
-  .shapeError(async ({ err, typedData, ctx }) => {
+const shapeErrorProcedureB = createServerActionProcedure(shapeErrorProcedureA)
+  .experimental_shapeError(({ err, typedData, ctx }) => {
     return {
       ...ctx,
-      testing: true,
-    } as const
+      fieldErrors: typedData.inputParseErrors?.fieldErrors,
+    }
   })
-  .handler(async () => {
-    throw new ZSAError("ERROR", "test")
-  })
-
-const action = two
-  .createServerAction()
-  .input(z.object({ test: z.string() }))
-  .handler(async () => {
-    return
+  .handler(async ({ ctx }) => {
+    return ctx + 1
   })
 
-const main = async () => {
-  const [data, err] = await action({ test: "test", test2: "test" })
-}
+export const shapeErrorAction = shapeErrorProcedureB.createServerAction()

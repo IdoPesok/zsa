@@ -36,7 +36,7 @@ import {
 
 const validateOpts = (opts?: THandlerOpts<any>) => {
   // log if someone is trying to manipulate the opts
-  // even without this check it is safe => no need for advisory because
+  // NOTE: even without this new check it is safe => no need for advisory because
   // - attacker can try to manipulate ctx but procedures will still run safely
   //     -> this is because the opts ctx always comes from procedure (check for isProcedure)
   // - schemas can't be returned (classes will be blocked)
