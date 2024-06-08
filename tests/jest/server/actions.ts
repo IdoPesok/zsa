@@ -532,8 +532,20 @@ export const shapeErrorActionThatReturnsInput = publicAction
     if (input.number > 0) {
       throw new ZSAError("NOT_AUTHORIZED", "number")
     }
-
     return input
+  })
+
+export const shapeErrorActionThatReturnsOutput = publicAction
+  .output(z.object({ number: z.number().refine((n) => n > 0) }))
+  .experimental_shapeError(({ err, typedData }) => {
+    return {
+      fieldErrors: typedData.outputParseErrors?.fieldErrors,
+    }
+  })
+  .handler(async () => {
+    return {
+      number: 0,
+    }
   })
 
 export const faultyShapeErrorAction = shapeErrorAction

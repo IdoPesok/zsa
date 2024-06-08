@@ -31,6 +31,7 @@ import {
   procedureChainAuthAction,
   procedureChainAuthActionWithCounter,
   shapeErrorActionThatReturnsInput,
+  shapeErrorActionThatReturnsOutput,
   stateInputAction,
   stateInputProcedureAction,
   transformedOutputAction,
@@ -906,7 +907,7 @@ describe("actions", () => {
     })
   })
 
-  describe.only("shapeError", () => {
+  describe("shapeError", () => {
     it("returns the correct shape error from the main procedure", async () => {
       const [data, err] = await shapeErrorActionThatReturnsInput({ number: 0 })
 
@@ -915,6 +916,15 @@ describe("actions", () => {
 
       expect(err?.inputParsed?.number).toBe(100)
       expect(err?.inputRaw?.number).toBe(0)
+    })
+
+    it("returns the correct output shape error from the main procedure", async () => {
+      const [data, err] = await shapeErrorActionThatReturnsOutput()
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+
+      expect(err?.fieldErrors?.number).toBeDefined()
     })
 
     it("returns the correct shape error from the chained procedure", async () => {
