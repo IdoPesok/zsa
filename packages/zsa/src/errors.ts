@@ -118,17 +118,21 @@ export class ZSAError<
 }
 
 export interface TypedProxyError {
+  /** the zod error from a failed input validation */
   inputParseErrors?: {
     fieldErrors: TInputFieldErrors
     formErrors: TInputFormErrors
     formattedErrors: TInputFormattedErrors
   }
+  /** the zod error from a failed output validation */
   outputParseErrors?: {
     fieldErrors: TOutputFieldErrors
     formErrors: TOutputFormErrors
     formattedErrors: TOutputFormattedErrors
   }
+  /** the raw input data that was passed to the handler */
   inputRaw: TInputRaw
+  /** the successful parsed input data */
   inputParsed: TInputParsed
 }
 
