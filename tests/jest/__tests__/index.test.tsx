@@ -25,6 +25,7 @@ import {
   inputNumberAction,
   intersectedInputAction,
   multiEntryFormDataAction,
+  multiplyAction,
   nextNotFoundAction,
   nextRedirectAction,
   nextRedirectInProcedureAction,
@@ -39,7 +40,12 @@ import {
 } from "server/actions"
 import { RetryState, TEST_DATA } from "server/data"
 import { z } from "zod"
-import { createServerActionProcedure } from "zsa"
+import {
+  createServerActionProcedure,
+  inferServerActionError,
+  inferServerActionInput,
+  inferServerActionReturnData,
+} from "zsa"
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(),
@@ -935,6 +941,75 @@ describe("actions", () => {
 
       expect(err?.isError).toBe(true)
       expect(err?.fieldErrors?.number).toBeDefined()
+    })
+  })
+
+  describe("infer types", () => {
+    it("should infer the correct data type", () => {
+      type TData = inferServerActionReturnData<typeof multiplyAction>
+      const data: TData = {
+        result: 100,
+      }
+      expect(data).toEqual({
+        result: 100,
+      })
+    })
+
+    it("should infer the correct state data type", () => {
+      type TStateData = inferServerActionReturnData<typeof stateInputAction>
+      const stateData: TStateData = 100
+
+      expect(stateData).toEqual(100)
+    })
+
+    it("should infer the correct input type", () => {
+      type TInput = inferServerActionInput<typeof multiplyAction>
+      const input: TInput = {
+        number1: 100,
+        number2: 200,
+      }
+
+      expect(input).toEqual({
+        number1: 100,
+        number2: 200,
+      })
+    })
+
+    it("should infer the correct error type", () => {
+      type TReturn = inferServerActionError<typeof multiplyAction>
+      const err: TReturn["fieldErrors"] = {
+        number1: ["invalid"],
+        number2: ["invalid"],
+      }
+
+      expect(err).toEqual({
+        number1: ["invalid"],
+        number2: ["invalid"],
+      })
+    })
+
+    it("should infer the correct error type from state action", () => {
+      type TReturn = inferServerActionError<typeof stateInputAction>
+      const err: TReturn["fieldErrors"] = {
+        number: ["invalid"],
+      }
+
+      expect(err).toEqual({
+        number: ["invalid"],
+      })
+    })
+
+    it("should infer the correct custom error type", () => {
+      type TReturn = inferServerActionError<
+        typeof shapeErrorActionThatReturnsInput
+      >
+      const err: TReturn["inputRaw"] = {
+        number: 100,
+      }
+
+      expect(err).toEqual({
+        number: 100,
+      })
     })
   })
 })
