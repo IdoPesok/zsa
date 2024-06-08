@@ -1,5 +1,14 @@
 # zsa-openapi
 
+## 0.0.11
+
+### Patch Changes
+
+- b9f6162: Parse empty inputs correctly based on if schema can be undefined or empty object
+- Updated dependencies [b9f6162]
+- Updated dependencies [83f94d1]
+  - zsa@0.3.4
+
 ## 0.0.10
 
 ### Patch Changes

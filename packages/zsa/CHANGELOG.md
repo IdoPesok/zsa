@@ -1,5 +1,12 @@
 # server-actions-wrapper
 
+## 0.3.4
+
+### Patch Changes
+
+- b9f6162: Allow z.undefined as an output and correctly parse it
+- 83f94d1: Experimental shape error feature
+
 ## 0.3.3
 
 ### Patch Changes
