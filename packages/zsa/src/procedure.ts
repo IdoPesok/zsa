@@ -9,6 +9,7 @@ import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   THandlerOpts,
+  TOptsSource,
   TShapeErrorFn,
   TShapeErrorNotSet,
   TZodSafeFunctionDefaultOmitted,
@@ -172,6 +173,7 @@ export const chainServerActionProcedures = <
     await second.$internals.lastHandler(input, overrideArgs, {
       ...opts,
       overrideInputSchema: opts?.overrideInputSchema || inputSchema,
+      source: new TOptsSource(() => true),
     })
 
   return new CompleteProcedure({

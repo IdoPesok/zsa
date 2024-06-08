@@ -11,12 +11,12 @@ import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 import {
   InputTypeOptions,
   RetryConfig,
-  ShapeErrorNotSet,
   TAnyZodSafeFunctionHandler,
   THandlerFunc,
   THandlerOpts,
   TInternals,
   TNoInputHandlerFunc,
+  TOptsSource,
   TSchemaInput,
   TSchemaOrZodUndefined,
   TSchemaOutput,
@@ -152,6 +152,7 @@ export class ZodSafeFunction<
         request,
         responseMeta,
         previousState,
+        source: new TOptsSource(() => true),
       })
       if (err) {
         throw err
@@ -470,20 +471,25 @@ export class ZodSafeFunction<
 
     let customError
 
-    if (this.$internals.shapeErrorFn !== ShapeErrorNotSet) {
-      customError = await this.$internals.shapeErrorFn({
-        err,
-        typedData: {
-          // @ts-expect-error
-          inputParseErrors:
-            err instanceof ZSAError ? err.inputParseErrors : undefined,
-          // @ts-expect-error
-          outputParseErrors:
-            err instanceof ZSAError ? err.outputParseErrors : undefined,
-          inputParsed: inputParsed,
-          inputRaw: inputRaw,
-        },
-      })
+    if (this.$internals.shapeErrorFns !== undefined) {
+      let accData = undefined
+      for (const fn of this.$internals.shapeErrorFns) {
+        accData = await fn({
+          err,
+          typedData: {
+            // @ts-expect-error
+            inputParseErrors:
+              err instanceof ZSAError ? err.inputParseErrors : undefined,
+            // @ts-expect-error
+            outputParseErrors:
+              err instanceof ZSAError ? err.outputParseErrors : undefined,
+            inputParsed: inputParsed,
+            inputRaw: inputRaw,
+          },
+          ctx: accData,
+        })
+      }
+      customError = accData as any
     } else {
       customError = err instanceof ZSAError ? err : new ZSAError("ERROR", err)
     }
@@ -672,6 +678,24 @@ export class ZodSafeFunction<
       overrideArgs?: Partial<TSchemaInput<TInputSchema>>,
       opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
+      // log if someone is trying to manipulate the opts
+      // even without this check it is safe
+      // but this will throw an auto not authorized error
+      try {
+        if (
+          opts &&
+          (!(opts.source instanceof TOptsSource) || !opts.source.validate())
+        ) {
+          throw new Error("Invalid opts")
+        }
+      } catch (err) {
+        return await this.handleError(
+          new ZSAError("NOT_AUTHORIZED", "Invalid opts"),
+          $args,
+          overrideArgs
+        )
+      }
+
       if (opts?.returnInputSchema) {
         // return the input schema
         return this.$internals.inputSchema || z.undefined()
@@ -771,6 +795,7 @@ export class ZodSafeFunction<
           return await wrapper($args, overrideArgs, {
             ...(opts || {}),
             attempts: (opts?.attempts || 1) + 1,
+            source: new TOptsSource(() => true),
           })
         }
 
@@ -799,6 +824,7 @@ export class ZodSafeFunction<
           onParsedArgs: (parsedArgs) => {
             gotParsedArgs = parsedArgs
           },
+          source: new TOptsSource(() => true),
         }),
         this.getTimeoutErrorPromise(timeoutMs),
       ])
@@ -816,7 +842,7 @@ export class ZodSafeFunction<
       return new CompleteProcedure({
         inputSchema: this.$internals.inputSchema,
         handlerChain: [...this.$internals.procedureHandlerChain, handler],
-        shapeErrorFn: this.$internals.shapeErrorFn,
+        shapeErrorFns: this.$internals.shapeErrorFns,
         lastHandler: handler,
         onCompleteFns: this.$internals.onCompleteFns,
         onErrorFns: this.$internals.onErrorFns,
@@ -903,7 +929,7 @@ export function createServerAction(): TZodSafeFunction<
   return new ZodSafeFunction({
     inputSchema: undefined,
     outputSchema: undefined,
-    shapeErrorFn: ShapeErrorNotSet,
+    shapeErrorFns: undefined,
     procedureHandlerChain: [],
   }) as any
 }

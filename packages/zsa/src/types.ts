@@ -108,6 +108,14 @@ export interface RetryConfig {
   delay?: number | ((currentAttempt: number, err: ZSAError) => number)
 }
 
+// this class can only be made on the server side
+export class TOptsSource {
+  public validate: () => boolean
+  constructor(validate: () => true) {
+    this.validate = validate
+  }
+}
+
 export interface THandlerOpts<TProcedureChainOutput extends any> {
   /** The context of the handler */
   ctx?: TProcedureChainOutput
@@ -129,6 +137,8 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   onArgs?: (args: any) => void
   /** on parsed args */
   onParsedArgs?: (args: any) => void
+  /** the source of the opts */
+  source: TOptsSource
 }
 
 /** A function type for a handler that does not have an input */
