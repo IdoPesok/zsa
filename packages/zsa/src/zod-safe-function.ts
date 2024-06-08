@@ -679,18 +679,25 @@ export class ZodSafeFunction<
       opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
       // log if someone is trying to manipulate the opts
-      // even without this check it is safe
-      // but this will throw an auto not authorized error
+      // even without this check it is safe => no need for advisory
+      // - attacker can try to manipulate ctx but procedures will still run safely
+      //     -> this is because the opts ctx always comes from procedure (check for isProcedure)
+      // - schemas can't be returned (classes will be blocked)
+      // - override input schema can't be passed in (classes will be blocked)
+      // adding this to throw an auto not authorized error and an extra layer of protection can't hurt
       try {
         if (
           opts &&
           (!(opts.source instanceof TOptsSource) || !opts.source.validate())
         ) {
-          throw new Error("Invalid opts")
+          throw new Error()
         }
       } catch (err) {
         return await this.handleError(
-          new ZSAError("NOT_AUTHORIZED", "Invalid opts"),
+          new ZSAError(
+            "NOT_AUTHORIZED",
+            "Invalid opts, must originate from the server"
+          ),
           $args,
           overrideArgs
         )
