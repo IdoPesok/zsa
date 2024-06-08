@@ -529,6 +529,10 @@ export class ZodSafeFunction<
       })
     }
 
+    if (this.$internals.shapeErrorFns !== undefined) {
+      return [null, customError as any]
+    }
+
     const stringifyIfNeeded = (data: any) =>
       typeof data === "string" ? data : JSON.stringify(data)
 
@@ -602,13 +606,13 @@ export class ZodSafeFunction<
   }
 
   /** set a handler function for when the server action starts */
-  public shapeError<T extends TShapeErrorFn<TError>>(
+  public experimental_shapeError<T extends TShapeErrorFn<TError>>(
     fn: T
   ): TZodSafeFunction<
     TInputSchema,
     TOutputSchema,
     Awaited<ReturnType<T>>,
-    TOmitted | "shapeError",
+    TOmitted | "experimental_shapeError",
     TProcedureChainOutput,
     TIsProcedure,
     TInputType
@@ -616,7 +620,7 @@ export class ZodSafeFunction<
     return new ZodSafeFunction({
       ...this.$internals,
       // @ts-expect-error
-      shapeErrorFn: fn,
+      shapeErrorFns: [...(this.$internals.shapeErrorFns || []), fn],
     }) as any
   }
 
@@ -880,7 +884,7 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
   return new ZodSafeFunction({
     inputSchema: parentProcedure?.$internals.inputSchema || undefined,
     outputSchema: undefined,
-    shapeErrorFns: undefined,
+    shapeErrorFns: parentProcedure?.$internals.shapeErrorFns || undefined,
     isChained: parentProcedure !== undefined,
     isProcedure: isProcedure === true,
     procedureHandlerChain: parentProcedure?.$internals.handlerChain || [],
