@@ -59,15 +59,18 @@ export type TReplaceErrorPlaceholders<
   TInputSchema extends z.ZodType,
   TOutputSchema extends z.ZodType,
   TError extends any,
-> = TError extends Object
-  ? {
-      [K in keyof TError]: NonNullable<TError[K]> extends infer TKey
-        ? TKey extends keyof TReplaceMap<any, any>
-          ? TReplaceMap<TInputSchema, TOutputSchema>[TKey]
-          : TReplaceErrorPlaceholders<TInputSchema, TOutputSchema, TError[K]>
-        : TError[K]
-    }
-  : TError
+> =
+  TError extends Record<string, any>
+    ? {
+        [K in keyof TError]: NonNullable<TError[K]> extends infer TKey
+          ? TKey extends keyof TReplaceMap<any, any>
+            ?
+                | TReplaceMap<TInputSchema, TOutputSchema>[TKey]
+                | Exclude<TError[K], TKey>
+            : TReplaceErrorPlaceholders<TInputSchema, TOutputSchema, TError[K]>
+          : TError[K]
+      }
+    : TError
 
 /**
  *  A ZSAError is an error that can be thrown by a server action.
