@@ -38,6 +38,10 @@ const [, err] = await shapeErrorAction({ number: 0 })
 //   ^? { code: string, message: string, myCustomProperty: true }
 ```
 
+<Warning>
+Make sure to not return any vulnerable data in your custom errors such as stack traces or sensitive information.
+</Warning>
+
 ## Typed Errors
 
 You are probably going to define your shape error functions before Typescript will have access to the input/output schemas of your actions.
