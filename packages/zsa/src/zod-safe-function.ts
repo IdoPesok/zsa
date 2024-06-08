@@ -11,6 +11,7 @@ import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 import {
   InputTypeOptions,
   RetryConfig,
+  TAnyStateHandlerFunc,
   TAnyZodSafeFunctionHandler,
   THandlerFunc,
   THandlerOpts,
@@ -897,30 +898,34 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
 
 // helper type to infer the return data of a server action
 export type inferServerActionReturnData<
-  TAction extends TAnyZodSafeFunctionHandler,
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
 > =
   NonNullable<Awaited<ReturnType<TAction>>[0]> extends never
     ? undefined
     : NonNullable<Awaited<ReturnType<TAction>>[0]>
 
 // helper type to infer the error of a server action
-export type inferServerActionError<TAction extends TAnyZodSafeFunctionHandler> =
-  NonNullable<Awaited<ReturnType<TAction>>[1]>
+export type inferServerActionError<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> = NonNullable<Awaited<ReturnType<TAction>>[1]>
 
 // helper type to infer the return type of a server action
 export type inferServerActionReturnType<
-  TAction extends TAnyZodSafeFunctionHandler,
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
 > = Awaited<ReturnType<TAction>>
 
 // helper type to infer the return type of a server action
 // hot promise
 export type inferServerActionReturnTypeHot<
-  TAction extends TAnyZodSafeFunctionHandler,
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
 > = ReturnType<TAction>
 
 // helper type to infer the input of a server action
-export type inferServerActionInput<TAction extends TAnyZodSafeFunctionHandler> =
-  Parameters<TAction>[0]
+export type inferServerActionInput<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> = TAction extends TAnyZodSafeFunctionHandler
+  ? Parameters<TAction>[0]
+  : [Parameters<TAction>[0], Parameters<TAction>[1]]
 
 // create a server action without a procedure
 export function createServerAction(): TZodSafeFunction<
