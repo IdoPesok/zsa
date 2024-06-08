@@ -34,6 +34,22 @@ import {
   formDataToJson,
 } from "./utils"
 
+const validateOpts = (opts?: THandlerOpts<any>) => {
+  // log if someone is trying to manipulate the opts
+  // even without this check it is safe => no need for advisory because
+  // - attacker can try to manipulate ctx but procedures will still run safely
+  //     -> this is because the opts ctx always comes from procedure (check for isProcedure)
+  // - schemas can't be returned (classes will be blocked)
+  // - override input schema can't be passed in (classes will be blocked)
+  // adding this to throw an auto not authorized error and an extra layer of protection can't hurt
+  if (
+    opts &&
+    (!(opts.source instanceof TOptsSource) || !opts.source.validate())
+  ) {
+    throw new Error("Invalid opts, must originate from the server")
+  }
+}
+
 /** A helper type to hold any zod safe function */
 export interface TAnyZodSafeFunction
   extends ZodSafeFunction<any, any, any, any, any, boolean, any> {}
@@ -678,30 +694,7 @@ export class ZodSafeFunction<
       overrideArgs?: Partial<TSchemaInput<TInputSchema>>,
       opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
-      // log if someone is trying to manipulate the opts
-      // even without this check it is safe => no need for advisory
-      // - attacker can try to manipulate ctx but procedures will still run safely
-      //     -> this is because the opts ctx always comes from procedure (check for isProcedure)
-      // - schemas can't be returned (classes will be blocked)
-      // - override input schema can't be passed in (classes will be blocked)
-      // adding this to throw an auto not authorized error and an extra layer of protection can't hurt
-      try {
-        if (
-          opts &&
-          (!(opts.source instanceof TOptsSource) || !opts.source.validate())
-        ) {
-          throw new Error()
-        }
-      } catch (err) {
-        return await this.handleError(
-          new ZSAError(
-            "NOT_AUTHORIZED",
-            "Invalid opts, must originate from the server"
-          ),
-          $args,
-          overrideArgs
-        )
-      }
+      validateOpts(opts)
 
       if (opts?.returnInputSchema) {
         // return the input schema
@@ -818,6 +811,8 @@ export class ZodSafeFunction<
     ) => {
       const timeoutMs = this.$internals.timeout
       if (!timeoutMs) return await wrapper(args, overrideArgs, opts)
+
+      validateOpts(opts)
 
       let gotArgs: any = undefined
       let gotParsedArgs: any = undefined

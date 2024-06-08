@@ -55,6 +55,16 @@ describe("actions", () => {
       expect(testType).toEqual("hello world")
       expect(err).toBeNull()
     })
+
+    it("throws an error when trying to attack opts", async () => {
+      const [data, err] = await helloWorldAction(
+        undefined,
+        undefined,
+        {} as any
+      )
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+    })
   })
 
   describe("getUserIdAction", () => {
