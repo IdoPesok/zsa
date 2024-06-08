@@ -485,6 +485,10 @@ export class ZodSafeFunction<
       throw err
     }
 
+    // callbacks run on the main action thread
+    // error will get returned at the action level
+    if (this.$internals.isProcedure) return [null, err as any]
+
     let customError
 
     if (this.$internals.shapeErrorFns !== undefined) {
@@ -509,10 +513,6 @@ export class ZodSafeFunction<
     } else {
       customError = err instanceof ZSAError ? err : new ZSAError("ERROR", err)
     }
-
-    // callbacks run on the main action thread
-    // error will get returned at the action level
-    if (this.$internals.isProcedure) return [null, customError as any]
 
     // run on error callbacks
     for (const fn of this.$internals.onErrorFns || []) {
