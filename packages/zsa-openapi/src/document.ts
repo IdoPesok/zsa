@@ -11,7 +11,7 @@
 
 import { OpenAPIV3 } from "openapi-types"
 import { z } from "zod"
-import { ZSAError } from "zsa"
+import { TOptsSource, ZSAError } from "zsa"
 import { TOpenApiServerActionRouter } from "./openapi"
 import {
   errorResponseObject,
@@ -87,9 +87,11 @@ const getOpenApiPathsObject = async (
 
       const inputParser = await action.action(undefined, undefined, {
         returnInputSchema: true,
+        source: new TOptsSource(() => true),
       })
       let outputParser = (await action.action(undefined, undefined, {
         returnOutputSchema: true,
+        source: new TOptsSource(() => true),
       })) as any
 
       if (outputParser instanceof z.ZodUndefined) {

@@ -339,3 +339,26 @@ export const intersectedInputProcedureC = createServerActionProcedure(
 )
   .input(z.object({ b: z.string() }))
   .handler(({ ctx }) => ctx + 1)
+
+const shapeErrorProcedureA = createServerActionProcedure()
+  .experimental_shapeError(() => {
+    return {
+      isError: true,
+    }
+  })
+  .handler(async () => {
+    return 1
+  })
+
+const shapeErrorProcedureB = createServerActionProcedure(shapeErrorProcedureA)
+  .experimental_shapeError(({ err, typedData, ctx }) => {
+    return {
+      ...ctx,
+      fieldErrors: typedData.inputParseErrors?.fieldErrors,
+    }
+  })
+  .handler(async ({ ctx }) => {
+    return ctx + 1
+  })
+
+export const shapeErrorAction = shapeErrorProcedureB.createServerAction()

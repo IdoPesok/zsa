@@ -7,6 +7,7 @@ import {
   faultyAction,
   faultyOutputAction,
   faultyOutputInProcedureAction,
+  faultyShapeErrorAction,
   formDataAction,
   getAdminGreetingAction,
   getPostByIdAction,
@@ -29,6 +30,8 @@ import {
   nextRedirectInProcedureAction,
   procedureChainAuthAction,
   procedureChainAuthActionWithCounter,
+  shapeErrorActionThatReturnsInput,
+  shapeErrorActionThatReturnsOutput,
   stateInputAction,
   stateInputProcedureAction,
   transformedOutputAction,
@@ -54,6 +57,14 @@ describe("actions", () => {
       expect(data).toEqual("hello world")
       expect(testType).toEqual("hello world")
       expect(err).toBeNull()
+    })
+
+    it("throws an error when trying to attack opts", async () => {
+      expect(async () => {
+        await helloWorldAction(undefined, undefined, {
+          ctx: "attacker",
+        } as any)
+      }).rejects.toThrow()
     })
   })
 
@@ -893,6 +904,37 @@ describe("actions", () => {
 
       expect(onInputParseErrorMock).not.toHaveBeenCalled()
       expect(onOutputParseErrorMock).toHaveBeenCalled()
+    })
+  })
+
+  describe("shapeError", () => {
+    it("returns the correct shape error from the main procedure", async () => {
+      const [data, err] = await shapeErrorActionThatReturnsInput({ number: 0 })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+
+      expect(err?.inputParsed?.number).toBe(100)
+      expect(err?.inputRaw?.number).toBe(0)
+    })
+
+    it("returns the correct output shape error from the main procedure", async () => {
+      const [data, err] = await shapeErrorActionThatReturnsOutput()
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+
+      expect(err?.fieldErrors?.number).toBeDefined()
+    })
+
+    it("returns the correct shape error from the chained procedure", async () => {
+      const [data, err] = await faultyShapeErrorAction({ number: 0 })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+
+      expect(err?.isError).toBe(true)
+      expect(err?.fieldErrors?.number).toBeDefined()
     })
   })
 })

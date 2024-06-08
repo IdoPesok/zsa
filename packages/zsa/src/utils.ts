@@ -87,9 +87,9 @@ export const formDataToJson = (formData: FormData, inputSchema: z.ZodType) => {
   return json
 }
 
-export const addToNullishArray = <T>(
-  array: Array<T> | undefined,
-  value: T | undefined
+export const addToNullishArray = (
+  array: Array<any> | undefined,
+  value: any | undefined
 ) => {
   if (!array && !value) return undefined
   if (!value) return array

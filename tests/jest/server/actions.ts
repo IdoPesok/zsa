@@ -22,6 +22,7 @@ import {
   retryAction,
   setAuthToTwoProcedure,
   setAuthToTwoProcedureWithCounter,
+  shapeErrorAction,
   timeoutAction,
 } from "./procedures"
 
@@ -517,4 +518,38 @@ export const intersectedInputAction = intersectedInputProcedureC
       input,
       ctx,
     }
+  })
+
+export const shapeErrorActionThatReturnsInput = publicAction
+  .input(z.object({ number: z.number().transform((n) => 100) }))
+  .experimental_shapeError(({ err, typedData }) => {
+    return {
+      inputRaw: typedData.inputRaw,
+      inputParsed: typedData.inputParsed,
+    }
+  })
+  .handler(async ({ input }) => {
+    if (input.number > 0) {
+      throw new ZSAError("NOT_AUTHORIZED", "number")
+    }
+    return input
+  })
+
+export const shapeErrorActionThatReturnsOutput = publicAction
+  .output(z.object({ number: z.number().refine((n) => n > 0) }))
+  .experimental_shapeError(({ err, typedData }) => {
+    return {
+      fieldErrors: typedData.outputParseErrors?.fieldErrors,
+    }
+  })
+  .handler(async () => {
+    return {
+      number: 0,
+    }
+  })
+
+export const faultyShapeErrorAction = shapeErrorAction
+  .input(z.object({ number: z.number().refine((n) => n > 0) }))
+  .handler(async ({ input }) => {
+    return input.number
   })

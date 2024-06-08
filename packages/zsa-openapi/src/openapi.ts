@@ -4,6 +4,7 @@ import { pathToRegexp } from "path-to-regexp"
 import { z } from "zod"
 import {
   TAnyZodSafeFunctionHandler,
+  TOptsSource,
   TZSAError,
   ZSAResponseMeta,
   canDataBeUndefinedForSchema,
@@ -442,6 +443,7 @@ const getResponseFromAction = async <
     const [data, err] = await action(input, undefined, {
       request: request,
       responseMeta,
+      source: new TOptsSource(() => true),
     })
 
     if (data instanceof Response) {
@@ -559,6 +561,7 @@ export const createRouteHandlers = (
 
       const inputSchema = await foundMatch.action(undefined, undefined, {
         returnInputSchema: true,
+        source: new TOptsSource(() => true),
       })
 
       const { data, searchParamsJson } = await getDataFromRequest(
@@ -718,6 +721,7 @@ export function createRouteHandlersForAction<
   ) => {
     const inputSchema = (await action(undefined, undefined, {
       returnInputSchema: true,
+      source: new TOptsSource(() => true),
     })) as any
 
     const { data, searchParamsJson } = await getDataFromRequest(

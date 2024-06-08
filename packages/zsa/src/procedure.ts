@@ -9,6 +9,9 @@ import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   THandlerOpts,
+  TOptsSource,
+  TShapeErrorFn,
+  TShapeErrorNotSet,
   TZodSafeFunctionDefaultOmitted,
 } from "./types"
 import { ZodTypeLikeVoid, mergeArraysAndRemoveDuplicates } from "./utils"
@@ -31,23 +34,26 @@ export interface TCompleteProcedureInternals<
   /** The last handler in the chain */
   lastHandler: THandler
   /** A chain of error handlers */
-  onErrorFns: Array<TOnErrorFn> | undefined
+  onErrorFns: Array<TOnErrorFn<any, true>> | undefined
   /** A chain of start handlers */
   onStartFns: Array<TOnStartFn<any, true>> | undefined
   /** A chain of success handlers */
   onSuccessFns: Array<TOnSuccessFn<any, any, true>> | undefined
   /** A chain of complete handlers */
-  onCompleteFns: Array<TOnCompleteFn<any, any, true>> | undefined
+  onCompleteFns: Array<TOnCompleteFn<any, any, any, true>> | undefined
   /** The timeout of the procedure */
   timeout: number | undefined
   /** The retry config of the procedure */
   retryConfig: RetryConfig | undefined
+  /** A function to run when the handler errors to customize the error */
+  shapeErrorFns: Array<TShapeErrorFn> | undefined
 }
 
 /** A completed procedure */
 export class CompleteProcedure<
   TInputSchema extends z.ZodType | undefined,
   THandler extends TAnyZodSafeFunctionHandler,
+  TError extends any,
 > {
   $internals: TCompleteProcedureInternals<TInputSchema, THandler>
 
@@ -59,6 +65,7 @@ export class CompleteProcedure<
   createServerAction(): TZodSafeFunction<
     TInputSchema,
     undefined,
+    TError,
     TZodSafeFunctionDefaultOmitted,
     inferServerActionReturnData<THandler>,
     false,
@@ -68,18 +75,23 @@ export class CompleteProcedure<
       inputSchema: this.$internals.inputSchema,
       outputSchema: undefined,
       procedureHandlerChain: this.$internals.handlerChain,
-      onErrorFromProcedureFn: this.$internals.onErrorFns,
-      onStartFromProcedureFn: this.$internals.onStartFns,
-      onSuccessFromProcedureFn: this.$internals.onSuccessFns,
-      onCompleteFromProcedureFn: this.$internals.onCompleteFns,
+      onErrorFns: this.$internals.onErrorFns,
+      onStartFns: this.$internals.onStartFns,
+      onSuccessFns: this.$internals.onSuccessFns,
+      onCompleteFns: this.$internals.onCompleteFns,
       timeout: this.$internals.timeout,
       retryConfig: this.$internals.retryConfig,
+      shapeErrorFns: this.$internals.shapeErrorFns,
     }) as any
   }
 }
 
 /** a helper type to hold any complete procedure */
-export interface TAnyCompleteProcedure extends CompleteProcedure<any, any> {}
+export interface TAnyCompleteProcedure
+  extends CompleteProcedure<any, any, any> {}
+
+type InferTError<T extends TAnyCompleteProcedure> =
+  T extends CompleteProcedure<any, any, infer TError> ? TError : never
 
 /** The return type of `createServerActionProcedure` given a parent procedure */
 type TRet<T extends TAnyCompleteProcedure | undefined> =
@@ -87,6 +99,7 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
     ? TZodSafeFunction<
         T["$internals"]["inputSchema"],
         undefined,
+        InferTError<T>,
         TZodSafeFunctionDefaultOmitted,
         inferServerActionReturnData<T["$internals"]["lastHandler"]>,
         true,
@@ -95,6 +108,7 @@ type TRet<T extends TAnyCompleteProcedure | undefined> =
     : TZodSafeFunction<
         undefined,
         undefined,
+        TShapeErrorNotSet,
         TZodSafeFunctionDefaultOmitted,
         undefined,
         true,
@@ -128,7 +142,11 @@ export const chainServerActionProcedures = <
   TContext extends TOpts extends { ctx?: any }
     ? NonNullable<TOpts["ctx"]>
     : undefined,
-  T1 extends CompleteProcedure<any, TAnyZodSafeFunctionHandler<any, TContext>>,
+  T1 extends CompleteProcedure<
+    any,
+    TAnyZodSafeFunctionHandler<any, TContext>,
+    any
+  >,
 >(
   first: T1,
   second: T2
@@ -139,7 +157,8 @@ export const chainServerActionProcedures = <
         T1["$internals"]["inputSchema"],
         T2["$internals"]["inputSchema"]
       >,
-  T2["$internals"]["lastHandler"]
+  T2["$internals"]["lastHandler"],
+  InferTError<T2>
 > => {
   let inputSchema =
     first.$internals.inputSchema === undefined
@@ -154,6 +173,7 @@ export const chainServerActionProcedures = <
     await second.$internals.lastHandler(input, overrideArgs, {
       ...opts,
       overrideInputSchema: opts?.overrideInputSchema || inputSchema,
+      source: new TOptsSource(() => true),
     })
 
   return new CompleteProcedure({
@@ -162,6 +182,10 @@ export const chainServerActionProcedures = <
     lastHandler: newLastHandler,
     timeout: second.$internals.timeout || first.$internals.timeout,
     retryConfig: second.$internals.retryConfig || first.$internals.retryConfig,
+    shapeErrorFns: mergeArraysAndRemoveDuplicates(
+      first.$internals.shapeErrorFns,
+      second.$internals.shapeErrorFns
+    ),
     onErrorFns: mergeArraysAndRemoveDuplicates(
       first.$internals.onErrorFns,
       second.$internals.onErrorFns
