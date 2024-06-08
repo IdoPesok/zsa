@@ -365,7 +365,7 @@ export const divideAction = publicAction
   })
 
 export const nextRedirectAction = publicAction.handler(async () => {
-  redirect("/123")
+  redirect("/slow")
   return "123"
 })
 
