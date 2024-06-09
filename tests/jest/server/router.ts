@@ -44,6 +44,17 @@ const protectedRouter = createOpenApiServerActionRouter({
   .get("/calculations/multiply/{number1}", protectedMultiplyAction)
   .post("/calculations/multiply/{number1}", protectedMultiplyAction)
 
+export const jsonOnlyRouter = createOpenApiServerActionRouter({
+  pathPrefix: "/api",
+}).post("/calculations/multiply-with-array", multiplyActionWithArray)
+
 export const openapiRouter = createOpenApiServerActionRouter({
   extend: [publicRouter, protectedRouter],
+  defaults: {
+    contentTypes: [
+      "application/json",
+      "application/x-www-form-urlencoded",
+      "multipart/form-data",
+    ],
+  },
 })
