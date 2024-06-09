@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.5
+
+### Patch Changes
+
+- 386af9d: Added executeFormAction to useServerAction return
+
 ## 0.1.4
 
 ### Patch Changes
