@@ -13,8 +13,10 @@ import {
   RetryConfig,
   TAnyStateHandlerFunc,
   TAnyZodSafeFunctionHandler,
+  TFinalInputSchema,
   THandlerFunc,
   THandlerOpts,
+  TInputSchemaFn,
   TInternals,
   TNoInputHandlerFunc,
   TOptsSource,
@@ -229,7 +231,7 @@ export class ZodSafeFunction<
    * ```
    */
   public input<
-    T extends z.ZodType,
+    T extends z.ZodType | TInputSchemaFn<TProcedureChainOutput>,
     TType extends TIsProcedure extends false
       ? InputTypeOptions
       : "json" = "json",
@@ -239,7 +241,9 @@ export class ZodSafeFunction<
       type?: TType
     }
   ): TZodSafeFunction<
-    TInputSchema extends z.ZodType ? z.ZodIntersection<TInputSchema, T> : T,
+    TInputSchema extends z.ZodType
+      ? z.ZodIntersection<TInputSchema, TFinalInputSchema<T>>
+      : TFinalInputSchema<T>,
     TOutputSchema,
     TError,
     "input" | Exclude<TOmitted, "onInputParseError">, // bring back the onInputParseError
@@ -568,6 +572,7 @@ export class ZodSafeFunction<
   public async parseInputData(
     data: any,
     timeoutStatus: TimeoutStatus,
+    ctx: TProcedureChainOutput,
     $overrideInputSchema?: z.ZodType
   ): Promise<TSchemaOutput<TInputSchema>> {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
@@ -769,6 +774,7 @@ export class ZodSafeFunction<
         const input = await this.parseInputData(
           args,
           timeoutStatus,
+          ctx,
           opts?.overrideInputSchema
         )
 

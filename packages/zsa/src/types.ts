@@ -371,3 +371,10 @@ export interface TShapeErrorFn<TError extends any = TShapeErrorNotSet> {
     ctx: TError extends TShapeErrorNotSet ? undefined : TError
   }): any
 }
+
+export interface TInputSchemaFn<TProcedureChainOutput extends any> {
+  (args: { ctx: TProcedureChainOutput }): z.ZodType
+}
+
+export type TFinalInputSchema<T extends z.ZodType | TInputSchemaFn<any>> =
+  T extends TInputSchemaFn<any> ? Awaited<ReturnType<T>> : T
