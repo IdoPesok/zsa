@@ -9,6 +9,7 @@ import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
   THandlerOpts,
+  TInputSchemaFn,
   TOptsSource,
   TShapeErrorFn,
   TShapeErrorNotSet,
@@ -28,7 +29,7 @@ export interface TCompleteProcedureInternals<
   THandler extends TAnyZodSafeFunctionHandler,
 > {
   /** The chained input schema */
-  inputSchema: TInputSchema
+  inputSchema: Array<TInputSchemaFn<any, any> | z.ZodType> | undefined
   /** An ordered array of handlers */
   handlerChain: TAnyZodSafeFunctionHandler[]
   /** The last handler in the chain */

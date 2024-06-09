@@ -231,7 +231,7 @@ export class ZodSafeFunction<
    * ```
    */
   public input<
-    T extends z.ZodType | TInputSchemaFn<TProcedureChainOutput>,
+    T extends z.ZodType | TInputSchemaFn<TInputSchema, TProcedureChainOutput>,
     TType extends TIsProcedure extends false
       ? InputTypeOptions
       : "json" = "json",
@@ -253,10 +253,9 @@ export class ZodSafeFunction<
   > {
     return new ZodSafeFunction({
       ...this.$internals,
-      // @ts-expect-error
       inputSchema: !this.$internals.inputSchema
-        ? schema
-        : schema.and(this.$internals.inputSchema),
+        ? [schema]
+        : [...this.$internals.inputSchema, schema],
       inputType: opts?.type,
     }) as any
   }
@@ -296,7 +295,6 @@ export class ZodSafeFunction<
     TIsProcedure,
     TInputType
   > {
-    // @ts-expect-error
     return new ZodSafeFunction({
       ...this.$internals,
       onInputParseError: fn,
@@ -588,8 +586,24 @@ export class ZodSafeFunction<
       return data
     }
 
+    let finalInputSchema: z.ZodType = z.undefined()
+
+    if (Array.isArray(inputSchema)) {
+      for (const value of inputSchema) {
+        const schema =
+          typeof value === "function"
+            ? await value({ ctx, previousSchema: finalInputSchema })
+            : value
+        if (!finalInputSchema) {
+          finalInputSchema = schema
+        } else {
+          finalInputSchema = finalInputSchema.and(schema)
+        }
+      }
+    }
+
     // parse the input data
-    const safe = await (inputSchema || z.undefined()).safeParseAsync(data)
+    const safe = await finalInputSchema.safeParseAsync(data)
 
     if (!safe.success) {
       if (this.$internals.onInputParseError) {

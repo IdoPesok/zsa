@@ -282,7 +282,7 @@ export interface TInternals<
   procedureHandlerChain: TAnyZodSafeFunctionHandler[]
 
   /** The final input schema of the handler */
-  inputSchema: TInputSchema
+  inputSchema: Array<TInputSchemaFn<any, any> | z.ZodType> | undefined
 
   /** The final output schema of the handler */
   outputSchema: TOutputSchema
@@ -372,9 +372,15 @@ export interface TShapeErrorFn<TError extends any = TShapeErrorNotSet> {
   }): any
 }
 
-export interface TInputSchemaFn<TProcedureChainOutput extends any> {
-  (args: { ctx: TProcedureChainOutput }): z.ZodType
+export interface TInputSchemaFn<
+  TPreviousInputSchema extends z.ZodType | undefined,
+  TProcedureChainOutput extends any,
+> {
+  (args: {
+    ctx: TProcedureChainOutput
+    previousSchema: TSchemaOrZodUndefined<TPreviousInputSchema>
+  }): z.ZodType
 }
 
-export type TFinalInputSchema<T extends z.ZodType | TInputSchemaFn<any>> =
-  T extends TInputSchemaFn<any> ? Awaited<ReturnType<T>> : T
+export type TFinalInputSchema<T extends z.ZodType | TInputSchemaFn<any, any>> =
+  T extends TInputSchemaFn<any, any> ? Awaited<ReturnType<T>> : T
