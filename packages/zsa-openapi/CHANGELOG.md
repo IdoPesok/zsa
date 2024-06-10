@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.1.0
+
+### Minor Changes
+
+- c03c5bf: Breaking change: you must now specify the allowed content types if it is not appliation/json. Please see the docs under Configuring OpenAPI > Content Types for how to set this up
+
 ## 0.0.12
 
 ### Patch Changes
