@@ -22,6 +22,7 @@ export type OpenApiMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE"
 const FORM_DATA_CONTENT_TYPE = "application/x-www-form-urlencoded"
 const MULTI_PART_CONTENT_TYPE = "multipart/form-data"
 const JSON_CONTENT_TYPE = "application/json"
+const TEXT_PLAIN = "text/plain"
 
 interface TShapeError<T extends any = unknown> {
   (error: T): any
@@ -31,6 +32,7 @@ export type OpenApiContentType =
   | typeof FORM_DATA_CONTENT_TYPE
   | typeof JSON_CONTENT_TYPE
   | typeof MULTI_PART_CONTENT_TYPE
+  | typeof TEXT_PLAIN
   | (string & {})
 
 export interface ApiRouteHandler {
@@ -407,12 +409,13 @@ const getDataFromRequest = async (
   let data: Object | undefined = undefined
 
   const suppportedContentTypes = contentTypes || ["application/json"]
-  const requestContentType = headers.get("content-type")
+  const requestContentType = headers.get("content-type") || TEXT_PLAIN
 
   // make sure the content type is supported
   const foundContentType = suppportedContentTypes.find((contentType) => {
     return requestContentType?.startsWith(contentType)
   })
+
   if (!foundContentType) {
     return {
       data: undefined,
