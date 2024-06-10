@@ -434,10 +434,7 @@ const getDataFromRequest = async (
         // if its form data
         const formData = await request.formData()
         data = formDataToJson(formData, inputSchema)
-      } else if (
-        suppportedContentTypes.includes(JSON_CONTENT_TYPE) &&
-        requestContentType?.startsWith(JSON_CONTENT_TYPE)
-      ) {
+      } else if (requestContentType?.startsWith(JSON_CONTENT_TYPE)) {
         // if its json
         data = await request.json()
       }
