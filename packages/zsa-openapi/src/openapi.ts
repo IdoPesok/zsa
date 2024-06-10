@@ -408,30 +408,28 @@ const getDataFromRequest = async (
   const headers = new Headers(request.headers)
   let data: Object | undefined = undefined
 
-  const suppportedContentTypes = contentTypes || ["application/json"]
-  const requestContentType = headers.get("content-type") || TEXT_PLAIN
-
-  // make sure the content type is supported
-  const foundContentType = suppportedContentTypes.find((contentType) => {
-    return requestContentType?.startsWith(contentType)
-  })
-
-  if (!foundContentType) {
-    return {
-      data: undefined,
-      searchParamsJson,
-      requestError: "UNSUPPORTED_CONTENT_TYPE" as const,
-    }
-  }
-
   // if it has a body
   if (acceptsRequestBody(request.method)) {
+    const suppportedContentTypes = contentTypes || ["application/json"]
+    const requestContentType = headers.get("content-type") || TEXT_PLAIN
+
+    // make sure the content type is supported
+    const foundContentType = suppportedContentTypes.find((contentType) => {
+      return requestContentType?.startsWith(contentType)
+    })
+
+    if (!foundContentType) {
+      return {
+        data: undefined,
+        searchParamsJson,
+        requestError: "UNSUPPORTED_CONTENT_TYPE" as const,
+      }
+    }
+
     try {
       if (
-        (suppportedContentTypes.includes(FORM_DATA_CONTENT_TYPE) &&
-          requestContentType?.startsWith(FORM_DATA_CONTENT_TYPE)) ||
-        (suppportedContentTypes.includes(MULTI_PART_CONTENT_TYPE) &&
-          requestContentType?.startsWith(MULTI_PART_CONTENT_TYPE))
+        requestContentType?.startsWith(FORM_DATA_CONTENT_TYPE) ||
+        requestContentType?.startsWith(MULTI_PART_CONTENT_TYPE)
       ) {
         // if its form data
         const formData = await request.formData()
