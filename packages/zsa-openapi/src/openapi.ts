@@ -5,11 +5,10 @@ import { z } from "zod"
 import {
   TAnyZodSafeFunctionHandler,
   TOptsSource,
-  TZSAError,
   ZSAResponseMeta,
   canDataBeUndefinedForSchema,
   formDataToJson,
-  inferInputSchemaFromHandler,
+  inferServerActionError,
   inferServerActionInput,
 } from "zsa"
 import {
@@ -24,8 +23,8 @@ const FORM_DATA_CONTENT_TYPE = "application/x-www-form-urlencoded"
 const MULTI_PART_CONTENT_TYPE = "multipart/form-data"
 const JSON_CONTENT_TYPE = "application/json"
 
-interface TShapeError<T extends z.ZodType> {
-  (error: TZSAError<T>): any
+interface TShapeError<T extends any = unknown> {
+  (error: T): any
 }
 
 export type OpenApiContentType =
@@ -459,7 +458,7 @@ const getResponseFromAction = async <
   action: TAction,
   input: inferServerActionInput<TAction>,
   error: Awaited<ReturnType<typeof getDataFromRequest>>["error"],
-  shapeError?: TShapeError<inferInputSchemaFromHandler<TAction>>
+  shapeError?: TShapeError
 ) => {
   // handle unsupported content type
   if (error === "UNSUPPORTED_CONTENT_TYPE") {
@@ -526,6 +525,10 @@ const getResponseFromAction = async <
       } catch (error: any) {
         error = $error
       }
+    }
+
+    if (error instanceof Response) {
+      return error
     }
 
     let status = getErrorStatusFromZSAError(error)
@@ -718,7 +721,7 @@ export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
   path: `/${string}`,
   action: THandler,
   opts?: {
-    shapeError?: TShapeError<inferInputSchemaFromHandler<THandler>>
+    shapeError?: TShapeError<inferServerActionError<THandler>>
   }
 ) {
   const router = createOpenApiServerActionRouter()
@@ -757,7 +760,7 @@ export function createRouteHandlersForAction<
   action: THandler,
   opts?: {
     contentTypes?: OpenApiContentType[]
-    shapeError?: TShapeError<inferInputSchemaFromHandler<THandler>>
+    shapeError?: TShapeError<inferServerActionError<THandler>>
   }
 ) {
   const handler: ApiRouteHandler = async (
