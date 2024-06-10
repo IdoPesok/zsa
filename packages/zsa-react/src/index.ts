@@ -135,8 +135,6 @@ export const useServerAction = <
           )
         }
 
-        setStatus("error")
-
         // don't retry => update the result
         if (oldResult.status === "filled") {
           setResult(oldResult.result)
@@ -150,11 +148,11 @@ export const useServerAction = <
           result: undefined,
         })
 
+        // trigger error useEffect
+        setStatus("error")
+
         return [data, err] as any
       }
-
-      // success state
-      setStatus("success")
 
       const res = {
         isError: false,
@@ -169,6 +167,9 @@ export const useServerAction = <
         status: "empty",
         result: undefined,
       })
+
+      // success state
+      setStatus("success")
 
       return [data, err] as any
     },
@@ -186,6 +187,22 @@ export const useServerAction = <
         startTransition(() => {
           internalExecute(opts[0])
         })
+      })
+    },
+    [internalExecute]
+  )
+
+  const executeFormAction = useCallback(
+    async (
+      ...opts: Parameters<TServerAction>[0] extends undefined
+        ? []
+        : [Parameters<TServerAction>[0]]
+    ): Promise<null> => {
+      return await new Promise((resolve) => {
+        startTransition(() => {
+          internalExecute(opts[0])
+        })
+        resolve(null)
       })
     },
     [internalExecute]
@@ -273,5 +290,6 @@ export const useServerAction = <
     reset,
     execute,
     setOptimistic,
+    executeFormAction,
   }
 }

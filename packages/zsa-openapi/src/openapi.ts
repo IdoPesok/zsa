@@ -480,6 +480,10 @@ const getResponseFromAction = async <
       source: new TOptsSource(() => true),
     })
 
+    if (err instanceof Response) {
+      return err
+    }
+
     if (data instanceof Response) {
       return data
     }
