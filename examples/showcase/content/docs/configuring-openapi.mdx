@@ -299,7 +299,7 @@ In this example, we have separate files for posts and users routes. Each file cr
 
 ## Content Types
 
-By default, `zsa-openapi` will only accept requests with the `application/json` content type. If you need to accept other content types, you can specify them in the `contentTypes` option:
+By default, `zsa-openapi` will only accept requests with the `application/json` content type for PUT and POST requests. If you need to accept other content types, you can specify them in the `contentTypes` option:
 
 ```ts title="app/api/[[...openapi]]/route.ts"
 import { createOpenApiServerActionRouter } from "zsa-openapi";
@@ -320,7 +320,7 @@ export const openApiRouter = createOpenApiServerActionRouter({
   })
 ```
 
-`zsa-openapi` will only allow requests through if the `content-type` header matches one of the specified content types.
+`zsa-openapi` will only allow PUT and POST requests through if the `content-type` header matches one of the specified content types.
 
 ## Error Handling
 
