@@ -7,7 +7,7 @@ import {
   nextRedirectInProcedureAction,
 } from "server/actions"
 import { TEST_DATA } from "server/data"
-import { openapiRouter } from "server/router"
+import { jsonOnlyRouter, openapiRouter } from "server/router"
 import {
   createOpenApiServerActionRouter,
   createRouteHandlers,
@@ -206,6 +206,22 @@ describe("openapi", () => {
       expect(json).toEqual({
         result: 100 * 100,
       })
+    })
+
+    it("should fail to use form data with json only router [POST]", async () => {
+      const { GET } = createRouteHandlers(jsonOnlyRouter)
+
+      const formData = new FormData()
+      formData.append("number", "100")
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/multiply-with-array",
+        formData,
+      })
+
+      const response = await GET(request)
+      expect(response.status).toBe(415)
     })
 
     it("should multiply one number in form data array [POST]", async () => {
