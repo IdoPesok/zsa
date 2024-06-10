@@ -417,7 +417,7 @@ const getDataFromRequest = async (
     return {
       data: undefined,
       searchParamsJson,
-      error: "UNSUPPORTED_CONTENT_TYPE" as const,
+      requestError: "UNSUPPORTED_CONTENT_TYPE" as const,
     }
   }
 
@@ -457,11 +457,11 @@ const getResponseFromAction = async <
   request: NextRequest,
   action: TAction,
   input: inferServerActionInput<TAction>,
-  error: Awaited<ReturnType<typeof getDataFromRequest>>["error"],
+  requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"],
   shapeError?: TShapeError
 ) => {
   // handle unsupported content type
-  if (error === "UNSUPPORTED_CONTENT_TYPE") {
+  if (requestError === "UNSUPPORTED_CONTENT_TYPE") {
     return new Response(JSON.stringify({ error: "Unsupported Media Type" }), {
       status: 415,
     })
@@ -573,7 +573,7 @@ export const createRouteHandlers = (
     searchParams: Record<string, string>
     action: TAnyZodSafeFunctionHandler
     body: Record<string, any> | undefined
-    error: Awaited<ReturnType<typeof getDataFromRequest>>["error"]
+    requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"]
   }> => {
     try {
       // find the matching action from the router
@@ -606,7 +606,7 @@ export const createRouteHandlers = (
         source: new TOptsSource(() => true),
       })
 
-      const { data, searchParamsJson, error } = await getDataFromRequest(
+      const { data, searchParamsJson, requestError } = await getDataFromRequest(
         request,
         inputSchema,
         foundMatch.contentTypes
@@ -658,7 +658,7 @@ export const createRouteHandlers = (
           searchParams: {},
           action: foundMatch.action,
           body: undefined,
-          error: error,
+          requestError: requestError,
         }
       }
 
@@ -668,7 +668,7 @@ export const createRouteHandlers = (
         searchParams: searchParamsJson,
         action: foundMatch.action,
         body: data,
-        error: error,
+        requestError: requestError,
       }
     } catch (error: unknown) {
       return null
@@ -683,7 +683,7 @@ export const createRouteHandlers = (
       request,
       parsedData.action,
       parsedData.input,
-      parsedData.error,
+      parsedData.requestError,
       opts?.shapeError
     )
   }
@@ -772,7 +772,7 @@ export function createRouteHandlersForAction<
       source: new TOptsSource(() => true),
     })) as any
 
-    const { data, searchParamsJson, error } = await getDataFromRequest(
+    const { data, searchParamsJson, requestError } = await getDataFromRequest(
       request,
       inputSchema,
       opts?.contentTypes
@@ -795,7 +795,7 @@ export function createRouteHandlersForAction<
       request,
       action,
       input,
-      error,
+      requestError,
       opts?.shapeError as any
     )
   }
