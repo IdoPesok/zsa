@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.1.1
+
+### Patch Changes
+
+- 322305a: Only validate content type for requests that are not GET and DELETE
+
 ## 0.1.0
 
 ### Minor Changes
