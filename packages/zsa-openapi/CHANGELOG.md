@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.0.12
+
+### Patch Changes
+
+- ffd71e5: Allow returning custom Responses in shape error
+
 ## 0.0.11
 
 ### Patch Changes
