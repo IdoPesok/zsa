@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 import { z } from "zod"
 import { createServerAction } from "zsa"
 
@@ -13,7 +14,8 @@ export const testAction = createServerAction()
   )
   .handler(async ({ input }) => {
     cookies().set("testing", "true")
-    revalidatePath("/test")
+    // revalidatePath("/test")
+    redirect("/slow")
 
     return `Hello, ${input.name}!`
   })

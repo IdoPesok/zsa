@@ -8,7 +8,7 @@ import { testAction } from "./test-actions"
 export default function TestForm() {
   const { execute, isPending, data, error } = useServerAction(testAction, {
     onSuccess: ({ data }) => {
-      toast(data)
+      toast("It worked!")
     },
   })
 
