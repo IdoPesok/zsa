@@ -59,11 +59,13 @@ export const useServerAction = <
 
   // keep track of pending states
   const [isTransitioning, startTransition] = useTransition()
-  const [status, setStatus] =
-    useState<TServerActionResult<TServerAction>["status"]>("idle")
+  const [isExecuting, setExecuting] = useState(false)
+
+  const status = useRef<TServerActionResult<TServerAction>["status"]>("idle")
 
   // set the result state and ref
   const setResult = useCallback((result: TInnerResult<TServerAction>) => {
+    console.log("setting result", result)
     $setResult(result)
     resultRef.current = result
   }, [])
@@ -108,7 +110,8 @@ export const useServerAction = <
 
       if (opts?.onStart) opts.onStart()
 
-      setStatus("pending")
+      status.current = "pending"
+      setExecuting(true)
 
       let data, err
 
@@ -149,7 +152,8 @@ export const useServerAction = <
         })
 
         // trigger error useEffect
-        setStatus("error")
+        status.current = "error"
+        setExecuting(false)
 
         return [data, err] as any
       }
@@ -169,7 +173,8 @@ export const useServerAction = <
       })
 
       // success state
-      setStatus("success")
+      status.current = "success"
+      setExecuting(false)
 
       return [data, err] as any
     },
@@ -235,25 +240,15 @@ export const useServerAction = <
   const reset = useCallback(() => {
     setResult(getEmptyResult())
     setOldResult(getEmptyOldResult())
-    setStatus("idle")
+    setExecuting(false)
+    status.current = "idle"
     lastRetryId.current = 0
     retryCount.current = 0
   }, [])
 
-  // check if the status is pending
-  // NOTE: during retries, the status is "pending" but the transition is not
-  //       complete, so we need to check the status to see if it is pending
-  const isPending = isTransitioning || status === "pending"
-
-  useEffect(() => {
-    // we need this effect because we won't know when the next.js server action is
-    // actually done until the transition finishes and sets isTransitioning back to false.
-    // when the transition finishes, we call resolve the executeRef.current promise and also
-    // invoke the onSuccess and onError callbacks.
-    if (isPending) return
-
+  const handleCallbacks = useCallback(() => {
     // handle the success state
-    if (status === "success") {
+    if (status.current === "success") {
       executeRef.current?.([resultRef.current.data, null])
 
       // call success callback
@@ -266,7 +261,7 @@ export const useServerAction = <
     }
 
     // handle the error state
-    if (status === "error") {
+    if (status.current === "error") {
       executeRef.current?.([null, resultRef.current.error])
 
       // call error callback
@@ -277,7 +272,35 @@ export const useServerAction = <
       // call finish callback
       opts?.onFinish?.([null, resultRef.current.error] as any)
     }
-  }, [status, isPending])
+
+    // reset the states
+    executeRef.current = undefined
+    status.current = "idle"
+  }, [])
+
+  // check if the status is pending
+  // NOTE: during retries, the status is "pending" but the transition is not
+  //       complete, so we need to check the status to see if it is pending
+  const isPending = isTransitioning || isExecuting
+
+  useEffect(() => {
+    // we need this effect because we won't know when the next.js server action is
+    // actually done until the transition finishes and sets isTransitioning back to false.
+    // when the transition finishes, we call resolve the executeRef.current promise and also
+    // invoke the onSuccess and onError callbacks.
+    if (isPending) return
+
+    // handle the callbacks
+    handleCallbacks()
+  }, [status.current, isPending])
+
+  useEffect(() => {
+    return () => {
+      if (executeRef.current !== undefined) {
+        handleCallbacks()
+      }
+    }
+  }, [])
 
   const final = calculateResultFromState<TServerAction>({
     isPending,
