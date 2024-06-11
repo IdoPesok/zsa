@@ -65,7 +65,6 @@ export const useServerAction = <
 
   // set the result state and ref
   const setResult = useCallback((result: TInnerResult<TServerAction>) => {
-    console.log("setting result", result)
     $setResult(result)
     resultRef.current = result
   }, [])
