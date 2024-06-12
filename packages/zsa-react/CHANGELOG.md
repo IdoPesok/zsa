@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.6
+
+### Patch Changes
+
+- 048a9b1: Fixes bug where callbacks aren't being called if the hook unmounts
+
 ## 0.1.5
 
 ### Patch Changes
