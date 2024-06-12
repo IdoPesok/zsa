@@ -366,7 +366,6 @@ export const divideAction = publicAction
 
 export const nextRedirectAction = publicAction.handler(async () => {
   redirect("/slow")
-  return "123"
 })
 
 export const nextNotFoundAction = publicAction.handler(async () => {

@@ -9,16 +9,26 @@ test("it should correctly show isPending until the redirect is finished", async 
   await expect(page.locator("button")).toBeEnabled()
 
   // click the button
+  const start = Date.now()
   await page.locator("button").click()
 
-  // wait for 5 seconds
-  await page.waitForTimeout(5000)
+  // wait for the console log
+  page.on("console", (msg) => {
+    expect(msg.text()).toContain("redirected")
+    expect(Date.now() - start).toBeGreaterThanOrEqual(5000)
+  })
 
+  // wait for < 5 seconds
+  await page.waitForTimeout(4500)
   // check that button is still disabled (while pending)
   await expect(page.url()).toContain("/redirect-action")
   await expect(page.locator("button")).toBeDisabled()
 
-  // check that page has been redirected
-  await page.waitForTimeout(500)
+  // wait for the page to stop loading
+  await page.waitForLoadState("networkidle")
   await expect(page.url()).toContain("/slow")
+
+  // check it all took between 5-6 seconds
+  await expect(Date.now() - start).toBeGreaterThanOrEqual(5000)
+  await expect(Date.now() - start).toBeLessThanOrEqual(6000)
 })

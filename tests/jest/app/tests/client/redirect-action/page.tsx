@@ -4,7 +4,11 @@ import { nextRedirectAction } from "server/actions"
 import { useServerAction } from "zsa-react"
 
 export default function HelloWorldUI() {
-  const { isPending, execute } = useServerAction(nextRedirectAction)
+  const { isPending, execute } = useServerAction(nextRedirectAction, {
+    onSuccess: () => {
+      console.log("redirected")
+    },
+  })
 
   return (
     <div>
