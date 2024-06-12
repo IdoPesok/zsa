@@ -303,6 +303,10 @@ export const useServerAction = <
     handleCallbacks()
   }, [status.current, isPending])
 
+  // on a revalidatePath or redirect the isPending useEffect won't run
+  // to combat this, we need to have a cleanup method that will fire
+  // when the hook is unmounted. we will run the callbacks here
+  // since they won't be called from the useEffect
   useEffect(() => {
     return () => {
       if (executeRef.current !== undefined) {
