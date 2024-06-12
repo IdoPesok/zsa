@@ -245,7 +245,16 @@ export const useServerAction = <
     retryCount.current = 0
   }, [])
 
+  const isRunningCallbacks = useRef(false)
+
   const handleCallbacks = useCallback(() => {
+    if (!executeRef.current || isRunningCallbacks.current) {
+      return
+    }
+
+    // make sure we don't call this function multiple times
+    isRunningCallbacks.current = true
+
     // handle the success state
     if (status.current === "success") {
       executeRef.current?.([resultRef.current.data, null])
@@ -275,6 +284,7 @@ export const useServerAction = <
     // reset the states
     executeRef.current = undefined
     status.current = "idle"
+    isRunningCallbacks.current = false
   }, [])
 
   // check if the status is pending
