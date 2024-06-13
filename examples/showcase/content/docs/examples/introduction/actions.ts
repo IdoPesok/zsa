@@ -1,6 +1,5 @@
 "use server"
 
-import { redirect } from "next/navigation"
 import z from "zod"
 import { createServerAction } from "zsa"
 
@@ -12,7 +11,6 @@ export const incrementNumberAction = createServerAction()
   )
   .handler(async ({ input }) => {
     await new Promise((resolve) => setTimeout(resolve, 500))
-    redirect("/")
     return input.number + 1
   })
 
