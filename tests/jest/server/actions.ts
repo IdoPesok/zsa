@@ -553,3 +553,13 @@ export const faultyShapeErrorAction = shapeErrorAction
   .handler(async ({ input }) => {
     return input.number
   })
+
+export const inputFunctionAction = ownsPostAction
+  .input(async ({ ctx }) => {
+    return z.object({
+      matchingPostId: z.string().refine((s) => s === ctx.post.id),
+    })
+  })
+  .handler(async ({ input }) => {
+    return input.matchingPostId
+  })

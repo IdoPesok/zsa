@@ -380,7 +380,7 @@ export interface TInputSchemaFn<
   (args: {
     ctx: TProcedureChainOutput
     previousSchema: TSchemaOrZodUndefined<TPreviousInputSchema>
-  }): z.ZodType
+  }): z.ZodType | Promise<z.ZodType>
 }
 
 export type TFinalInputSchema<T extends z.ZodType | TInputSchemaFn<any, any>> =
