@@ -9,6 +9,7 @@ import { CLIENT_TEST_DATA, TEST_DATA } from "./data"
 import {
   adminAction,
   faultyOutputProcedure,
+  inputFunctionProcedure,
   inputNumberProcedure,
   intersectedInputProcedureC,
   ownsPostAction,
@@ -557,9 +558,24 @@ export const faultyShapeErrorAction = shapeErrorAction
 export const inputFunctionAction = ownsPostAction
   .input(async ({ ctx }) => {
     return z.object({
-      matchingPostId: z.string().refine((s) => s === ctx.post.id),
+      matchingPostId: z
+        .string()
+        .refine((s) => s === ctx.post.id, "not the same"),
     })
   })
   .handler(async ({ input }) => {
     return input.matchingPostId
+  })
+
+export const inputFunctionActionTwo = inputFunctionProcedure
+  .createServerAction()
+  .input(async ({ ctx }) => {
+    return z.object({
+      password: z
+        .string()
+        .refine((s) => s === ctx.username, "invalid password"),
+    })
+  })
+  .handler(async ({ input }) => {
+    return input
   })

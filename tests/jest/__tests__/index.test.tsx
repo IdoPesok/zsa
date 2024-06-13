@@ -21,6 +21,8 @@ import {
   helloWorldRetryAction,
   helloWorldRetryProcedureAction,
   helloWorldTimeoutAction,
+  inputFunctionAction,
+  inputFunctionActionTwo,
   inputLargeNumberAction,
   inputNumberAction,
   intersectedInputAction,
@@ -1010,6 +1012,71 @@ describe("actions", () => {
       expect(err).toEqual({
         number: 100,
       })
+    })
+  })
+
+  describe("input functions", () => {
+    beforeEach(() => {
+      ;(cookies as jest.Mock).mockReturnValue({
+        get: jest.fn().mockReturnValue({ value: "session" }),
+      })
+    })
+
+    test("should infer the correct input type", async () => {
+      const [data, err] = await inputFunctionAction({
+        postId: "testUserAuthor",
+        matchingPostId: "testUserAuthor",
+      })
+
+      expect(data).toEqual("testUserAuthor")
+      expect(err).toBeNull()
+    })
+
+    test("should fail to parse the input", async () => {
+      const [data, err] = await inputFunctionAction({
+        postId: "testUserAuthor",
+        matchingPostId: "wronginput",
+      })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.fieldErrors?.matchingPostId).toEqual(["not the same"])
+    })
+
+    test("should fail to parse the input with invalid username and password", async () => {
+      const [data, err] = await inputFunctionActionTwo({
+        username: "nope",
+        password: "wrong",
+      })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.fieldErrors?.username).toEqual(["invalid username"])
+    })
+
+    test("should fail to parse the input with invalid password", async () => {
+      const [data, err] = await inputFunctionActionTwo({
+        username: "valid",
+        password: "wrong",
+      })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.fieldErrors?.password).toEqual(["invalid password"])
+      expect(err?.fieldErrors?.username).not.toBeDefined()
+    })
+
+    it("should return the valid username and password", async () => {
+      const [data, err] = await inputFunctionActionTwo({
+        username: "valid",
+        password: "valid",
+      })
+
+      expect(data).toEqual({
+        username: "valid",
+        password: "valid",
+      })
+      expect(err).toBeNull()
     })
   })
 })
