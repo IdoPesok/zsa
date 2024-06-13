@@ -573,31 +573,29 @@ export class ZodSafeFunction<
   }): Promise<TSchemaOutput<TInputSchema>> {
     const { ctx, opts, noFunctionsAllowed } = args
     // evaluate the input schema
-    let inputSchema: z.ZodType = z.undefined()
-    if (Array.isArray(inputSchema)) {
-      for (const value of inputSchema) {
-        if (noFunctionsAllowed && typeof value === "function") {
-          throw new Error("Input functions are not suppported yet")
-        }
+    let inputSchema: z.ZodType | undefined = undefined
 
-        const schema =
-          typeof value === "function"
-            ? await value({ ctx, previousSchema: inputSchema })
-            : value
-        if (!inputSchema) {
-          inputSchema = schema
-        } else {
-          inputSchema = inputSchema.and(schema)
-        }
+    const schemaArray =
+      opts?.overrideInputSchema || this.$internals.inputSchema || []
+
+    for (const value of schemaArray) {
+      if (noFunctionsAllowed && typeof value === "function") {
+        throw new Error("Input functions are not suppported yet")
+      }
+
+      const schema: any =
+        typeof value === "function"
+          ? await value({ ctx, previousSchema: inputSchema })
+          : value
+
+      if (!inputSchema) {
+        inputSchema = schema
+      } else {
+        inputSchema = inputSchema.and(schema)
       }
     }
 
-    // use override input schema if provided
-    if (opts?.overrideInputSchema) {
-      inputSchema = opts.overrideInputSchema
-    }
-
-    return inputSchema as any
+    return (inputSchema || z.undefined()) as any
   }
 
   /** helper function to parse input data given the active input schema */
@@ -642,7 +640,11 @@ export class ZodSafeFunction<
     // the procedure input schema is undefined but the action input schema is not
     // thus if we try to parse z.undefined(object) we get an error
     // we can safely skip this because it will get validated by the action
-    if (!inputSchema && data !== undefined && this.$internals.isProcedure) {
+    if (
+      !this.$internals.inputSchema &&
+      data !== undefined &&
+      this.$internals.isProcedure
+    ) {
       return undefined as any
     }
 
@@ -766,7 +768,7 @@ export class ZodSafeFunction<
 
       if (opts?.returnInputSchema) {
         // return the input schema
-        return this.evaluateInputSchema({
+        return await this.evaluateInputSchema({
           ctx: undefined as any,
           opts,
           noFunctionsAllowed: true,
