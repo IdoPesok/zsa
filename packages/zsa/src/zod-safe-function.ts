@@ -638,18 +638,27 @@ export class ZodSafeFunction<
 
     // if data is formData, convert it to json
     if ($data instanceof FormData) {
-      data = {
-        ...formDataToJson(data, inputSchema),
-        ...(this.$internals.inputType !== "state" ? overrideData || {} : {}),
-      }
+      data = formDataToJson(data, inputSchema)
+    }
 
-      // if its an empty object, set it to undefined if reasonable
-      if (
-        Object.keys(data).length === 0 &&
-        canDataBeUndefinedForSchema(inputSchema)
-      ) {
-        data = undefined
-      }
+    // add the override data to the data
+    if (
+      data &&
+      typeof data === "object" &&
+      overrideData &&
+      typeof overrideData === "object"
+    ) {
+      data = { ...data, ...overrideData }
+    }
+
+    // if its an empty object, set it to undefined if reasonable
+    if (
+      data &&
+      typeof data === "object" &&
+      Object.keys(data).length === 0 &&
+      canDataBeUndefinedForSchema(inputSchema)
+    ) {
+      data = undefined
     }
 
     opts?.onArgs?.(data)
@@ -836,10 +845,12 @@ export class ZodSafeFunction<
                 previousState
               )
 
+        const inputType = this.$internals.inputType
+
         // parse the input data
         const input = await this.parseInputData(
           args,
-          overrideArgs,
+          inputType === "state" ? undefined : overrideArgs, // only override args for non state
           timeoutStatus,
           ctx,
           opts

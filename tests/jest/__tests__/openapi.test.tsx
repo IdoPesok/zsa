@@ -1,6 +1,7 @@
 import { mockNextRequest } from "lib/utils"
 import {
   divideAction,
+  dynamicSchemasAction,
   multiplyAction,
   nextNotFoundAction,
   nextRedirectAction,
@@ -11,6 +12,7 @@ import { jsonOnlyRouter, openapiRouter } from "server/router"
 import {
   createOpenApiServerActionRouter,
   createRouteHandlers,
+  createRouteHandlersForAction,
   setupApiHandler,
 } from "zsa-openapi"
 
@@ -500,6 +502,98 @@ describe("openapi", () => {
       })
 
       await expect(POST(request)).rejects.toThrow("NEXT_REDIRECT")
+    })
+  })
+
+  describe("dynamic schemas", () => {
+    it("should return the dynamic header values", async () => {
+      const { POST } = createRouteHandlersForAction(dynamicSchemasAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/test",
+        body: {
+          min: 0,
+          max: 100,
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toEqual(200)
+
+      const json = await response.json()
+      const randomNumber = json.randomNumber
+
+      if (randomNumber > 50) {
+        expect(response.headers.get("x-test")).toEqual(">")
+      } else {
+        expect(response.headers.get("x-test")).toEqual("<")
+      }
+    })
+
+    it("should return the static input parse error", async () => {
+      const { POST } = createRouteHandlersForAction(dynamicSchemasAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/test",
+        body: {
+          min: 1000,
+          max: 2000,
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toEqual(400)
+    })
+
+    it("should return the dynamic input parse error", async () => {
+      const { POST } = createRouteHandlersForAction(dynamicSchemasAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/test",
+        body: {
+          min: 1000,
+          max: 2000,
+        },
+        headers: {
+          "x-min-number": "10000",
+          "x-max-number": "20000",
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toEqual(400)
+    })
+
+    it("should return the dynamic header values from dynamic input schema", async () => {
+      const { POST } = createRouteHandlersForAction(dynamicSchemasAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/test",
+        body: {
+          min: 10000,
+          max: 20000,
+        },
+        headers: {
+          "x-min-number": "10000",
+          "x-max-number": "20000",
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toEqual(200)
+
+      const json = await response.json()
+      const randomNumber = json.randomNumber
+
+      if (randomNumber > 15000) {
+        expect(response.headers.get("x-test")).toEqual(">")
+      } else {
+        expect(response.headers.get("x-test")).toEqual("<")
+      }
     })
   })
 })

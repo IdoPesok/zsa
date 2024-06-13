@@ -1,15 +1,11 @@
 import { type NextRequest } from "next/server"
 import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
-import { z } from "zod"
 import {
   TAnyZodSafeFunctionHandler,
   TOptsSource,
   ZSAResponseMeta,
-  canDataBeUndefinedForSchema,
-  formDataToJson,
   inferServerActionError,
-  inferServerActionInput,
 } from "zsa"
 import {
   acceptsRequestBody,
@@ -36,7 +32,10 @@ export type OpenApiContentType =
   | (string & {})
 
 export interface ApiRouteHandler {
-  (request: NextRequest): Promise<Response>
+  (
+    request: NextRequest,
+    args?: { params?: Record<string, string> }
+  ): Promise<Response>
 }
 
 /**
@@ -395,7 +394,6 @@ export const createOpenApiServerActionRouter = (args?: {
 
 const getDataFromRequest = async (
   request: NextRequest,
-  inputSchema: z.ZodType,
   contentTypes?: OpenApiContentType[]
 ) => {
   // get the search params
@@ -432,8 +430,7 @@ const getDataFromRequest = async (
         requestContentType?.startsWith(MULTI_PART_CONTENT_TYPE)
       ) {
         // if its form data
-        const formData = await request.formData()
-        data = formDataToJson(formData, inputSchema)
+        data = await request.formData()
       } else if (requestContentType?.startsWith(JSON_CONTENT_TYPE)) {
         // if its json
         data = await request.json()
@@ -454,7 +451,8 @@ const getResponseFromAction = async <
 >(
   request: NextRequest,
   action: TAction,
-  input: inferServerActionInput<TAction>,
+  args: any,
+  partialArgs: any,
   requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"],
   shapeError?: TShapeError
 ) => {
@@ -471,7 +469,7 @@ const getResponseFromAction = async <
     typeof data === "string" ? data : JSON.stringify(data)
 
   try {
-    const [data, err] = await action(input, undefined, {
+    const [data, err] = await action(args, partialArgs, {
       request: request,
       responseMeta,
       source: new TOptsSource(() => true),
@@ -566,9 +564,8 @@ export const createRouteHandlers = (
   const parseRequest = async (
     request: NextRequest
   ): Promise<null | {
-    input: Record<string, any> | undefined
-    params: Record<string, string>
-    searchParams: Record<string, string>
+    args: Record<string, any> | undefined
+    partialArgs: Record<string, any> | undefined
     action: TAnyZodSafeFunctionHandler
     body: Record<string, any> | undefined
     requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"]
@@ -599,14 +596,8 @@ export const createRouteHandlers = (
 
       if (!foundMatch) return null
 
-      const inputSchema = await foundMatch.action(undefined, undefined, {
-        returnInputSchema: true,
-        source: new TOptsSource(() => true),
-      })
-
       const { data, searchParamsJson, requestError } = await getDataFromRequest(
         request,
-        inputSchema,
         foundMatch.contentTypes
       )
 
@@ -639,31 +630,12 @@ export const createRouteHandlers = (
         }
       }
 
-      // form the final input to be sent to the action
-      const final = {
-        ...searchParamsJson,
-        ...(data || {}),
-        ...params,
-      }
-
-      if (
-        Object.keys(final).length === 0 &&
-        canDataBeUndefinedForSchema(inputSchema)
-      ) {
-        return {
-          input: undefined,
-          params: {},
-          searchParams: {},
-          action: foundMatch.action,
-          body: undefined,
-          requestError: requestError,
-        }
-      }
-
       return {
-        input: final,
-        params,
-        searchParams: searchParamsJson,
+        args: data || {},
+        partialArgs: {
+          ...searchParamsJson,
+          ...params,
+        },
         action: foundMatch.action,
         body: data,
         requestError: requestError,
@@ -680,7 +652,8 @@ export const createRouteHandlers = (
     return await getResponseFromAction(
       request,
       parsedData.action,
-      parsedData.input,
+      parsedData.args,
+      parsedData.partialArgs,
       parsedData.requestError,
       opts?.shapeError
     )
@@ -765,34 +738,21 @@ export function createRouteHandlersForAction<
     request: NextRequest,
     args?: { params?: Record<string, string> }
   ) => {
-    const inputSchema = (await action(undefined, undefined, {
-      returnInputSchema: true,
-      source: new TOptsSource(() => true),
-    })) as any
-
     const { data, searchParamsJson, requestError } = await getDataFromRequest(
       request,
-      inputSchema,
       opts?.contentTypes
     )
-
-    let input: any = {
-      ...(data || {}),
-      ...(searchParamsJson || {}),
-      ...(args?.params || {}),
-    }
-
-    if (
-      Object.keys(input).length === 0 &&
-      canDataBeUndefinedForSchema(inputSchema)
-    ) {
-      input = undefined
-    }
 
     return await getResponseFromAction(
       request,
       action,
-      input,
+      {
+        ...(data || {}),
+      },
+      {
+        ...(searchParamsJson || {}),
+        ...(args?.params || {}),
+      },
       requestError,
       opts?.shapeError as any
     )
