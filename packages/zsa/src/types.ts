@@ -230,6 +230,7 @@ export const DefaultOmitted = {
   onOutputParseError: 1,
   checkTimeoutStatus: 1,
   getRetryDelay: 1,
+  evaluateInputSchema: 1,
 } as const
 
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
