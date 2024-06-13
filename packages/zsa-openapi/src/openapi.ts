@@ -5,11 +5,10 @@ import { z } from "zod"
 import {
   TAnyZodSafeFunctionHandler,
   TOptsSource,
-  TZSAError,
   ZSAResponseMeta,
   canDataBeUndefinedForSchema,
   formDataToJson,
-  inferInputSchemaFromHandler,
+  inferServerActionError,
   inferServerActionInput,
 } from "zsa"
 import {
@@ -23,15 +22,17 @@ export type OpenApiMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE"
 const FORM_DATA_CONTENT_TYPE = "application/x-www-form-urlencoded"
 const MULTI_PART_CONTENT_TYPE = "multipart/form-data"
 const JSON_CONTENT_TYPE = "application/json"
+const TEXT_PLAIN = "text/plain"
 
-interface TShapeError<T extends z.ZodType> {
-  (error: TZSAError<T>): any
+interface TShapeError<T extends any = unknown> {
+  (error: T): any
 }
 
 export type OpenApiContentType =
   | typeof FORM_DATA_CONTENT_TYPE
   | typeof JSON_CONTENT_TYPE
   | typeof MULTI_PART_CONTENT_TYPE
+  | typeof TEXT_PLAIN
   | (string & {})
 
 export interface ApiRouteHandler {
@@ -375,9 +376,13 @@ export const createOpenApiServerActionRouter = (args?: {
     let extend: Array<OpenApiServerActionRouter> = Array.isArray(args.extend)
       ? args.extend
       : [args.extend]
+
     for (const router of extend) {
       for (const action of router.$INTERNALS.actions) {
-        actions.push(action)
+        actions.push({
+          ...(args.defaults || {}),
+          ...action,
+        })
       }
     }
   }
@@ -390,7 +395,8 @@ export const createOpenApiServerActionRouter = (args?: {
 
 const getDataFromRequest = async (
   request: NextRequest,
-  inputSchema: z.ZodType
+  inputSchema: z.ZodType,
+  contentTypes?: OpenApiContentType[]
 ) => {
   // get the search params
   const searchParams = request.nextUrl.searchParams
@@ -404,15 +410,31 @@ const getDataFromRequest = async (
 
   // if it has a body
   if (acceptsRequestBody(request.method)) {
+    const suppportedContentTypes = contentTypes || ["application/json"]
+    const requestContentType = headers.get("content-type") || TEXT_PLAIN
+
+    // make sure the content type is supported
+    const foundContentType = suppportedContentTypes.find((contentType) => {
+      return requestContentType?.startsWith(contentType)
+    })
+
+    if (!foundContentType) {
+      return {
+        data: undefined,
+        searchParamsJson,
+        requestError: "UNSUPPORTED_CONTENT_TYPE" as const,
+      }
+    }
+
     try {
       if (
-        headers.get("content-type")?.startsWith(FORM_DATA_CONTENT_TYPE) ||
-        headers.get("content-type")?.startsWith(MULTI_PART_CONTENT_TYPE)
+        requestContentType?.startsWith(FORM_DATA_CONTENT_TYPE) ||
+        requestContentType?.startsWith(MULTI_PART_CONTENT_TYPE)
       ) {
         // if its form data
         const formData = await request.formData()
         data = formDataToJson(formData, inputSchema)
-      } else {
+      } else if (requestContentType?.startsWith(JSON_CONTENT_TYPE)) {
         // if its json
         data = await request.json()
       }
@@ -420,6 +442,7 @@ const getDataFromRequest = async (
       data = undefined
     }
   }
+
   return {
     data,
     searchParamsJson,
@@ -432,8 +455,16 @@ const getResponseFromAction = async <
   request: NextRequest,
   action: TAction,
   input: inferServerActionInput<TAction>,
-  shapeError?: TShapeError<inferInputSchemaFromHandler<TAction>>
+  requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"],
+  shapeError?: TShapeError
 ) => {
+  // handle unsupported content type
+  if (requestError === "UNSUPPORTED_CONTENT_TYPE") {
+    return new Response(JSON.stringify({ error: "Unsupported Media Type" }), {
+      status: 415,
+    })
+  }
+
   const responseMeta = new ZSAResponseMeta()
 
   const stringifyIfNeeded = (data: any) =>
@@ -445,6 +476,10 @@ const getResponseFromAction = async <
       responseMeta,
       source: new TOptsSource(() => true),
     })
+
+    if (err instanceof Response) {
+      return err
+    }
 
     if (data instanceof Response) {
       return data
@@ -490,6 +525,10 @@ const getResponseFromAction = async <
       }
     }
 
+    if (error instanceof Response) {
+      return error
+    }
+
     let status = getErrorStatusFromZSAError(error)
 
     responseMeta.headers.set(
@@ -532,6 +571,7 @@ export const createRouteHandlers = (
     searchParams: Record<string, string>
     action: TAnyZodSafeFunctionHandler
     body: Record<string, any> | undefined
+    requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"]
   }> => {
     try {
       // find the matching action from the router
@@ -564,9 +604,10 @@ export const createRouteHandlers = (
         source: new TOptsSource(() => true),
       })
 
-      const { data, searchParamsJson } = await getDataFromRequest(
+      const { data, searchParamsJson, requestError } = await getDataFromRequest(
         request,
-        inputSchema
+        inputSchema,
+        foundMatch.contentTypes
       )
 
       const params: Record<string, string> = {}
@@ -615,6 +656,7 @@ export const createRouteHandlers = (
           searchParams: {},
           action: foundMatch.action,
           body: undefined,
+          requestError: requestError,
         }
       }
 
@@ -624,6 +666,7 @@ export const createRouteHandlers = (
         searchParams: searchParamsJson,
         action: foundMatch.action,
         body: data,
+        requestError: requestError,
       }
     } catch (error: unknown) {
       return null
@@ -633,10 +676,12 @@ export const createRouteHandlers = (
   const handler: ApiRouteHandler = async (request: NextRequest) => {
     const parsedData = await parseRequest(request)
     if (!parsedData) return new Response("", { status: 404 })
+
     return await getResponseFromAction(
       request,
       parsedData.action,
       parsedData.input,
+      parsedData.requestError,
       opts?.shapeError
     )
   }
@@ -674,7 +719,7 @@ export function setupApiHandler<THandler extends TAnyZodSafeFunctionHandler>(
   path: `/${string}`,
   action: THandler,
   opts?: {
-    shapeError?: TShapeError<inferInputSchemaFromHandler<THandler>>
+    shapeError?: TShapeError<inferServerActionError<THandler>>
   }
 ) {
   const router = createOpenApiServerActionRouter()
@@ -712,7 +757,8 @@ export function createRouteHandlersForAction<
 >(
   action: THandler,
   opts?: {
-    shapeError?: TShapeError<inferInputSchemaFromHandler<THandler>>
+    contentTypes?: OpenApiContentType[]
+    shapeError?: TShapeError<inferServerActionError<THandler>>
   }
 ) {
   const handler: ApiRouteHandler = async (
@@ -724,9 +770,10 @@ export function createRouteHandlersForAction<
       source: new TOptsSource(() => true),
     })) as any
 
-    const { data, searchParamsJson } = await getDataFromRequest(
+    const { data, searchParamsJson, requestError } = await getDataFromRequest(
       request,
-      inputSchema
+      inputSchema,
+      opts?.contentTypes
     )
 
     let input: any = {
@@ -746,6 +793,7 @@ export function createRouteHandlersForAction<
       request,
       action,
       input,
+      requestError,
       opts?.shapeError as any
     )
   }

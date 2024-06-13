@@ -1,5 +1,6 @@
 import { BasicForm } from "@/content/docs/examples/basic-form/basic-form-example"
 import DocsPage from "@/content/docs/examples/docs/swagger-docs"
+import { ExecuteFormAction } from "@/content/docs/examples/execute-form-action/execute-form-action"
 import FormDataExample from "@/content/docs/examples/form-data/form-data-example"
 import IncrementExample from "@/content/docs/examples/introduction/increment-example"
 import MultiEntryExample from "@/content/docs/examples/multi-entry-example/multi-entry-example"
@@ -31,6 +32,8 @@ function ExampleComponent({ id }: { id: string }) {
       return <MultiEntryExample />
     case "basic-form":
       return <BasicForm />
+    case "execute-form-action":
+      return <ExecuteFormAction />
     case "react-hook-form":
       return <ReactHookForm />
     case "docs":

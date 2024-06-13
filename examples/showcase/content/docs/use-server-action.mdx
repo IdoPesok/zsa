@@ -159,5 +159,73 @@ The `retry` option is useful for handling temporary network issues or server err
 
 You can pass either the new data directly or a function that receives the current data and returns the new data to `setOptimistic`. If the server action fails, the optimistic update will be rolled back to the previous value.
 
-That's it! You can now use `useServerAction` to execute server actions and handle their results in your React components with ease.
+## Form Actions
 
+`useServerAction` also supports executing a form action directly. This is useful when you want to handle form submissions in your React components.
+
+To do this, you can use the `executeFormAction` function passed back by `useServerAction` hook.
+
+First, make sure you have the input type set to `"formData"` in your server action.
+
+```typescript title="actions.ts"
+"use server"
+
+import z from "zod"
+import { createServerAction } from "zsa"
+
+export const produceNewMessage = createServerAction()
+  .input(
+    z.object({
+      name: z.string().min(5),
+    }),
+    {
+      type: "formData", // [!code highlight]
+    }
+  )
+  .handler(async ({ input }) => {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return "Hello, " + input.name
+  })
+```
+
+Then, you can use the `executeFormAction` function to execute the form action.
+
+```tsx title="form-example.tsx"
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { useServerAction } from "zsa-react"
+import { produceNewMessage } from "./actions"
+
+export const ExecuteFormAction = () => {
+  const { isPending, executeFormAction, isSuccess, data, isError, error } = // [!code highlight]
+    useServerAction(produceNewMessage) // [!code highlight]
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Form Example</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form className="flex flex-col gap-4" action={executeFormAction}> // [!code highlight]
+          <Input type="text" name="name" placeholder="Enter your name..." />
+          <Button className="w-full" type="submit" disabled={isPending}>
+            Submit
+          </Button>
+          {isPending && <div>Loading...</div>}
+          {isSuccess && <div>Success: {JSON.stringify(data)}</div>}
+          {isError && <div>Error: {JSON.stringify(error.fieldErrors)}</div>}
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+Here is the result:
+
+<ExampleComponent id="execute-form-action" />
+
+That's it! You can now use `useServerAction` to execute server actions and handle their results in your React components with ease.

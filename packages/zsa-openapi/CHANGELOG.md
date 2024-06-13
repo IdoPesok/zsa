@@ -1,5 +1,23 @@
 # zsa-openapi
 
+## 0.1.1
+
+### Patch Changes
+
+- 322305a: Only validate content type for requests that are not GET and DELETE
+
+## 0.1.0
+
+### Minor Changes
+
+- c03c5bf: Breaking change: you must now specify the allowed content types if it is not appliation/json. Please see the docs under Configuring OpenAPI > Content Types for how to set this up
+
+## 0.0.12
+
+### Patch Changes
+
+- ffd71e5: Allow returning custom Responses in shape error
+
 ## 0.0.11
 
 ### Patch Changes

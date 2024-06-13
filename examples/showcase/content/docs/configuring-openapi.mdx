@@ -297,6 +297,31 @@ export const { GET, POST, PUT, DELETE } = createRouteHandlers(router);
 
 In this example, we have separate files for posts and users routes. Each file creates its own router using `createOpenApiServerActionRouter`. Then, in the final `route.ts` file, we create a new router and use the `extend` option to combine the `postsRouter` and `usersRouter`. This way, all the routes from both routers will be included in the final router.
 
+## Content Types
+
+By default, `zsa-openapi` will only accept requests with the `application/json` content type for PUT and POST requests. If you need to accept other content types, you can specify them in the `contentTypes` option:
+
+```ts title="app/api/[[...openapi]]/route.ts"
+import { createOpenApiServerActionRouter } from "zsa-openapi";
+
+export const openApiRouter = createOpenApiServerActionRouter({
+  pathPrefix: "/api",
+  defaults: {
+    contentTypes: ["application/json"] // [!code highlight]
+  }
+})
+  .get("/", getPosts, {
+    tags: ["posts"],
+    contentTypes: ["plain/text"] // [!code highlight]
+  })
+  .post("/", createPost, {
+    tags: ["posts"],
+    contentTypes: ["application/x-www-form-urlencoded"] // [!code highlight]
+  })
+```
+
+`zsa-openapi` will only allow PUT and POST requests through if the `content-type` header matches one of the specified content types.
+
 ## Error Handling
 
 ### OpenAPI Error Status Codes
@@ -371,6 +396,16 @@ export const { GET } = createRouteHandlersForAction(getPostAction, {
 })
 ```
 
+You can even return your own custom error response:
+
+```ts
+export const { GET } = createRouteHandlers(router, {
+  pathPrefix: "/api",
+  shapeError: (error) => { // [!code highlight]
+    return new Response("Custom error", { status: 400 }) // [!code highlight]
+  }, // [!code highlight]
+})
+```
 
 ## Attributes
 
