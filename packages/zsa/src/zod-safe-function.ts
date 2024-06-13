@@ -596,7 +596,7 @@ export class ZodSafeFunction<
 
       const schema: any =
         typeof value === "function"
-          ? await value({ ctx, previousSchema: inputSchema })
+          ? await value({ ctx, previousSchema: inputSchema || z.undefined() })
           : value
 
       if (!inputSchema) {
