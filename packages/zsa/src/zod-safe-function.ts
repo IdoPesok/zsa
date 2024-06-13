@@ -14,12 +14,14 @@ import {
   TAnyStateHandlerFunc,
   TAnyZodSafeFunctionHandler,
   TFinalInputSchema,
+  TFinalOutputSchema,
   THandlerFunc,
   THandlerOpts,
   TInputSchemaFn,
   TInternals,
   TNoInputHandlerFunc,
   TOptsSource,
+  TOutputSchemaFn,
   TSchemaInput,
   TSchemaOrZodUndefined,
   TSchemaOutput,
@@ -261,11 +263,11 @@ export class ZodSafeFunction<
   }
 
   /** set the output schema for the server action */
-  public output<T extends z.ZodType>(
+  public output<T extends z.ZodType | TOutputSchemaFn<TProcedureChainOutput>>(
     schema: T
   ): TZodSafeFunction<
     TInputSchema,
-    T,
+    TFinalOutputSchema<T>,
     TError,
     "output" | Exclude<TOmitted, "onOutputParseError">,
     TProcedureChainOutput,
@@ -403,6 +405,7 @@ export class ZodSafeFunction<
   /** a helper function to parse output data given the active output schema */
   public async parseOutputData(
     data: any,
+    ctx: TProcedureChainOutput,
     timeoutStatus: TimeoutStatus
   ): Promise<TSchemaOutputOrUnknown<TOutputSchema>> {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
@@ -410,7 +413,15 @@ export class ZodSafeFunction<
     // no output schema, return data
     if (!this.$internals.outputSchema) return data
 
-    const safe = await this.$internals.outputSchema.safeParseAsync(data)
+    const schema =
+      typeof this.$internals.outputSchema === "function"
+        ? await this.$internals.outputSchema({
+            ctx,
+            unparsedData: data,
+          })
+        : this.$internals.outputSchema
+
+    const safe = await schema.safeParseAsync(data)
     if (!safe.success) {
       if (this.$internals.onOutputParseError) {
         await this.$internals.onOutputParseError(safe.error)
@@ -774,6 +785,11 @@ export class ZodSafeFunction<
           noFunctionsAllowed: true,
         })
       } else if (opts?.returnOutputSchema) {
+        if (typeof this.$internals.outputSchema === "function") {
+          throw new Error(
+            "Cannot return output schema from a function output schema"
+          )
+        }
         // return the output schema
         return this.$internals.outputSchema
       }
@@ -835,7 +851,7 @@ export class ZodSafeFunction<
           previousState,
         })
 
-        const parsed = await this.parseOutputData(data, timeoutStatus)
+        const parsed = await this.parseOutputData(data, ctx, timeoutStatus)
 
         await this.handleSuccess(input, parsed, timeoutStatus)
 

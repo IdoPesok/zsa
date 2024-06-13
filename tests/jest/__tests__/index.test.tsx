@@ -31,6 +31,8 @@ import {
   nextNotFoundAction,
   nextRedirectAction,
   nextRedirectInProcedureAction,
+  outputFunctionAction,
+  outputFunctionActionError,
   procedureChainAuthAction,
   procedureChainAuthActionWithCounter,
   shapeErrorActionThatReturnsInput,
@@ -1077,6 +1079,35 @@ describe("actions", () => {
         password: "valid",
       })
       expect(err).toBeNull()
+    })
+  })
+
+  describe("output functions", () => {
+    beforeEach(() => {
+      ;(cookies as jest.Mock).mockReturnValue({
+        get: jest.fn().mockReturnValue({ value: "session" }),
+      })
+    })
+
+    it("should return the correct output from the output function", async () => {
+      const [data, err] = await outputFunctionAction({
+        postId: "testUserAuthor",
+      })
+
+      expect(data).toEqual({
+        matchingPostId: "testUserAuthor",
+      })
+      expect(err).toBeNull()
+    })
+
+    it("should return the correct error from the output function", async () => {
+      const [data, err] = await outputFunctionActionError({
+        postId: "testUserAuthor",
+      })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.code).toBe("OUTPUT_PARSE_ERROR")
     })
   })
 })

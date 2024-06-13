@@ -571,11 +571,35 @@ export const inputFunctionActionTwo = inputFunctionProcedure
   .createServerAction()
   .input(async ({ ctx }) => {
     return z.object({
-      password: z
-        .string()
-        .refine((s) => s === ctx.username, "invalid password"),
+      password: z.string().refine((s) => s == ctx.username, "invalid password"),
     })
   })
   .handler(async ({ input }) => {
     return input
+  })
+
+export const outputFunctionAction = ownsPostAction
+  .output(async ({ ctx }) => {
+    return z.object({
+      matchingPostId: z
+        .string()
+        .refine((s) => s === ctx.post.id, "not the same"),
+    })
+  })
+  .handler(async ({ input }) => {
+    return {
+      matchingPostId: "testUserAuthor",
+    }
+  })
+
+export const outputFunctionActionError = ownsPostAction
+  .output(async ({ ctx }) => {
+    return z.object({
+      matchingPostId: z.string().refine((s) => s === "matched", "not the same"),
+    })
+  })
+  .handler(async ({ input }) => {
+    return {
+      matchingPostId: "not matched" as any,
+    }
   })

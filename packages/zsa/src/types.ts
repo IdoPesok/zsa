@@ -286,7 +286,7 @@ export interface TInternals<
   inputSchema: Array<TInputSchemaFn<any, any> | z.ZodType> | undefined
 
   /** The final output schema of the handler */
-  outputSchema: TOutputSchema
+  outputSchema: TOutputSchema | TOutputSchemaFn<any>
 
   /** A function to run when an input parse error occurs */
   onInputParseError?: ((err: z.ZodError<TInputSchema>) => any) | undefined
@@ -383,5 +383,15 @@ export interface TInputSchemaFn<
   }): z.ZodType | Promise<z.ZodType>
 }
 
+export interface TOutputSchemaFn<TProcedureChainOutput extends any> {
+  (args: {
+    ctx: TProcedureChainOutput
+    unparsedData: unknown
+  }): z.ZodType | Promise<z.ZodType>
+}
+
 export type TFinalInputSchema<T extends z.ZodType | TInputSchemaFn<any, any>> =
   T extends TInputSchemaFn<any, any> ? Awaited<ReturnType<T>> : T
+
+export type TFinalOutputSchema<T extends z.ZodType | TOutputSchemaFn<any>> =
+  T extends TOutputSchemaFn<any> ? Awaited<ReturnType<T>> : T
