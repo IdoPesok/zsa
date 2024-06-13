@@ -377,17 +377,21 @@ export interface TInputSchemaFn<
   TPreviousInputSchema extends z.ZodType | undefined,
   TProcedureChainOutput extends any,
 > {
-  (args: {
-    ctx: TProcedureChainOutput
-    previousSchema: TSchemaOrZodUndefined<TPreviousInputSchema>
-  }): z.ZodType | Promise<z.ZodType>
+  (
+    args: {
+      ctx: TProcedureChainOutput
+      previousSchema: TSchemaOrZodUndefined<TPreviousInputSchema>
+    } & Pick<THandlerOpts<any>, "previousState" | "request" | "responseMeta">
+  ): z.ZodType | Promise<z.ZodType>
 }
 
 export interface TOutputSchemaFn<TProcedureChainOutput extends any> {
-  (args: {
-    ctx: TProcedureChainOutput
-    unparsedData: unknown
-  }): z.ZodType | Promise<z.ZodType>
+  (
+    args: {
+      ctx: TProcedureChainOutput
+      unparsedData: unknown
+    } & Pick<THandlerOpts<any>, "previousState" | "request" | "responseMeta">
+  ): z.ZodType | Promise<z.ZodType>
 }
 
 export type TFinalInputSchema<T extends z.ZodType | TInputSchemaFn<any, any>> =

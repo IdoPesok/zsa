@@ -406,7 +406,8 @@ export class ZodSafeFunction<
   public async parseOutputData(
     data: any,
     ctx: TProcedureChainOutput,
-    timeoutStatus: TimeoutStatus
+    timeoutStatus: TimeoutStatus,
+    opts?: THandlerOpts<any>
   ): Promise<TSchemaOutputOrUnknown<TOutputSchema>> {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
@@ -418,6 +419,9 @@ export class ZodSafeFunction<
         ? await this.$internals.outputSchema({
             ctx,
             unparsedData: data,
+            request: opts?.request,
+            responseMeta: opts?.responseMeta,
+            previousState: opts?.previousState,
           })
         : this.$internals.outputSchema
 
@@ -596,7 +600,13 @@ export class ZodSafeFunction<
 
       const schema: any =
         typeof value === "function"
-          ? await value({ ctx, previousSchema: inputSchema || z.undefined() })
+          ? await value({
+              ctx,
+              previousSchema: inputSchema || z.undefined(),
+              request: opts?.request,
+              responseMeta: opts?.responseMeta,
+              previousState: opts?.previousState,
+            })
           : value
 
       if (!inputSchema) {
@@ -851,7 +861,12 @@ export class ZodSafeFunction<
           previousState,
         })
 
-        const parsed = await this.parseOutputData(data, ctx, timeoutStatus)
+        const parsed = await this.parseOutputData(
+          data,
+          ctx,
+          timeoutStatus,
+          opts
+        )
 
         await this.handleSuccess(input, parsed, timeoutStatus)
 
