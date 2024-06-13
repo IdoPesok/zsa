@@ -603,3 +603,38 @@ export const outputFunctionActionError = ownsPostAction
       matchingPostId: "not matched" as any,
     }
   })
+
+export const dynamicSchemasAction = publicAction
+  .input(({ request }) =>
+    z.object({
+      min: z
+        .number()
+        .min(parseInt(request?.headers.get("x-min-number") || "0")),
+      max: z
+        .number()
+        .max(parseInt(request?.headers.get("x-max-number") || "100")),
+    })
+  )
+  .output(({ request, responseMeta }) =>
+    z.object({
+      randomNumber: z.number().transform((n) => {
+        const min = parseInt(request?.headers.get("x-min-number") || "0")
+        const max = parseInt(request?.headers.get("x-max-number") || "100")
+        const mid = (min + max) / 2
+
+        if (n > mid) {
+          responseMeta?.headers.set("x-test", ">")
+        } else {
+          responseMeta?.headers.set("x-test", "<")
+        }
+
+        return n
+      }),
+    })
+  )
+  .handler(({ input }) => {
+    const { min, max } = input
+    return {
+      randomNumber: Math.random() * (max - min) + min,
+    }
+  })

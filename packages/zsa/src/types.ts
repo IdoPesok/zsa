@@ -139,6 +139,8 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   onParsedArgs?: (args: any) => void
   /** the source of the opts */
   source: TOptsSource
+  /** whether the handler is from an OpenAPI handler */
+  isFromOpenApiHandler?: boolean
 }
 
 /** A function type for a handler that does not have an input */

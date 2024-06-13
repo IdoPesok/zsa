@@ -1,13 +1,10 @@
 import { type NextRequest } from "next/server"
 import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
-import { z } from "zod"
 import {
   TAnyZodSafeFunctionHandler,
   TOptsSource,
   ZSAResponseMeta,
-  canDataBeUndefinedForSchema,
-  formDataToJson,
   inferServerActionError,
   inferServerActionInput,
 } from "zsa"
@@ -36,7 +33,10 @@ export type OpenApiContentType =
   | (string & {})
 
 export interface ApiRouteHandler {
-  (request: NextRequest): Promise<Response>
+  (
+    request: NextRequest,
+    args?: { params?: Record<string, string> }
+  ): Promise<Response>
 }
 
 /**
@@ -395,7 +395,6 @@ export const createOpenApiServerActionRouter = (args?: {
 
 const getDataFromRequest = async (
   request: NextRequest,
-  inputSchema: z.ZodType,
   contentTypes?: OpenApiContentType[]
 ) => {
   // get the search params
@@ -432,8 +431,7 @@ const getDataFromRequest = async (
         requestContentType?.startsWith(MULTI_PART_CONTENT_TYPE)
       ) {
         // if its form data
-        const formData = await request.formData()
-        data = formDataToJson(formData, inputSchema)
+        data = await request.formData()
       } else if (requestContentType?.startsWith(JSON_CONTENT_TYPE)) {
         // if its json
         data = await request.json()
@@ -451,13 +449,17 @@ const getDataFromRequest = async (
 
 const getResponseFromAction = async <
   TAction extends TAnyZodSafeFunctionHandler,
->(
-  request: NextRequest,
-  action: TAction,
-  input: inferServerActionInput<TAction>,
-  requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"],
+>(args: {
+  request: NextRequest
+  action: TAction
+  input: inferServerActionInput<TAction> | FormData
+  overrideInput: any
+  requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"]
   shapeError?: TShapeError
-) => {
+}) => {
+  const { request, action, input, overrideInput, requestError, shapeError } =
+    args
+
   // handle unsupported content type
   if (requestError === "UNSUPPORTED_CONTENT_TYPE") {
     return new Response(JSON.stringify({ error: "Unsupported Media Type" }), {
@@ -471,10 +473,11 @@ const getResponseFromAction = async <
     typeof data === "string" ? data : JSON.stringify(data)
 
   try {
-    const [data, err] = await action(input, undefined, {
+    const [data, err] = await action(input, overrideInput, {
       request: request,
       responseMeta,
       source: new TOptsSource(() => true),
+      isFromOpenApiHandler: true,
     })
 
     if (err instanceof Response) {
@@ -567,6 +570,7 @@ export const createRouteHandlers = (
     request: NextRequest
   ): Promise<null | {
     input: Record<string, any> | undefined
+    overrideInput?: Record<string, any> | undefined
     params: Record<string, string>
     searchParams: Record<string, string>
     action: TAnyZodSafeFunctionHandler
@@ -599,14 +603,8 @@ export const createRouteHandlers = (
 
       if (!foundMatch) return null
 
-      const inputSchema = await foundMatch.action(undefined, undefined, {
-        returnInputSchema: true,
-        source: new TOptsSource(() => true),
-      })
-
       const { data, searchParamsJson, requestError } = await getDataFromRequest(
         request,
-        inputSchema,
         foundMatch.contentTypes
       )
 
@@ -639,25 +637,26 @@ export const createRouteHandlers = (
         }
       }
 
-      // form the final input to be sent to the action
-      const final = {
-        ...searchParamsJson,
-        ...(data || {}),
-        ...params,
-      }
-
-      if (
-        Object.keys(final).length === 0 &&
-        canDataBeUndefinedForSchema(inputSchema)
-      ) {
+      if (data instanceof FormData) {
         return {
-          input: undefined,
+          input: data,
+          overrideInput: {
+            ...searchParamsJson,
+            ...params,
+          },
           params: {},
           searchParams: {},
           action: foundMatch.action,
           body: undefined,
           requestError: requestError,
         }
+      }
+
+      // form the final input to be sent to the action
+      const final = {
+        ...searchParamsJson,
+        ...(data || {}),
+        ...params,
       }
 
       return {
@@ -677,13 +676,14 @@ export const createRouteHandlers = (
     const parsedData = await parseRequest(request)
     if (!parsedData) return new Response("", { status: 404 })
 
-    return await getResponseFromAction(
+    return await getResponseFromAction({
       request,
-      parsedData.action,
-      parsedData.input,
-      parsedData.requestError,
-      opts?.shapeError
-    )
+      action: parsedData.action,
+      input: parsedData.input,
+      overrideInput: parsedData.overrideInput,
+      requestError: parsedData.requestError,
+      shapeError: opts?.shapeError,
+    })
   }
 
   return {
@@ -765,37 +765,40 @@ export function createRouteHandlersForAction<
     request: NextRequest,
     args?: { params?: Record<string, string> }
   ) => {
-    const inputSchema = (await action(undefined, undefined, {
-      returnInputSchema: true,
-      source: new TOptsSource(() => true),
-    })) as any
-
     const { data, searchParamsJson, requestError } = await getDataFromRequest(
       request,
-      inputSchema,
       opts?.contentTypes
     )
 
-    let input: any = {
-      ...(data || {}),
-      ...(searchParamsJson || {}),
-      ...(args?.params || {}),
-    }
-
-    if (
-      Object.keys(input).length === 0 &&
-      canDataBeUndefinedForSchema(inputSchema)
-    ) {
-      input = undefined
-    }
-
-    return await getResponseFromAction(
+    const partial = {
       request,
       action,
-      input,
       requestError,
-      opts?.shapeError as any
-    )
+      shapeError: opts?.shapeError as any,
+      overrideInput: undefined,
+    } as const
+
+    // handle form data with override input
+    if (data instanceof FormData) {
+      return await getResponseFromAction({
+        ...partial,
+        input: data,
+        overrideInput: {
+          ...(searchParamsJson || {}),
+          ...(args?.params || {}),
+        },
+      })
+    }
+
+    // handle normal json data
+    return await getResponseFromAction({
+      ...partial,
+      input: {
+        ...(data || {}),
+        ...(searchParamsJson || {}),
+        ...(args?.params || {}),
+      } as any,
+    })
   }
 
   return {

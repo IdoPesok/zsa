@@ -637,19 +637,26 @@ export class ZodSafeFunction<
     let data = $data
 
     // if data is formData, convert it to json
-    if ($data instanceof FormData) {
+    if ($data instanceof FormData && this.$internals.inputType !== "json") {
       data = {
         ...formDataToJson(data, inputSchema),
         ...(this.$internals.inputType !== "state" ? overrideData || {} : {}),
       }
+    }
 
-      // if its an empty object, set it to undefined if reasonable
-      if (
-        Object.keys(data).length === 0 &&
-        canDataBeUndefinedForSchema(inputSchema)
-      ) {
-        data = undefined
-      }
+    // if its an empty object, set it to undefined if reasonable
+    const canChangeToUndefined =
+      ($data instanceof FormData || opts?.isFromOpenApiHandler) &&
+      canDataBeUndefinedForSchema(inputSchema)
+
+    // edge case for openapi handlers where the input is an empty object
+    if (
+      canChangeToUndefined &&
+      data &&
+      typeof data === "object" &&
+      Object.keys(data).length === 0
+    ) {
+      data = undefined
     }
 
     opts?.onArgs?.(data)
