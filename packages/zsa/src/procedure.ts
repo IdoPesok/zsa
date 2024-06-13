@@ -94,11 +94,16 @@ export interface TAnyCompleteProcedure
 type InferTError<T extends TAnyCompleteProcedure> =
   T extends CompleteProcedure<any, any, infer TError> ? TError : never
 
+type InferInputSchema<T extends TAnyCompleteProcedure> =
+  T extends CompleteProcedure<infer TInputSchema, any, any>
+    ? TInputSchema
+    : never
+
 /** The return type of `createServerActionProcedure` given a parent procedure */
 type TRet<T extends TAnyCompleteProcedure | undefined> =
   T extends TAnyCompleteProcedure
     ? TZodSafeFunction<
-        T["$internals"]["inputSchema"],
+        InferInputSchema<T>,
         undefined,
         InferTError<T>,
         TZodSafeFunctionDefaultOmitted,
@@ -152,19 +157,16 @@ export const chainServerActionProcedures = <
   first: T1,
   second: T2
 ): CompleteProcedure<
-  T1["$internals"]["inputSchema"] extends undefined | ZodTypeLikeVoid
-    ? T2["$internals"]["inputSchema"]
-    : z.ZodIntersection<
-        T1["$internals"]["inputSchema"],
-        T2["$internals"]["inputSchema"]
-      >,
+  InferInputSchema<T1> extends undefined | ZodTypeLikeVoid
+    ? InferInputSchema<T2>
+    : z.ZodIntersection<InferInputSchema<T1>, InferInputSchema<T2>>,
   T2["$internals"]["lastHandler"],
   InferTError<T2>
 > => {
-  let inputSchema =
-    first.$internals.inputSchema === undefined
-      ? second.$internals.inputSchema
-      : first.$internals.inputSchema.and(second.$internals.inputSchema)
+  let inputSchema = mergeArraysAndRemoveDuplicates(
+    first.$internals.inputSchema,
+    second.$internals.inputSchema
+  )
 
   const newLastHandler = async (
     input?: any,

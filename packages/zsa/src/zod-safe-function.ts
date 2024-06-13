@@ -566,44 +566,45 @@ export class ZodSafeFunction<
     ]
   }
 
+  public async evaluateInputSchema(
+    ctx: TProcedureChainOutput
+  ): Promise<TSchemaOutput<TInputSchema>> {
+    let inputSchema: z.ZodType = z.undefined()
+    if (Array.isArray(inputSchema)) {
+      for (const value of inputSchema) {
+        const schema =
+          typeof value === "function"
+            ? await value({ ctx, previousSchema: inputSchema })
+            : value
+        if (!inputSchema) {
+          inputSchema = schema
+        } else {
+          inputSchema = inputSchema.and(schema)
+        }
+      }
+    }
+
+    return inputSchema as any
+  }
+
   /** helper function to parse input data given the active input schema */
   public async parseInputData(
     data: any,
-    timeoutStatus: TimeoutStatus,
-    ctx: TProcedureChainOutput,
-    $overrideInputSchema?: z.ZodType
+    inputSchema: z.ZodType,
+    timeoutStatus: TimeoutStatus
   ): Promise<TSchemaOutput<TInputSchema>> {
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
-
-    // get the input schema
-    const inputSchema = $overrideInputSchema || this.$internals.inputSchema
 
     // WEIRD CASE
     // the procedure input schema is undefined but the action input schema is not
     // thus if we try to parse z.undefined(object) we get an error
     // we can safely skip this because it will get validated by the action
     if (!inputSchema && data !== undefined && this.$internals.isProcedure) {
-      return data
-    }
-
-    let finalInputSchema: z.ZodType = z.undefined()
-
-    if (Array.isArray(inputSchema)) {
-      for (const value of inputSchema) {
-        const schema =
-          typeof value === "function"
-            ? await value({ ctx, previousSchema: finalInputSchema })
-            : value
-        if (!finalInputSchema) {
-          finalInputSchema = schema
-        } else {
-          finalInputSchema = finalInputSchema.and(schema)
-        }
-      }
+      return undefined as any
     }
 
     // parse the input data
-    const safe = await finalInputSchema.safeParseAsync(data)
+    const safe = await inputSchema.safeParseAsync(data)
 
     if (!safe.success) {
       if (this.$internals.onInputParseError) {
