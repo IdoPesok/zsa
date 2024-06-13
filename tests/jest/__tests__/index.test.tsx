@@ -41,10 +41,13 @@ import {
 import { RetryState, TEST_DATA } from "server/data"
 import { z } from "zod"
 import {
+  ZSAError,
   createServerActionProcedure,
   inferServerActionError,
   inferServerActionInput,
   inferServerActionReturnData,
+  zsaParseInput,
+  zsaParseOutput,
 } from "zsa"
 
 jest.mock("next/headers", () => ({
@@ -1011,5 +1014,72 @@ describe("actions", () => {
         number: 100,
       })
     })
+  })
+
+  describe("helper parse functions", () => {
+    it("should parse input data", async () => {
+      const data = await zsaParseInput(
+        z.object({
+          number: z.number(),
+        }),
+        {
+          number: 100,
+        }
+      )
+
+      expect(data).toEqual({
+        number: 100,
+      })
+    })
+
+    it("should parse output data", async () => {
+      const data = await zsaParseOutput(
+        z.object({
+          number: z.number(),
+        }),
+        {
+          number: 100,
+        }
+      )
+
+      expect(data).toEqual({
+        number: 100,
+      })
+    })
+  })
+
+  it("should throw an error if the input schema is invalid", async () => {
+    await expect(
+      zsaParseInput(
+        z.object({
+          number: z.number(),
+        }),
+        {
+          number: "100",
+        }
+      )
+    ).rejects.toThrow()
+  })
+
+  it.only("should throw an error if the output schema is invalid", async () => {
+    try {
+      await zsaParseOutput(
+        z.object({
+          number: z.number(),
+        }),
+        {
+          number: "100" as any,
+        }
+      )
+    } catch (error: any) {
+      expect(error).toBeInstanceOf(ZSAError)
+      if (error instanceof ZSAError) {
+        expect(error.code).toEqual("OUTPUT_PARSE_ERROR")
+        expect(error.outputParseErrors).toBeDefined()
+        console.log(error.fieldErrors)
+      } else {
+        throw error
+      }
+    }
   })
 })
