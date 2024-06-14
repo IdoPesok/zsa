@@ -155,14 +155,23 @@ export class ZodSafeFunction<
   /**
    *  Run through the procedure chain and get the final context
    */
-  public async getProcedureChainOutput(
-    args: TSchemaInput<TInputSchema>,
-    timeoutStatus: TimeoutStatus,
-    request: NextRequest | undefined,
-    responseMeta: ZSAResponseMeta | undefined,
-    onInputSchema?: (schema: z.ZodType | undefined) => void,
+  public async getProcedureChainOutput($args: {
+    args: TSchemaInput<TInputSchema>
+    timeoutStatus: TimeoutStatus
+    request: NextRequest | undefined
+    responseMeta: ZSAResponseMeta | undefined
+    onInputSchema?: (schema: z.ZodType | undefined) => void
     previousState?: any
-  ): Promise<TProcedureChainOutput> {
+  }): Promise<TProcedureChainOutput> {
+    const {
+      args,
+      timeoutStatus,
+      request,
+      responseMeta,
+      onInputSchema,
+      previousState,
+    } = $args
+
     let accData = undefined
     let inputSchema: z.ZodType | undefined = undefined
 
@@ -193,6 +202,50 @@ export class ZodSafeFunction<
     onInputSchema?.(inputSchema)
 
     return accData as any
+  }
+
+  /**
+   *  Run through the procedure chain and get the final static input schema
+   */
+  public async getFinalStaticInputSchema(args: {
+    opts?: THandlerOpts<TProcedureChainOutput>
+  }): Promise<TProcedureChainOutput> {
+    if (this.$internals.isProcedure) {
+      return await this.evaluateInputSchema({
+        ctx: undefined as any,
+        opts: args.opts,
+        noFunctionsAllowed: true,
+      })
+    }
+
+    let inputSchema: z.ZodType | undefined = undefined
+
+    for (const procedureHandler of this.$internals.procedureHandlerChain) {
+      await procedureHandler(undefined, undefined, {
+        source: new TOptsSource(() => true),
+        previousInputSchema: inputSchema,
+        returnInputSchema: true,
+        onInputSchema: (schema) => {
+          inputSchema = schema
+        },
+      })
+    }
+
+    if (!args.opts) {
+      args.opts = {
+        source: new TOptsSource(() => true),
+      }
+    }
+
+    // set the final previous input schema
+    args.opts.previousInputSchema = inputSchema
+
+    // evaluate the final input schema
+    return ((await this.evaluateInputSchema({
+      ctx: undefined as any,
+      opts: args.opts,
+      noFunctionsAllowed: true,
+    })) || z.undefined()) as any
   }
 
   /** set a timeout on the server action */
@@ -624,14 +677,17 @@ export class ZodSafeFunction<
     let final
 
     if (!opts?.previousInputSchema) {
+      // if there is no previous input schema, return current schema
       final = inputSchema
     } else if (!inputSchema) {
+      // if there is no current schema, return previous schema
       final = opts.previousInputSchema
     } else {
+      // if there is both a previous and current schema, return the intersection
       final = opts.previousInputSchema.and(inputSchema)
     }
 
-    // send the input schema back
+    // send the input schema back to the chain handler
     opts?.onInputSchema?.(final as any)
 
     return (final || z.undefined()) as any
@@ -698,13 +754,16 @@ export class ZodSafeFunction<
     const safe = await inputSchema.safeParseAsync(data)
 
     if (!safe.success) {
+      // call the input parse error callbacks
       if (this.$internals.onInputParseError) {
         await this.$internals.onInputParseError(safe.error)
       }
 
+      // retrieve the zod errors
       const flattenedErrors = safe.error.flatten()
       const formattedErrors = safe.error.format()
 
+      // throw the error
       throw new ZSAError("INPUT_PARSE_ERROR", safe.error, {
         inputParseErrors: {
           fieldErrors: flattenedErrors?.fieldErrors,
@@ -810,16 +869,20 @@ export class ZodSafeFunction<
       overrideArgs?: Partial<TSchemaInput<TInputSchema>>,
       opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
+      // make sure the opts came from the server
       validateOpts(opts)
 
+      /**
+       * helper opts to generate openapi docs
+       * for the action schemas
+       */
       if (opts?.returnInputSchema) {
-        // return the input schema
-        return await this.evaluateInputSchema({
-          ctx: undefined as any,
+        // compute the final static input schema
+        return await this.getFinalStaticInputSchema({
           opts,
-          noFunctionsAllowed: true,
         })
       } else if (opts?.returnOutputSchema) {
+        // return a static output schema
         if (typeof this.$internals.outputSchema === "function") {
           throw new Error(
             "Cannot return output schema from a function output schema"
@@ -833,13 +896,15 @@ export class ZodSafeFunction<
       let parsedArgs
 
       if (this.$internals.inputType === "state") {
-        args = overrideArgs // the second argument is the form data
+        // the second argument is the form data
+        args = overrideArgs
       } else {
         args = $args
       }
 
       let previousState = opts?.previousState || undefined
 
+      // get the previous state (if it exists)
       if (
         this.$internals.inputType === "state" &&
         !this.$internals.isProcedure
@@ -849,27 +914,34 @@ export class ZodSafeFunction<
 
       try {
         // run the procedure chain to get the context
-        const ctx =
-          this.$internals.isProcedure && opts
-            ? (opts.ctx as TProcedureChainOutput)
-            : await this.getProcedureChainOutput(
-                // @ts-expect-error
-                args,
-                timeoutStatus,
-                opts?.request,
-                opts?.responseMeta,
-                (schema) => {
-                  if (!opts) {
-                    opts = {
-                      previousInputSchema: schema,
-                      source: new TOptsSource(() => true),
-                    }
-                  } else {
-                    opts.previousInputSchema = schema
-                  }
-                },
-                previousState
-              )
+        let ctx
+
+        if (this.$internals.isProcedure && opts) {
+          // ctx is from the procedure chain
+          ctx = opts.ctx as TProcedureChainOutput
+        } else {
+          // get ctx by evaluating the procedure chain
+          ctx = await this.getProcedureChainOutput({
+            // @ts-expect-error
+            args,
+            timeoutStatus,
+            request: opts?.request,
+            responseMeta: opts?.responseMeta,
+            onInputSchema: (schema) => {
+              if (!opts) {
+                // make sure opts is not undefined
+                opts = {
+                  source: new TOptsSource(() => true),
+                }
+              }
+
+              // set the previous input schema to the evaluated
+              // schema from the procedure chain
+              opts.previousInputSchema = schema
+            },
+            previousState,
+          })
+        }
 
         // parse the input data
         const input = await this.parseInputData(
@@ -883,11 +955,13 @@ export class ZodSafeFunction<
         // send on parsed args
         opts?.onParsedArgs?.(input)
 
+        // update the parsed args (used in errors)
         parsedArgs = input
 
         // timeout checkpoint
         this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
+        // call the handler!
         const data = await fn({
           input,
           ctx,
@@ -896,6 +970,7 @@ export class ZodSafeFunction<
           previousState,
         })
 
+        // parse the output data
         const parsed = await this.parseOutputData(
           data,
           ctx,
