@@ -29,6 +29,7 @@ import {
   TShapeErrorFn,
   TShapeErrorNotSet,
   TStateHandlerFunc,
+  TZodMerge,
   TZodSafeFunctionDefaultOmitted,
   TimeoutStatus,
   ZSAResponseMeta,
@@ -37,6 +38,7 @@ import {
   ZodTypeLikeVoid,
   canDataBeUndefinedForSchema,
   formDataToJson,
+  instanceofZodTypeObject,
 } from "./utils"
 
 const validateOpts = (opts?: THandlerOpts<any>) => {
@@ -214,15 +216,12 @@ export class ZodSafeFunction<
 
     // handle procedure nodes
     if (this.$internals.isProcedure && args.opts) {
-      args.opts.onInputSchema = (schema) => {
-        inputSchema = schema
-      }
       await this.evaluateInputSchema({
         ctx: undefined as any,
         opts: args.opts,
         noFunctionsAllowed: true,
       })
-      return inputSchema
+      return
     }
 
     // handle the action node
@@ -314,9 +313,7 @@ export class ZodSafeFunction<
       type?: TType
     }
   ): TZodSafeFunction<
-    TInputSchema extends z.ZodType
-      ? z.ZodIntersection<TInputSchema, TFinalInputSchema<T>>
-      : TFinalInputSchema<T>,
+    TZodMerge<TInputSchema, TFinalInputSchema<T>>,
     TOutputSchema,
     TError,
     "input" | Exclude<TOmitted, "onInputParseError">, // bring back the onInputParseError
@@ -691,9 +688,14 @@ export class ZodSafeFunction<
     } else if (!inputSchema) {
       // if there is no current schema, return previous schema
       final = opts.previousInputSchema
-    } else {
+    } else if (
+      instanceofZodTypeObject(opts.previousInputSchema) &&
+      instanceofZodTypeObject(inputSchema)
+    ) {
       // if there is both a previous and current schema, return the intersection
-      final = opts.previousInputSchema.and(inputSchema)
+      final = opts.previousInputSchema.merge(inputSchema)
+    } else {
+      final = inputSchema
     }
 
     // send the input schema back to the chain handler

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { AnyZodObject, objectUtil, z, ZodObject } from "zod"
 import { NextRequest } from "./api"
 import {
   TOnCompleteFn,
@@ -8,8 +8,8 @@ import {
 } from "./callbacks"
 import {
   TReplaceErrorPlaceholders,
-  TZSAError,
   TypedProxyError,
+  TZSAError,
   ZSAError,
 } from "./errors"
 
@@ -406,3 +406,18 @@ export type TFinalInputSchema<T extends z.ZodType | TInputSchemaFn<any, any>> =
 
 export type TFinalOutputSchema<T extends z.ZodType | TOutputSchemaFn<any>> =
   T extends TOutputSchemaFn<any> ? Awaited<ReturnType<T>> : T
+
+export type TZodMerge<
+  T1 extends z.ZodType | undefined,
+  T2 extends z.ZodType | undefined,
+> = T1 extends AnyZodObject
+  ? T2 extends AnyZodObject
+    ? ZodObject<
+        objectUtil.extendShape<T1["shape"], T2["shape"]>,
+        T2["_def"]["unknownKeys"],
+        T2["_def"]["catchall"]
+      >
+    : T2 extends undefined
+      ? T1 // only return T1 if T2 is undefined
+      : T2
+  : T2

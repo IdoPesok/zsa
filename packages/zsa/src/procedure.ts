@@ -11,9 +11,10 @@ import {
   TInputSchemaFn,
   TShapeErrorFn,
   TShapeErrorNotSet,
+  TZodMerge,
   TZodSafeFunctionDefaultOmitted,
 } from "./types"
-import { ZodTypeLikeVoid, mergeArraysAndRemoveDuplicates } from "./utils"
+import { mergeArraysAndRemoveDuplicates } from "./utils"
 import {
   TZodSafeFunction,
   ZodSafeFunction,
@@ -155,9 +156,7 @@ export const chainServerActionProcedures = <
   first: T1,
   second: T2
 ): CompleteProcedure<
-  InferInputSchema<T1> extends undefined | ZodTypeLikeVoid
-    ? InferInputSchema<T2>
-    : z.ZodIntersection<InferInputSchema<T1>, InferInputSchema<T2>>,
+  TZodMerge<InferInputSchema<T1>, InferInputSchema<T2>>,
   T2["$internals"]["lastHandler"],
   InferTError<T2>
 > => {

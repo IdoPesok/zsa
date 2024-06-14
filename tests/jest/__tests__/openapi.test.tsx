@@ -9,10 +9,13 @@ import {
 } from "server/actions"
 import { TEST_DATA } from "server/data"
 import { jsonOnlyRouter, openapiRouter } from "server/router"
+import { z } from "zod"
+import { createServerAction, createServerActionProcedure } from "zsa"
 import {
   createOpenApiServerActionRouter,
   createRouteHandlers,
   createRouteHandlersForAction,
+  generateOpenApiDocument,
   setupApiHandler,
 } from "zsa-openapi"
 
@@ -674,6 +677,76 @@ describe("openapi", () => {
       } else {
         expect(response.headers.get("x-test")).toEqual("<")
       }
+    })
+  })
+
+  describe("generate openapi document", () => {
+    it("should throw since there is a function in the input schema", async () => {
+      const router = createOpenApiServerActionRouter()
+
+      router.get(
+        "/",
+        createServerAction()
+          .input(() => z.undefined())
+          .handler(() => {
+            return "123"
+          })
+      )
+
+      expect(() =>
+        generateOpenApiDocument(router, {
+          title: "tRPC OpenAPI",
+          version: "1.0.0",
+          baseUrl: "http://localhost:3000",
+        })
+      ).rejects.toThrow()
+    })
+
+    it("should not throw since there is no function in the input schema", async () => {
+      const router = createOpenApiServerActionRouter()
+
+      router.get(
+        "/:id",
+        createServerActionProcedure()
+          .input(
+            z.object({
+              id: z.string(),
+            })
+          )
+          .handler(() => {
+            return "123"
+          })
+          .createServerAction()
+          .input(z.object({ title: z.string().optional() }))
+          .handler(() => {
+            return "123"
+          })
+      )
+
+      const doc = await generateOpenApiDocument(router, {
+        title: "tRPC OpenAPI",
+        version: "1.0.0",
+        baseUrl: "http://localhost:3000",
+      })
+
+      const params = doc.paths["/{id}"]?.get?.parameters
+
+      expect(params).toBeDefined()
+
+      if (!params) return
+
+      const param1 = params[0] as any
+      const param2 = params[1] as any
+
+      expect(param1.name).toEqual("id")
+      expect(param1.in).toEqual("path")
+      expect(param1.required).toEqual(true)
+      expect(param1.schema.type).toEqual("string")
+
+      expect(param2.name).toEqual("title")
+      expect(param2.in).toEqual("query")
+      expect(param2.required).toEqual(false)
+      expect(param2.schema.type).toEqual("string")
     })
   })
 })
