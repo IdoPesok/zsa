@@ -209,18 +209,25 @@ export class ZodSafeFunction<
    */
   public async getFinalStaticInputSchema(args: {
     opts?: THandlerOpts<TProcedureChainOutput>
-  }): Promise<TProcedureChainOutput> {
-    if (this.$internals.isProcedure) {
-      return await this.evaluateInputSchema({
+  }): Promise<any> {
+    let inputSchema: z.ZodType | undefined = undefined
+
+    // handle procedure nodes
+    if (this.$internals.isProcedure && args.opts) {
+      args.opts.onInputSchema = (schema) => {
+        inputSchema = schema
+      }
+      await this.evaluateInputSchema({
         ctx: undefined as any,
         opts: args.opts,
         noFunctionsAllowed: true,
       })
+      return inputSchema
     }
 
-    let inputSchema: z.ZodType | undefined = undefined
-
+    // handle the action node
     for (const procedureHandler of this.$internals.procedureHandlerChain) {
+      // run each procedure node
       await procedureHandler(undefined, undefined, {
         source: new TOptsSource(() => true),
         previousInputSchema: inputSchema,
@@ -241,11 +248,13 @@ export class ZodSafeFunction<
     args.opts.previousInputSchema = inputSchema
 
     // evaluate the final input schema
-    return ((await this.evaluateInputSchema({
-      ctx: undefined as any,
-      opts: args.opts,
-      noFunctionsAllowed: true,
-    })) || z.undefined()) as any
+    return (
+      (await this.evaluateInputSchema({
+        ctx: undefined as any,
+        opts: args.opts,
+        noFunctionsAllowed: true,
+      })) || z.undefined()
+    )
   }
 
   /** set a timeout on the server action */
