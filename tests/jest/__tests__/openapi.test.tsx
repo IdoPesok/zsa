@@ -702,6 +702,37 @@ describe("openapi", () => {
       ).rejects.toThrow()
     })
 
+    it("should throw there is a function in the input schema for the procedure", async () => {
+      const router = createOpenApiServerActionRouter()
+
+      router.get(
+        "/:id",
+        createServerActionProcedure()
+          .input(() =>
+            z.object({
+              id: z.string(),
+            })
+          )
+          .handler(() => {
+            return "123"
+          })
+          .createServerAction()
+          .input(z.object({ title: z.string().optional() }))
+          .handler(() => {
+            return "123"
+          })
+      )
+
+      expect(
+        async () =>
+          await generateOpenApiDocument(router, {
+            title: "tRPC OpenAPI",
+            version: "1.0.0",
+            baseUrl: "http://localhost:3000",
+          })
+      ).rejects.toThrow()
+    })
+
     it("should not throw since there is no function in the input schema", async () => {
       const router = createOpenApiServerActionRouter()
 
