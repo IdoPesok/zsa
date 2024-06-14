@@ -1109,18 +1109,29 @@ describe("actions", () => {
       expect(err).not.toBeNull()
       expect(err?.code).toBe("OUTPUT_PARSE_ERROR")
     })
+  })
 
-    it.only("sdkfjlsdkfjklsad", async () => {
-      const procedureA = createServerActionProcedure().handler(() => {
-        return {
-          value: "123",
-        } as const
-      })
+  describe("procedure chain input", () => {
+    it("should run each procedure input function once", async () => {
+      const procedureA = createServerActionProcedure()
+        .input(() =>
+          z.object({
+            value: z.string(),
+          })
+        )
+        .handler(() => {
+          return {
+            value: "123",
+          } as const
+        })
 
       const procedureB = createServerActionProcedure(procedureA)
-        .input(({ ctx }) => {
+        .input(({ ctx, previousSchema }) => {
           return z.object({
-            value: z.string().refine((v) => v === ctx.value, "invalid value"),
+            value: previousSchema.shape.value.refine(
+              (v) => v === ctx.value,
+              "invalid value"
+            ),
           })
         })
         .handler(({ input, ctx }) => {
@@ -1143,7 +1154,8 @@ describe("actions", () => {
         value: "123",
       })
 
-      console.log("got data", data)
+      expect(data).toEqual("123123123")
+      expect(err).toBeNull()
     })
   })
 })

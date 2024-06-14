@@ -8,9 +8,7 @@ import {
 import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
-  THandlerOpts,
   TInputSchemaFn,
-  TOptsSource,
   TShapeErrorFn,
   TShapeErrorNotSet,
   TZodSafeFunctionDefaultOmitted,
@@ -163,26 +161,13 @@ export const chainServerActionProcedures = <
   T2["$internals"]["lastHandler"],
   InferTError<T2>
 > => {
-  let inputSchema = mergeArraysAndRemoveDuplicates(
-    first.$internals.inputSchema,
-    second.$internals.inputSchema
-  )
-
-  const newLastHandler = async (
-    input?: any,
-    overrideArgs?: undefined,
-    opts?: THandlerOpts<any>
-  ) =>
-    await second.$internals.lastHandler(input, overrideArgs, {
-      ...opts,
-      overrideInputSchema: opts?.overrideInputSchema || inputSchema,
-      source: new TOptsSource(() => true),
-    })
-
   return new CompleteProcedure({
-    inputSchema: inputSchema as any,
-    handlerChain: [...first.$internals.handlerChain, newLastHandler],
-    lastHandler: newLastHandler,
+    inputSchema: second.$internals.inputSchema,
+    handlerChain: [
+      ...first.$internals.handlerChain,
+      second.$internals.lastHandler,
+    ],
+    lastHandler: second.$internals.lastHandler,
     timeout: second.$internals.timeout || first.$internals.timeout,
     retryConfig: second.$internals.retryConfig || first.$internals.retryConfig,
     shapeErrorFns: mergeArraysAndRemoveDuplicates(
