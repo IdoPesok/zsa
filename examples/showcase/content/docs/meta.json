@@ -4,11 +4,12 @@
   "pages": [
     "---Getting Started---",
     "introduction",
+    "inputs",
     "procedures",
+    "outputs",
     "callbacks",
     "timeouts",
     "retries",
-    "outputs",
     "---Client Side Usage---",
     "calling-directly",
     "use-server-action",
