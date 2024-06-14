@@ -119,8 +119,6 @@ export class TOptsSource {
 export interface THandlerOpts<TProcedureChainOutput extends any> {
   /** The context of the handler */
   ctx?: TProcedureChainOutput
-  /** Override the input schema */
-  overrideInputSchema?: TInputSchemaFn<any, any> | z.ZodType
   /** return the input schema */
   returnInputSchema?: boolean
   /** return the output schema */

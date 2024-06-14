@@ -660,20 +660,20 @@ export class ZodSafeFunction<
     const { ctx, opts, noFunctionsAllowed } = args
 
     // evaluate the input schema
-    let inputSchema = opts?.overrideInputSchema || this.$internals.inputSchema
+    let inputSchema = this.$internals.inputSchema
 
     if (noFunctionsAllowed && typeof inputSchema === "function") {
       throw new Error("Input functions are not suppported yet")
     }
 
     if (typeof inputSchema === "function") {
-      inputSchema = await inputSchema({
+      inputSchema = (await inputSchema({
         ctx,
         previousSchema: opts?.previousInputSchema || z.undefined(),
         request: opts?.request,
         responseMeta: opts?.responseMeta,
         previousState: opts?.previousState,
-      })
+      })) as any
     }
 
     if (inputSchema && !(inputSchema instanceof z.ZodType)) {
