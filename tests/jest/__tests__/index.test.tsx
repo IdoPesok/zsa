@@ -979,6 +979,21 @@ describe("actions", () => {
       })
     })
 
+    it("should infer the correct input type for merged inputs", () => {
+      type TInput = inferServerActionInput<typeof intersectedInputAction>
+      const input: TInput = {
+        a: "a",
+        b: "b",
+        c: "c",
+      }
+
+      expect(input).toEqual({
+        a: "a",
+        b: "b",
+        c: "c",
+      })
+    })
+
     it("should infer the correct error type", () => {
       type TReturn = inferServerActionError<typeof multiplyAction>
       const err: TReturn["fieldErrors"] = {
