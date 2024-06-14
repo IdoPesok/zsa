@@ -29,7 +29,7 @@ export interface TCompleteProcedureInternals<
   THandler extends TAnyZodSafeFunctionHandler,
 > {
   /** The chained input schema */
-  inputSchema: Array<TInputSchemaFn<any, any> | z.ZodType> | undefined
+  inputSchema: TInputSchemaFn<any, any> | TInputSchema
   /** An ordered array of handlers */
   handlerChain: TAnyZodSafeFunctionHandler[]
   /** The last handler in the chain */
@@ -180,7 +180,7 @@ export const chainServerActionProcedures = <
     })
 
   return new CompleteProcedure({
-    inputSchema,
+    inputSchema: inputSchema as any,
     handlerChain: [...first.$internals.handlerChain, newLastHandler],
     lastHandler: newLastHandler,
     timeout: second.$internals.timeout || first.$internals.timeout,

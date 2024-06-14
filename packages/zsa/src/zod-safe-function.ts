@@ -160,9 +160,11 @@ export class ZodSafeFunction<
     timeoutStatus: TimeoutStatus,
     request: NextRequest | undefined,
     responseMeta: ZSAResponseMeta | undefined,
+    onInputSchema?: (schema: z.ZodType | undefined) => void,
     previousState?: any
   ): Promise<TProcedureChainOutput> {
     let accData = undefined
+    let inputSchema: z.ZodType | undefined = undefined
 
     for (let i = 0; i < this.$internals.procedureHandlerChain.length; i += 1) {
       this.checkTimeoutStatus(timeoutStatus)
@@ -174,7 +176,12 @@ export class ZodSafeFunction<
         responseMeta,
         previousState,
         source: new TOptsSource(() => true),
+        previousInputSchema: inputSchema,
+        onInputSchema: (schema) => {
+          inputSchema = schema
+        },
       })
+
       if (err) {
         throw err
       }
@@ -182,6 +189,8 @@ export class ZodSafeFunction<
       // update the accumulated data
       accData = data as any
     }
+
+    onInputSchema?.(inputSchema)
 
     return accData as any
   }
@@ -255,9 +264,8 @@ export class ZodSafeFunction<
   > {
     return new ZodSafeFunction({
       ...this.$internals,
-      inputSchema: !this.$internals.inputSchema
-        ? [schema]
-        : [...this.$internals.inputSchema, schema],
+      // @ts-expect-error
+      inputSchema: schema,
       inputType: opts?.type,
     }) as any
   }
@@ -299,7 +307,7 @@ export class ZodSafeFunction<
   > {
     return new ZodSafeFunction({
       ...this.$internals,
-      onInputParseError: fn,
+      onInputParseError: fn as any,
     }) as any
   }
 
@@ -424,6 +432,10 @@ export class ZodSafeFunction<
             previousState: opts?.previousState,
           })
         : this.$internals.outputSchema
+
+    if (!(schema instanceof z.ZodType)) {
+      throw new ZSAError("ERROR", "Output schema must be a ZodType")
+    }
 
     const safe = await schema.safeParseAsync(data)
     if (!safe.success) {
@@ -587,36 +599,42 @@ export class ZodSafeFunction<
     noFunctionsAllowed?: boolean
   }): Promise<TSchemaOutput<TInputSchema>> {
     const { ctx, opts, noFunctionsAllowed } = args
+
     // evaluate the input schema
-    let inputSchema: z.ZodType | undefined = undefined
+    let inputSchema = opts?.overrideInputSchema || this.$internals.inputSchema
 
-    const schemaArray =
-      opts?.overrideInputSchema || this.$internals.inputSchema || []
-
-    for (const value of schemaArray) {
-      if (noFunctionsAllowed && typeof value === "function") {
-        throw new Error("Input functions are not suppported yet")
-      }
-
-      const schema: any =
-        typeof value === "function"
-          ? await value({
-              ctx,
-              previousSchema: inputSchema || z.undefined(),
-              request: opts?.request,
-              responseMeta: opts?.responseMeta,
-              previousState: opts?.previousState,
-            })
-          : value
-
-      if (!inputSchema) {
-        inputSchema = schema
-      } else {
-        inputSchema = inputSchema.and(schema)
-      }
+    if (noFunctionsAllowed && typeof inputSchema === "function") {
+      throw new Error("Input functions are not suppported yet")
     }
 
-    return (inputSchema || z.undefined()) as any
+    if (typeof inputSchema === "function") {
+      inputSchema = await inputSchema({
+        ctx,
+        previousSchema: opts?.previousInputSchema || z.undefined(),
+        request: opts?.request,
+        responseMeta: opts?.responseMeta,
+        previousState: opts?.previousState,
+      })
+    }
+
+    if (inputSchema && !(inputSchema instanceof z.ZodType)) {
+      throw new ZSAError("ERROR", "Input schema must be a ZodType")
+    }
+
+    let final
+
+    if (!opts?.previousInputSchema) {
+      final = inputSchema
+    } else if (!inputSchema) {
+      final = opts.previousInputSchema
+    } else {
+      final = opts.previousInputSchema.and(inputSchema)
+    }
+
+    // send the input schema back
+    opts?.onInputSchema?.(final as any)
+
+    return (final || z.undefined()) as any
   }
 
   /** helper function to parse input data given the active input schema */
@@ -840,6 +858,16 @@ export class ZodSafeFunction<
                 timeoutStatus,
                 opts?.request,
                 opts?.responseMeta,
+                (schema) => {
+                  if (!opts) {
+                    opts = {
+                      previousInputSchema: schema,
+                      source: new TOptsSource(() => true),
+                    }
+                  } else {
+                    opts.previousInputSchema = schema
+                  }
+                },
                 previousState
               )
 

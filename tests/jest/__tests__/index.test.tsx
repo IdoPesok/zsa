@@ -1109,5 +1109,40 @@ describe("actions", () => {
       expect(err).not.toBeNull()
       expect(err?.code).toBe("OUTPUT_PARSE_ERROR")
     })
+
+    // it.only("sdkfjlsdkfjklsad", async () => {
+    //   const procedureA = createServerActionProcedure().handler(() => {
+    //     return {
+    //       value: "123",
+    //     } as const
+    //   })
+
+    //   const procedureB = createServerActionProcedure(procedureA)
+    //     .input(({ ctx }) => {
+    //       console.log("got ctx", ctx)
+    //       return z.object({
+    //         value: z.string().refine((v) => v === ctx.value, "invalid value"),
+    //       })
+    //     })
+    //     .handler(({ input, ctx }) => {
+    //       return {
+    //         value: input.value + ctx.value,
+    //       } as const
+    //     })
+
+    //   const action = procedureB
+    //     .createServerAction()
+    //     .input(z.object({ other: z.string() }))
+    //     .handler(({ ctx, input }) => {
+    //       return ctx.value + input.other
+    //     })
+
+    //   const [data, err] = await action({
+    //     other: "123",
+    //     value: "123",
+    //   })
+
+    //   console.log("got data", data)
+    // })
   })
 })

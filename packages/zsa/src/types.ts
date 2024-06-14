@@ -120,7 +120,7 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   /** The context of the handler */
   ctx?: TProcedureChainOutput
   /** Override the input schema */
-  overrideInputSchema?: Array<TInputSchemaFn<any, any> | z.ZodType>
+  overrideInputSchema?: TInputSchemaFn<any, any> | z.ZodType
   /** return the input schema */
   returnInputSchema?: boolean
   /** return the output schema */
@@ -141,6 +141,10 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   source: TOptsSource
   /** whether the handler is from an OpenAPI handler */
   isFromOpenApiHandler?: boolean
+  /** on input schema evaluated */
+  onInputSchema?: (schema: z.ZodType) => void
+  /** previous input schema */
+  previousInputSchema?: z.ZodType
 }
 
 /** A function type for a handler that does not have an input */
@@ -285,7 +289,7 @@ export interface TInternals<
   procedureHandlerChain: TAnyZodSafeFunctionHandler[]
 
   /** The final input schema of the handler */
-  inputSchema: Array<TInputSchemaFn<any, any> | z.ZodType> | undefined
+  inputSchema: TInputSchemaFn<any, any> | TInputSchema
 
   /** The final output schema of the handler */
   outputSchema: TOutputSchema | TOutputSchemaFn<any>
