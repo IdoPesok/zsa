@@ -31,11 +31,14 @@ export const useServerAction = <
     onFinish?: (result: inferServerActionReturnType<TServerAction>) => void
 
     initialData?: inferServerActionReturnData<TServerAction>
-
     retry?: RetryConfig<TServerAction>
+    persistedError?: boolean
+    persistedData?: boolean
   }
 ) => {
   const initialData = opts?.initialData
+  const persistedError = opts?.persistedError ?? false
+  const persistedData = opts?.persistedData ?? false
 
   // store the result in state and a ref
   const [result, $setResult] = useState<TInnerResult<TServerAction>>(
@@ -144,7 +147,7 @@ export const useServerAction = <
         } else {
           setResult({
             error: err,
-            data: undefined,
+            data: persistedData ? data : undefined,
             status: "error",
           })
         }
@@ -326,6 +329,8 @@ export const useServerAction = <
     isPending,
     oldResult,
     result: resultRef.current,
+    persistedError,
+    persistedData,
   })
 
   return {

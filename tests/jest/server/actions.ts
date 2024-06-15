@@ -18,6 +18,7 @@ import {
   protectedAction,
   protectedTimeoutAction,
   publicAction,
+  publicActionPreservingDataOnError,
   rateLimitedAction,
   redirectAction,
   retryAction,
@@ -463,6 +464,15 @@ export const emptyFormDataAction = publicAction
   .handler(async ({ input }) => {
     return input.value
   })
+
+export const emptyFormDataActionPreservingDataOnError =
+  publicActionPreservingDataOnError
+    .input(z.object({ value: z.string() }).default({ value: "hello world" }), {
+      type: "formData",
+    })
+    .handler(async ({ input }) => {
+      return input.value
+    })
 
 export const procedureChainAuthAction = setAuthToTwoProcedure
   .createServerAction()
