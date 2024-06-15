@@ -18,6 +18,7 @@ import {
   protectedAction,
   protectedTimeoutAction,
   publicAction,
+  publicActionPreservingDataOnError,
   rateLimitedAction,
   redirectAction,
   retryAction,
@@ -463,6 +464,20 @@ export const emptyFormDataAction = publicAction
   .handler(async ({ input }) => {
     return input.value
   })
+
+const inputWithFile = z.object({
+  value: z.string(),
+  avatar: z.instanceof(File).optional(),
+})
+export const emptyFormDataActionPreservingDataOnError =
+  publicActionPreservingDataOnError
+    .input(inputWithFile.default({ value: "hello world" }), {
+      type: "formData",
+    })
+    .output(inputWithFile)
+    .handler(async ({ input }) => {
+      return input
+    })
 
 export const procedureChainAuthAction = setAuthToTwoProcedure
   .createServerAction()

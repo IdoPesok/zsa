@@ -566,7 +566,7 @@ export class ZodSafeFunction<
     err: any,
     inputRaw: any,
     inputParsed: any
-  ): Promise<[null, TZSAError<TInputSchema>]> {
+  ): Promise<[any, TZSAError<TInputSchema>]> {
     // we need to throw any NEXT_REDIRECT errors so that next can
     // properly handle them.
 
@@ -638,8 +638,19 @@ export class ZodSafeFunction<
     }
 
     // finally return the error
+    let inputSchema = await this.evaluateInputSchema({
+      ctx: undefined as any,
+      opts: inputRaw,
+      noFunctionsAllowed: false,
+    })
+
+    const persistedDataWhenError = this.$internals.persistedDataWhenError
+    const returnedData =
+      inputRaw instanceof FormData
+        ? formDataToJson({ formData: inputRaw, inputSchema, safeValue: true })
+        : inputRaw
     return [
-      null,
+      persistedDataWhenError ? returnedData : null,
       {
         data: stringifyIfNeeded(customError.data),
         name: customError.name,
@@ -724,7 +735,7 @@ export class ZodSafeFunction<
     // if data is formData, convert it to json
     if ($data instanceof FormData && this.$internals.inputType !== "json") {
       data = {
-        ...formDataToJson(data, inputSchema),
+        ...formDataToJson({ formData: data, inputSchema }),
         ...(this.$internals.inputType !== "state" ? overrideData || {} : {}),
       }
     }
@@ -1128,7 +1139,11 @@ export type inferServerActionInput<
   : [Parameters<TAction>[0], Parameters<TAction>[1]]
 
 // create a server action without a procedure
-export function createServerAction(): TZodSafeFunction<
+export function createServerAction(
+  { persistedDataWhenError }: { persistedDataWhenError?: boolean } = {
+    persistedDataWhenError: false,
+  }
+): TZodSafeFunction<
   undefined,
   undefined,
   TShapeErrorNotSet,
@@ -1142,5 +1157,6 @@ export function createServerAction(): TZodSafeFunction<
     outputSchema: undefined,
     shapeErrorFns: undefined,
     procedureHandlerChain: [],
+    persistedDataWhenError,
   }) as any
 }
