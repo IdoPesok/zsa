@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.1
+
+### Patch Changes
+
+- 986cf04: Fixes redirect and not found usage
+
 ## 0.1.0
 
 ### Minor Changes
