@@ -93,7 +93,9 @@ export const setupServerActionHooks = <
         ...options,
         queryFn: async ({ pageParam }) => {
           const input = options.input({ pageParam: pageParam as TPageParam })
-          const [data, err] = await action(input)
+          const result = await action(input)
+
+          if (!result) return
 
           if (err) {
             throw err
