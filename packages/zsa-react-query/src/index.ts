@@ -97,6 +97,8 @@ export const setupServerActionHooks = <
 
           if (!result) return
 
+          const [data, err] = result
+
           if (err) {
             throw err
           }
