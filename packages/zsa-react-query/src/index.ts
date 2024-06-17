@@ -142,7 +142,11 @@ export const setupServerActionHooks = <
       {
         ...options,
         queryFn: async () => {
-          const [data, err] = await action(options.input)
+          const result = await action(options.input)
+
+          if (!result) return
+
+          const [data, err] = result
 
           if (err) {
             throw err
@@ -183,7 +187,12 @@ export const setupServerActionHooks = <
       {
         ...options,
         mutationFn: async (...args) => {
-          const [data, err] = await action(...args)
+          const result = await action(...args)
+
+          // redirect or not found
+          if (!result) return
+
+          const [data, err] = result
 
           if (options?.returnError) {
             return [data, err]
