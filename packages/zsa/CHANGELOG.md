@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.3.5
+
+### Patch Changes
+
+- d2d27fd: 402 error code support
+
 ## 0.3.4
 
 ### Patch Changes

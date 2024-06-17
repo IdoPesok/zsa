@@ -1,5 +1,13 @@
 # zsa-openapi
 
+## 0.1.2
+
+### Patch Changes
+
+- d2d27fd: 402 error code support
+- Updated dependencies [d2d27fd]
+  - zsa@0.3.5
+
 ## 0.1.1
 
 ### Patch Changes
