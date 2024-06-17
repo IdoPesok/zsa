@@ -63,6 +63,9 @@ export const getErrorStatusFromZSAError = (error: unknown) => {
       return 429
     case "CLIENT_CLOSED_REQUEST":
       return 499
+    case "INSUFFICIENT_CREDITS":
+    case "PAYMENT_REQUIRED":
+      return 402
     default:
       return 500
   }
