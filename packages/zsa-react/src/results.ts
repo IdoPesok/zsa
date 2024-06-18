@@ -1,6 +1,7 @@
 import {
   TAnyZodSafeFunctionHandler,
   inferServerActionError,
+  inferServerActionInputRaw,
   inferServerActionReturnData,
 } from "zsa"
 
@@ -11,6 +12,7 @@ export type TInnerResult<TServerAction extends TAnyZodSafeFunctionHandler> = {
   isError: boolean
   error: undefined | inferServerActionError<TServerAction>
   data: undefined | inferServerActionReturnData<TServerAction>
+  input: inferServerActionInputRaw<TServerAction> | undefined
 }
 
 export type TOldResult<TServerAction extends TAnyZodSafeFunctionHandler> =
@@ -38,6 +40,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
+      input: undefined
     }
   | {
       // pending state (optimistic)
@@ -48,6 +51,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
+      input: undefined
     }
   | {
       // idle state
@@ -58,6 +62,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "idle"
+      input: undefined
     }
   | {
       // error state
@@ -68,6 +73,7 @@ export type TServerActionResult<
       error: inferServerActionError<TServerAction>
       isSuccess: false
       status: "error"
+      input: inferServerActionInputRaw<TServerAction>
     }
   | {
       isPending: false
@@ -77,6 +83,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: true
       status: "success"
+      input: inferServerActionInputRaw<TServerAction>
     }
 
 /**
@@ -88,6 +95,7 @@ export const calculateResultFromState = <
   isPending: boolean
   oldResult: TOldResult<TServerAction>
   result: TInnerResult<TServerAction>
+  input: inferServerActionInputRaw<TServerAction> | undefined
 }): TServerActionResult<TServerAction> => {
   const { isPending, oldResult, result } = state
 
@@ -158,12 +166,14 @@ export const getEmptyResult = <
         isError: false,
         error: undefined,
         data: undefined,
+        input: undefined,
       }
     : {
         // if there is initial data
         isError: false,
         error: undefined,
         data: initialData,
+        input: undefined,
       }
 
 export const getEmptyOldResult = () =>

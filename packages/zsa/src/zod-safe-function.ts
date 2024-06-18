@@ -47,6 +47,16 @@ const validateOpts = (opts?: THandlerOpts<any>) => {
     opts &&
     (!(opts.source instanceof TOptsSource) || !opts.source.validate())
   ) {
+    // if its just a useServerAction flag
+    // we can approve it
+    if (
+      JSON.stringify(opts) === JSON.stringify({ isFromUseServerAction: true })
+    ) {
+      opts.source = new TOptsSource(() => true)
+      return
+    }
+
+    // otherwise it is not allowed
     throw new Error("Invalid opts, must originate from the server")
   }
 }
@@ -477,7 +487,8 @@ export class ZodSafeFunction<
   public async handleError(
     err: any,
     inputRaw: any,
-    inputParsed: any
+    inputParsed: any,
+    opts?: THandlerOpts<any>
   ): Promise<[null, TZSAError<TInputSchema>]> {
     // we need to throw any NEXT_REDIRECT errors so that next can
     // properly handle them.
@@ -530,8 +541,15 @@ export class ZodSafeFunction<
       })
     }
 
+    const formReturn = (value: any) => {
+      if (opts?.isFromUseServerAction) {
+        return [value, null, inputRaw]
+      }
+      return [null, value]
+    }
+
     if (this.$internals.shapeErrorFns !== undefined) {
-      return [null, customError as any]
+      return formReturn([null, customError]) as any
     }
 
     const stringifyIfNeeded = (data: any) =>
@@ -550,7 +568,7 @@ export class ZodSafeFunction<
     }
 
     // finally return the error
-    return [
+    return formReturn([
       null,
       {
         data: stringifyIfNeeded(customError.data),
@@ -561,7 +579,7 @@ export class ZodSafeFunction<
         formErrors: flattenedErrors?.formErrors,
         formattedErrors: formattedErrors as any,
       } as any,
-    ]
+    ]) as any
   }
 
   /** helper function to parse input data given the active input schema */
@@ -699,7 +717,11 @@ export class ZodSafeFunction<
       overrideArgs?: Partial<TSchemaInput<TInputSchema>>,
       opts?: THandlerOpts<TProcedureChainOutput>
     ): Promise<any> => {
+      console.log("got opts", opts)
+
       validateOpts(opts)
+
+      console.log("got opts", opts)
 
       if (opts?.returnInputSchema) {
         // return the input schema
@@ -791,6 +813,10 @@ export class ZodSafeFunction<
 
         await this.handleSuccess(input, parsed, timeoutStatus)
 
+        if (opts?.isFromUseServerAction) {
+          return [parsed, null, args]
+        }
+
         return [parsed, null]
       } catch (err) {
         const retryDelay = this.getRetryDelay(err, opts?.attempts || 1)
@@ -804,7 +830,7 @@ export class ZodSafeFunction<
           })
         }
 
-        return await this.handleError(err, args, parsedArgs)
+        return await this.handleError(err, args, parsedArgs, opts)
       }
     }
 
@@ -895,6 +921,43 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
     onSuccessFns: parentProcedure?.$internals.onSuccessFns,
   }) as any
 }
+
+// helper type to infer the input schema of a server action
+export type inferServerActionInputSchema<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> =
+  TAction extends TStateHandlerFunc<infer TInputSchema, any, any, any>
+    ? TInputSchema
+    : TAction extends TNoInputHandlerFunc<
+          any,
+          infer TInputSchema,
+          any,
+          any,
+          any,
+          any
+        >
+      ? TInputSchema
+      : TAction extends THandlerFunc<
+            infer TInputSchema,
+            any,
+            any,
+            any,
+            any,
+            any,
+            any
+          >
+        ? TInputSchema
+        : never
+
+// helper type to infer the raw input of a server action
+export type inferServerActionInputRaw<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> = TSchemaInput<inferServerActionInputSchema<TAction>>
+
+// helper type to infer the parsed input of a server action
+export type inferServerActionInputParsed<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> = TSchemaOutput<inferServerActionInputSchema<TAction>>
 
 // helper type to infer the return data of a server action
 export type inferServerActionReturnData<

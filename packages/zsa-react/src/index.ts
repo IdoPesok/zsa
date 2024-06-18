@@ -112,13 +112,19 @@ export const useServerAction = <
       status.current = "pending"
       setExecuting(true)
 
-      let data, err
+      let data, err, inputRaw
 
-      await serverAction(input).then((response) => {
+      await serverAction(input, undefined, {
+        isFromUseServerAction: true,
+        // we don't need to send source since `isFromUseServerAction` is an
+        // exceptional flag that can be used alone
+        // @ts-expect-error
+        source: undefined,
+      }).then((response) => {
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
-          ;[data, err] = response
+          ;[data, err, inputRaw] = response as any
         }
       })
 
@@ -141,7 +147,12 @@ export const useServerAction = <
         if (oldResult.status === "filled") {
           setResult(oldResult.result)
         } else {
-          setResult({ error: err, isError: true, data: undefined })
+          setResult({
+            error: err,
+            isError: true,
+            data: undefined,
+            input: inputRaw,
+          })
         }
 
         // clear the old data
@@ -161,6 +172,7 @@ export const useServerAction = <
         isError: false,
         error: undefined,
         data: data ?? undefined,
+        input: inputRaw,
       }
 
       setResult(res)
@@ -231,6 +243,7 @@ export const useServerAction = <
         isError: false,
         error: undefined,
         data: data ?? undefined,
+        input: resultRef.current.input,
       })
     },
     [execute]
