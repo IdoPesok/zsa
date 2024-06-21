@@ -1141,7 +1141,8 @@ describe("actions", () => {
         })
 
       const procedureB = createServerActionProcedure(procedureA)
-        .input(({ ctx, previousSchema }) => {
+        .input(async ({ ctx, previousSchema }) => {
+          await new Promise((r) => setTimeout(r, 500)) // await for 500ms
           return z.object({
             value: previousSchema.shape.value.refine(
               (v) => v === ctx.value,

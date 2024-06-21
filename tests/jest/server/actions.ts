@@ -580,6 +580,7 @@ export const inputFunctionActionTwo = inputFunctionProcedure
 
 export const outputFunctionAction = ownsPostAction
   .output(async ({ ctx }) => {
+    await new Promise((r) => setTimeout(r, 500)) // await for 500ms
     return z.object({
       matchingPostId: z
         .string()
