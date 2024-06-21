@@ -1,6 +1,7 @@
 import { mockNextRequest } from "lib/utils"
 import {
   divideAction,
+  dynamicSchemasAction,
   multiplyAction,
   nextNotFoundAction,
   nextRedirectAction,
@@ -8,9 +9,13 @@ import {
 } from "server/actions"
 import { TEST_DATA } from "server/data"
 import { jsonOnlyRouter, openapiRouter } from "server/router"
+import { z } from "zod"
+import { createServerAction, createServerActionProcedure } from "zsa"
 import {
   createOpenApiServerActionRouter,
   createRouteHandlers,
+  createRouteHandlersForAction,
+  generateOpenApiDocument,
   setupApiHandler,
 } from "zsa-openapi"
 
@@ -392,6 +397,86 @@ describe("openapi", () => {
     })
   })
 
+  describe("createRouteHandlersForAction", () => {
+    it("it should succeed in dividing a number by zero [PUT]", async () => {
+      const { PUT } = createRouteHandlersForAction(divideAction)
+
+      const request = mockNextRequest({
+        method: "PUT",
+        pathname: "/api/calculations/divide/100",
+        body: {
+          number2: "20",
+        },
+      })
+
+      const response = await PUT(request, {
+        params: {
+          number1: "100",
+        },
+      })
+      expect(response.status).toEqual(200)
+
+      const json = await response.json()
+      expect(json).toEqual({
+        result: 100 / 20,
+      })
+    })
+
+    it("it should fail to divide a number by zero and return full error [POST]", async () => {
+      const { POST } = createRouteHandlersForAction(divideAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/divide/100",
+        body: {
+          number2: "0",
+        },
+      })
+
+      const response = await POST(request, {
+        params: {
+          number1: "100",
+        },
+      })
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.code).toBe("INPUT_PARSE_ERROR")
+      expect(json.message).toBeDefined()
+      expect(json.name).toBeDefined()
+    })
+
+    it("it should fail to divide a number by zero and return a custom error [POST]", async () => {
+      const { POST } = createRouteHandlersForAction(divideAction, {
+        shapeError: (error) => {
+          return {
+            message: error.message,
+            code: error.code,
+          }
+        },
+      })
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/divide/100",
+        body: {
+          number2: "0",
+        },
+      })
+
+      const response = await POST(request, {
+        params: {
+          number1: "100",
+        },
+      })
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.code).toBe("INPUT_PARSE_ERROR")
+      expect(json.message).toBeDefined()
+    })
+  })
+
   describe("setupApiHandler", () => {
     it("it should succeed in dividing a number by zero [PUT]", async () => {
       const { PUT } = setupApiHandler(
@@ -500,6 +585,199 @@ describe("openapi", () => {
       })
 
       await expect(POST(request)).rejects.toThrow("NEXT_REDIRECT")
+    })
+  })
+
+  describe("dynamic schemas", () => {
+    it("should return the dynamic header values", async () => {
+      const { POST } = createRouteHandlersForAction(dynamicSchemasAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/test",
+        body: {
+          min: 0,
+          max: 100,
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toEqual(200)
+
+      const json = await response.json()
+      const randomNumber = json.randomNumber
+
+      if (randomNumber > 50) {
+        expect(response.headers.get("x-test")).toEqual(">")
+      } else {
+        expect(response.headers.get("x-test")).toEqual("<")
+      }
+    })
+
+    it("should return the static input parse error", async () => {
+      const { POST } = createRouteHandlersForAction(dynamicSchemasAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/test",
+        body: {
+          min: 1000,
+          max: 2000,
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toEqual(400)
+    })
+
+    it("should return the dynamic input parse error", async () => {
+      const { POST } = createRouteHandlersForAction(dynamicSchemasAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/test",
+        body: {
+          min: 1000,
+          max: 2000,
+        },
+        headers: {
+          "x-min-number": "10000",
+          "x-max-number": "20000",
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toEqual(400)
+    })
+
+    it("should return the dynamic header values from dynamic input schema", async () => {
+      const { POST } = createRouteHandlersForAction(dynamicSchemasAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/test",
+        body: {
+          min: 10000,
+          max: 20000,
+        },
+        headers: {
+          "x-min-number": "10000",
+          "x-max-number": "20000",
+        },
+      })
+
+      const response = await POST(request)
+      expect(response.status).toEqual(200)
+
+      const json = await response.json()
+      const randomNumber = json.randomNumber
+
+      if (randomNumber > 15000) {
+        expect(response.headers.get("x-test")).toEqual(">")
+      } else {
+        expect(response.headers.get("x-test")).toEqual("<")
+      }
+    })
+  })
+
+  describe("generate openapi document", () => {
+    it("should throw since there is a function in the input schema", async () => {
+      const router = createOpenApiServerActionRouter()
+
+      router.get(
+        "/",
+        createServerAction()
+          .input(() => z.undefined())
+          .handler(() => {
+            return "123"
+          })
+      )
+
+      expect(() =>
+        generateOpenApiDocument(router, {
+          title: "tRPC OpenAPI",
+          version: "1.0.0",
+          baseUrl: "http://localhost:3000",
+        })
+      ).rejects.toThrow()
+    })
+
+    it("should throw there is a function in the input schema for the procedure", async () => {
+      const router = createOpenApiServerActionRouter()
+
+      router.get(
+        "/:id",
+        createServerActionProcedure()
+          .input(() =>
+            z.object({
+              id: z.string(),
+            })
+          )
+          .handler(() => {
+            return "123"
+          })
+          .createServerAction()
+          .input(z.object({ title: z.string().optional() }))
+          .handler(() => {
+            return "123"
+          })
+      )
+
+      expect(
+        async () =>
+          await generateOpenApiDocument(router, {
+            title: "tRPC OpenAPI",
+            version: "1.0.0",
+            baseUrl: "http://localhost:3000",
+          })
+      ).rejects.toThrow()
+    })
+
+    it("should not throw since there is no function in the input schema", async () => {
+      const router = createOpenApiServerActionRouter()
+
+      router.get(
+        "/:id",
+        createServerActionProcedure()
+          .input(
+            z.object({
+              id: z.string(),
+            })
+          )
+          .handler(() => {
+            return "123"
+          })
+          .createServerAction()
+          .input(z.object({ title: z.string().optional() }))
+          .handler(() => {
+            return "123"
+          })
+      )
+
+      const doc = await generateOpenApiDocument(router, {
+        title: "tRPC OpenAPI",
+        version: "1.0.0",
+        baseUrl: "http://localhost:3000",
+      })
+
+      const params = doc.paths["/{id}"]?.get?.parameters
+
+      expect(params).toBeDefined()
+
+      if (!params) return
+
+      const param1 = params[0] as any
+      const param2 = params[1] as any
+
+      expect(param1.name).toEqual("id")
+      expect(param1.in).toEqual("path")
+      expect(param1.required).toEqual(true)
+      expect(param1.schema.type).toEqual("string")
+
+      expect(param2.name).toEqual("title")
+      expect(param2.in).toEqual("query")
+      expect(param2.required).toEqual(false)
+      expect(param2.schema.type).toEqual("string")
     })
   })
 })

@@ -8,13 +8,13 @@ import {
 import {
   RetryConfig,
   TAnyZodSafeFunctionHandler,
-  THandlerOpts,
-  TOptsSource,
+  TInputSchemaFn,
   TShapeErrorFn,
   TShapeErrorNotSet,
+  TZodMerge,
   TZodSafeFunctionDefaultOmitted,
 } from "./types"
-import { ZodTypeLikeVoid, mergeArraysAndRemoveDuplicates } from "./utils"
+import { mergeArraysAndRemoveDuplicates } from "./utils"
 import {
   TZodSafeFunction,
   ZodSafeFunction,
@@ -28,7 +28,7 @@ export interface TCompleteProcedureInternals<
   THandler extends TAnyZodSafeFunctionHandler,
 > {
   /** The chained input schema */
-  inputSchema: TInputSchema
+  inputSchema: TInputSchemaFn<any, any> | TInputSchema
   /** An ordered array of handlers */
   handlerChain: TAnyZodSafeFunctionHandler[]
   /** The last handler in the chain */
@@ -93,11 +93,16 @@ export interface TAnyCompleteProcedure
 type InferTError<T extends TAnyCompleteProcedure> =
   T extends CompleteProcedure<any, any, infer TError> ? TError : never
 
+type InferInputSchema<T extends TAnyCompleteProcedure> =
+  T extends CompleteProcedure<infer TInputSchema, any, any>
+    ? TInputSchema
+    : never
+
 /** The return type of `createServerActionProcedure` given a parent procedure */
 type TRet<T extends TAnyCompleteProcedure | undefined> =
   T extends TAnyCompleteProcedure
     ? TZodSafeFunction<
-        T["$internals"]["inputSchema"],
+        InferInputSchema<T>,
         undefined,
         InferTError<T>,
         TZodSafeFunctionDefaultOmitted,
@@ -151,35 +156,17 @@ export const chainServerActionProcedures = <
   first: T1,
   second: T2
 ): CompleteProcedure<
-  T1["$internals"]["inputSchema"] extends undefined | ZodTypeLikeVoid
-    ? T2["$internals"]["inputSchema"]
-    : z.ZodIntersection<
-        T1["$internals"]["inputSchema"],
-        T2["$internals"]["inputSchema"]
-      >,
+  TZodMerge<InferInputSchema<T1>, InferInputSchema<T2>>,
   T2["$internals"]["lastHandler"],
   InferTError<T2>
 > => {
-  let inputSchema =
-    first.$internals.inputSchema === undefined
-      ? second.$internals.inputSchema
-      : first.$internals.inputSchema.and(second.$internals.inputSchema)
-
-  const newLastHandler = async (
-    input?: any,
-    overrideArgs?: undefined,
-    opts?: THandlerOpts<any>
-  ) =>
-    await second.$internals.lastHandler(input, overrideArgs, {
-      ...opts,
-      overrideInputSchema: opts?.overrideInputSchema || inputSchema,
-      source: new TOptsSource(() => true),
-    })
-
   return new CompleteProcedure({
-    inputSchema,
-    handlerChain: [...first.$internals.handlerChain, newLastHandler],
-    lastHandler: newLastHandler,
+    inputSchema: second.$internals.inputSchema,
+    handlerChain: [
+      ...first.$internals.handlerChain,
+      second.$internals.lastHandler,
+    ],
+    lastHandler: second.$internals.lastHandler,
     timeout: second.$internals.timeout || first.$internals.timeout,
     retryConfig: second.$internals.retryConfig || first.$internals.retryConfig,
     shapeErrorFns: mergeArraysAndRemoveDuplicates(

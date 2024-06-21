@@ -21,6 +21,8 @@ import {
   helloWorldRetryAction,
   helloWorldRetryProcedureAction,
   helloWorldTimeoutAction,
+  inputFunctionAction,
+  inputFunctionActionTwo,
   inputLargeNumberAction,
   inputNumberAction,
   intersectedInputAction,
@@ -29,6 +31,8 @@ import {
   nextNotFoundAction,
   nextRedirectAction,
   nextRedirectInProcedureAction,
+  outputFunctionAction,
+  outputFunctionActionError,
   procedureChainAuthAction,
   procedureChainAuthActionWithCounter,
   shapeErrorActionThatReturnsInput,
@@ -975,6 +979,21 @@ describe("actions", () => {
       })
     })
 
+    it("should infer the correct input type for merged inputs", () => {
+      type TInput = inferServerActionInput<typeof intersectedInputAction>
+      const input: TInput = {
+        a: "a",
+        b: "b",
+        c: "c",
+      }
+
+      expect(input).toEqual({
+        a: "a",
+        b: "b",
+        c: "c",
+      })
+    })
+
     it("should infer the correct error type", () => {
       type TReturn = inferServerActionError<typeof multiplyAction>
       const err: TReturn["fieldErrors"] = {
@@ -1010,6 +1029,149 @@ describe("actions", () => {
       expect(err).toEqual({
         number: 100,
       })
+    })
+  })
+
+  describe("input functions", () => {
+    beforeEach(() => {
+      ;(cookies as jest.Mock).mockReturnValue({
+        get: jest.fn().mockReturnValue({ value: "session" }),
+      })
+    })
+
+    test("should infer the correct input type", async () => {
+      const [data, err] = await inputFunctionAction({
+        postId: "testUserAuthor",
+        matchingPostId: "testUserAuthor",
+      })
+
+      expect(data).toEqual("testUserAuthor")
+      expect(err).toBeNull()
+    })
+
+    test("should fail to parse the input", async () => {
+      const [data, err] = await inputFunctionAction({
+        postId: "testUserAuthor",
+        matchingPostId: "wronginput",
+      })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.fieldErrors?.matchingPostId).toEqual(["not the same"])
+    })
+
+    test("should fail to parse the input with invalid username and password", async () => {
+      const [data, err] = await inputFunctionActionTwo({
+        username: "nope",
+        password: "wrong",
+      })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.fieldErrors?.username).toEqual(["invalid username"])
+    })
+
+    test("should fail to parse the input with invalid password", async () => {
+      const [data, err] = await inputFunctionActionTwo({
+        username: "valid",
+        password: "wrong",
+      })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.fieldErrors?.password).toEqual(["invalid password"])
+      expect(err?.fieldErrors?.username).not.toBeDefined()
+    })
+
+    it("should return the valid username and password", async () => {
+      const [data, err] = await inputFunctionActionTwo({
+        username: "valid",
+        password: "valid",
+      })
+
+      expect(data).toEqual({
+        username: "valid",
+        password: "valid",
+      })
+      expect(err).toBeNull()
+    })
+  })
+
+  describe("output functions", () => {
+    beforeEach(() => {
+      ;(cookies as jest.Mock).mockReturnValue({
+        get: jest.fn().mockReturnValue({ value: "session" }),
+      })
+    })
+
+    it("should return the correct output from the output function", async () => {
+      const [data, err] = await outputFunctionAction({
+        postId: "testUserAuthor",
+      })
+
+      expect(data).toEqual({
+        matchingPostId: "testUserAuthor",
+      })
+      expect(err).toBeNull()
+    })
+
+    it("should return the correct error from the output function", async () => {
+      const [data, err] = await outputFunctionActionError({
+        postId: "testUserAuthor",
+      })
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
+      expect(err?.code).toBe("OUTPUT_PARSE_ERROR")
+    })
+  })
+
+  describe("procedure chain input", () => {
+    it("should run each procedure input function once", async () => {
+      const procedureA = createServerActionProcedure()
+        .input(() =>
+          z.object({
+            value: z.string(),
+          })
+        )
+        .handler(() => {
+          return {
+            value: "123",
+          } as const
+        })
+
+      const procedureB = createServerActionProcedure(procedureA)
+        .input(async ({ ctx, previousSchema }) => {
+          await new Promise((r) => setTimeout(r, 500)) // await for 500ms
+          return z.object({
+            value: previousSchema.shape.value.refine(
+              (v) => v === ctx.value,
+              "invalid value"
+            ),
+          })
+        })
+        .handler(({ input, ctx }) => {
+          return {
+            value2: input.value + ctx.value,
+          } as const
+        })
+
+      const action = procedureB
+        .createServerAction()
+        .input(({ ctx }) => {
+          return z.object({ other: z.string().min(ctx.value2.length / 2) })
+        })
+        .handler(({ ctx, input }) => {
+          return ctx.value2 + input.other
+        })
+
+      const [data, err] = await action({
+        other: "123",
+        value: "123",
+      })
+
+      expect(data).toEqual("123123123")
+      expect(err).toBeNull()
     })
   })
 })

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { AnyZodObject, objectUtil, z, ZodObject } from "zod"
 import { NextRequest } from "./api"
 import {
   TOnCompleteFn,
@@ -8,8 +8,8 @@ import {
 } from "./callbacks"
 import {
   TReplaceErrorPlaceholders,
-  TZSAError,
   TypedProxyError,
+  TZSAError,
   ZSAError,
 } from "./errors"
 
@@ -119,8 +119,6 @@ export class TOptsSource {
 export interface THandlerOpts<TProcedureChainOutput extends any> {
   /** The context of the handler */
   ctx?: TProcedureChainOutput
-  /** Override the input schema */
-  overrideInputSchema?: z.ZodType
   /** return the input schema */
   returnInputSchema?: boolean
   /** return the output schema */
@@ -139,6 +137,12 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   onParsedArgs?: (args: any) => void
   /** the source of the opts */
   source: TOptsSource
+  /** whether the handler is from an OpenAPI handler */
+  isFromOpenApiHandler?: boolean
+  /** on input schema evaluated */
+  onInputSchema?: (schema: z.ZodType) => void
+  /** previous input schema */
+  previousInputSchema?: z.ZodType
 }
 
 /** A function type for a handler that does not have an input */
@@ -230,6 +234,8 @@ export const DefaultOmitted = {
   onOutputParseError: 1,
   checkTimeoutStatus: 1,
   getRetryDelay: 1,
+  evaluateInputSchema: 1,
+  getFinalStaticInputSchema: 1,
 } as const
 
 export type TZodSafeFunctionDefaultOmitted = keyof typeof DefaultOmitted
@@ -282,10 +288,10 @@ export interface TInternals<
   procedureHandlerChain: TAnyZodSafeFunctionHandler[]
 
   /** The final input schema of the handler */
-  inputSchema: TInputSchema
+  inputSchema: TInputSchemaFn<any, any> | TInputSchema
 
   /** The final output schema of the handler */
-  outputSchema: TOutputSchema
+  outputSchema: TOutputSchema | TOutputSchemaFn<any>
 
   /** A function to run when an input parse error occurs */
   onInputParseError?: ((err: z.ZodError<TInputSchema>) => any) | undefined
@@ -371,3 +377,45 @@ export interface TShapeErrorFn<TError extends any = TShapeErrorNotSet> {
     ctx: TError extends TShapeErrorNotSet ? undefined : TError
   }): any
 }
+
+export interface TInputSchemaFn<
+  TPreviousInputSchema extends z.ZodType | undefined,
+  TProcedureChainOutput extends any,
+> {
+  (
+    args: {
+      ctx: TProcedureChainOutput
+      previousSchema: TSchemaOrZodUndefined<TPreviousInputSchema>
+    } & Pick<THandlerOpts<any>, "previousState" | "request" | "responseMeta">
+  ): z.ZodType | Promise<z.ZodType>
+}
+
+export interface TOutputSchemaFn<TProcedureChainOutput extends any> {
+  (
+    args: {
+      ctx: TProcedureChainOutput
+      unparsedData: unknown
+    } & Pick<THandlerOpts<any>, "previousState" | "request" | "responseMeta">
+  ): z.ZodType | Promise<z.ZodType>
+}
+
+export type TFinalInputSchema<T extends z.ZodType | TInputSchemaFn<any, any>> =
+  T extends TInputSchemaFn<any, any> ? Awaited<ReturnType<T>> : T
+
+export type TFinalOutputSchema<T extends z.ZodType | TOutputSchemaFn<any>> =
+  T extends TOutputSchemaFn<any> ? Awaited<ReturnType<T>> : T
+
+export type TZodMerge<
+  T1 extends z.ZodType | undefined,
+  T2 extends z.ZodType | undefined,
+> = T1 extends AnyZodObject
+  ? T2 extends AnyZodObject
+    ? ZodObject<
+        objectUtil.extendShape<T1["shape"], T2["shape"]>,
+        T2["_def"]["unknownKeys"],
+        T2["_def"]["catchall"]
+      >
+    : T2 extends undefined
+      ? T1 // only return T1 if T2 is undefined
+      : T2
+  : T2

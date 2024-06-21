@@ -94,7 +94,7 @@ const getOpenApiPathsObject = async (
         source: new TOptsSource(() => true),
       })) as any
 
-      if (outputParser instanceof z.ZodUndefined) {
+      if (!outputParser) {
         outputParser = z.unknown()
       }
 

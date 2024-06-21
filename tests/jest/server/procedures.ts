@@ -362,3 +362,13 @@ const shapeErrorProcedureB = createServerActionProcedure(shapeErrorProcedureA)
   })
 
 export const shapeErrorAction = shapeErrorProcedureB.createServerAction()
+
+export const inputFunctionProcedure = createServerActionProcedure()
+  .input(({ ctx }) => {
+    return z.object({
+      username: z.string().refine((s) => s === "valid", "invalid username"),
+    })
+  })
+  .handler(async ({ input }) => {
+    return input
+  })

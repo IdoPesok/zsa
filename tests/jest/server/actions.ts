@@ -9,6 +9,7 @@ import { CLIENT_TEST_DATA, TEST_DATA } from "./data"
 import {
   adminAction,
   faultyOutputProcedure,
+  inputFunctionProcedure,
   inputNumberProcedure,
   intersectedInputProcedureC,
   ownsPostAction,
@@ -552,4 +553,89 @@ export const faultyShapeErrorAction = shapeErrorAction
   .input(z.object({ number: z.number().refine((n) => n > 0) }))
   .handler(async ({ input }) => {
     return input.number
+  })
+
+export const inputFunctionAction = ownsPostAction
+  .input(async ({ ctx }) => {
+    return z.object({
+      matchingPostId: z
+        .string()
+        .refine((s) => s === ctx.post.id, "not the same"),
+    })
+  })
+  .handler(async ({ input }) => {
+    return input.matchingPostId
+  })
+
+export const inputFunctionActionTwo = inputFunctionProcedure
+  .createServerAction()
+  .input(async ({ ctx }) => {
+    return z.object({
+      password: z.string().refine((s) => s == ctx.username, "invalid password"),
+    })
+  })
+  .handler(async ({ input }) => {
+    return input
+  })
+
+export const outputFunctionAction = ownsPostAction
+  .output(async ({ ctx }) => {
+    await new Promise((r) => setTimeout(r, 500)) // await for 500ms
+    return z.object({
+      matchingPostId: z
+        .string()
+        .refine((s) => s === ctx.post.id, "not the same"),
+    })
+  })
+  .handler(async ({ input }) => {
+    return {
+      matchingPostId: "testUserAuthor",
+    }
+  })
+
+export const outputFunctionActionError = ownsPostAction
+  .output(async ({ ctx }) => {
+    return z.object({
+      matchingPostId: z.string().refine((s) => s === "matched", "not the same"),
+    })
+  })
+  .handler(async ({ input }) => {
+    return {
+      matchingPostId: "not matched" as any,
+    }
+  })
+
+export const dynamicSchemasAction = publicAction
+  .input(({ request }) =>
+    z.object({
+      min: z
+        .number()
+        .min(parseInt(request?.headers.get("x-min-number") || "0")),
+      max: z
+        .number()
+        .max(parseInt(request?.headers.get("x-max-number") || "100")),
+    })
+  )
+  .output(({ request, responseMeta }) =>
+    z.object({
+      randomNumber: z.number().transform((n) => {
+        const min = parseInt(request?.headers.get("x-min-number") || "0")
+        const max = parseInt(request?.headers.get("x-max-number") || "100")
+        const mid = (min + max) / 2
+
+        if (n > mid) {
+          responseMeta?.headers.set("x-test", ">")
+        } else {
+          responseMeta?.headers.set("x-test", "<")
+        }
+
+        return n
+      }),
+    })
+  )
+  .handler(({ input }) => {
+    const { min, max } = input
+    return {
+      randomNumber: Math.random() * (max - min) + min,
+    }
   })
