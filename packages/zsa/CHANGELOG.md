@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.4.0
+
+### Minor Changes
+
+- 884cf8f: Change input schemas from zod intersections to zod merges
+
 ## 0.3.5
 
 ### Patch Changes
