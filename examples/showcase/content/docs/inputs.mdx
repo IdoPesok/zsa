@@ -31,6 +31,10 @@ If the input passed to `myAction` does not match the defined schema (e.g. `name`
 
 ## Dynamic Input Schemas
 
+<Warning>
+Although useful in some cases, this should be avoided by default since creating a schema for every request is going to be much more expensive than reusing an existing one.
+</Warning>
+
 For more advanced use cases, you can define the input schema using a function that returns a Zod schema. This allows you to dynamically generate the schema based on data available when the action is invoked, such as data from the request or context from procedures.
 
 The input schema function receives an object with the following properties:

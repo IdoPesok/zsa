@@ -38,6 +38,10 @@ In this example, the server action `myOutputAction` is configured with both an i
 
 ## Dynamic Output Schemas
 
+<Warning>
+Although useful in some cases, this should be avoided by default since creating a schema for every request is going to be much more expensive than reusing an existing one.
+</Warning>
+
 Similar to input schemas, you can also define dynamic output schemas using functions. This allows you to generate the output schema based on data available when the action is invoked, such as the request, response metadata, or context from procedures.
 
 The output schema function receives an object with the following properties:
