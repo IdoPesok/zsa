@@ -192,7 +192,7 @@ export const useServerAction = <
       return await new Promise((resolve) => {
         executeRef.current = resolve
         startTransition(() => {
-          internalExecute(opts[0])
+          internalExecute(opts[0], opts[1])
         })
       })
     },
