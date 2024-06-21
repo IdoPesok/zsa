@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.7
+
+### Patch Changes
+
+- d293542: Add ability to pass override data to form actions
+
 ## 0.1.6
 
 ### Patch Changes
