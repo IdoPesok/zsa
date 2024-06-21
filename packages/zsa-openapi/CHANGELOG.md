@@ -1,5 +1,16 @@
 # zsa-openapi
 
+## 0.2.0
+
+### Minor Changes
+
+- 9b5f4fb: Added support for input schema functions
+
+### Patch Changes
+
+- Updated dependencies [884cf8f]
+  - zsa@0.4.0
+
 ## 0.1.2
 
 ### Patch Changes
