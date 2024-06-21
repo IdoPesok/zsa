@@ -78,6 +78,7 @@ export const useServerAction = <
   const internalExecute = useCallback(
     async (
       input: Parameters<TServerAction>[0],
+      overrideData?: Parameters<TServerAction>[1],
       args?: {
         isFromRetryId?: number
       }
@@ -114,7 +115,7 @@ export const useServerAction = <
 
       let data, err
 
-      await serverAction(input).then((response) => {
+      await serverAction(input, overrideData).then((response) => {
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
@@ -129,7 +130,7 @@ export const useServerAction = <
           retryCount.current += 1
           return await new Promise((resolve) =>
             setTimeout(() => {
-              internalExecute(input, {
+              internalExecute(input, overrideData, {
                 ...(args || {}),
                 isFromRetryId: retryId,
               }).then(resolve)
@@ -182,14 +183,16 @@ export const useServerAction = <
 
   const execute = useCallback(
     async (
-      ...opts: Parameters<TServerAction>[0] extends undefined
-        ? []
-        : [Parameters<TServerAction>[0]]
+      ...opts: Parameters<TServerAction>[0] extends FormData
+        ? [FormData] | [FormData, Parameters<TServerAction>[1]]
+        : Parameters<TServerAction>[0] extends undefined
+          ? []
+          : [Parameters<TServerAction>[0]]
     ): Promise<inferServerActionReturnType<TServerAction>> => {
       return await new Promise((resolve) => {
         executeRef.current = resolve
         startTransition(() => {
-          internalExecute(opts[0])
+          internalExecute(opts[0], opts[1])
         })
       })
     },
