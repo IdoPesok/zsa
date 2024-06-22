@@ -8,8 +8,7 @@ import {
  * A result object for the hook
  */
 export type TInnerResult<TServerAction extends TAnyZodSafeFunctionHandler> = {
-  isError: boolean
-  isSuccess: boolean
+  status: "success" | "error" | "idle"
   error: undefined | inferServerActionError<TServerAction>
   data: undefined | inferServerActionReturnData<TServerAction>
 }
@@ -102,7 +101,11 @@ export const calculateResultFromState = <
       isSuccess: false,
       status: "pending",
     }
-  } else if (isPending && oldResult.status === "filled" && result.isSuccess) {
+  } else if (
+    isPending &&
+    oldResult.status === "filled" &&
+    result.status === "success"
+  ) {
     return {
       isPending: true,
       isOptimistic: true,
@@ -112,7 +115,7 @@ export const calculateResultFromState = <
       isSuccess: false,
       status: "pending",
     }
-  } else if (result.isSuccess) {
+  } else if (result.status === "success") {
     // success state
     return {
       isPending: false,
@@ -123,7 +126,7 @@ export const calculateResultFromState = <
       isSuccess: true,
       status: "success",
     }
-  } else if (result.isError) {
+  } else if (result.status === "error") {
     // error state
     return {
       isPending: false,
@@ -156,15 +159,13 @@ export const getEmptyResult = <
   initialData === undefined
     ? // if there is no initial data
       {
-        isError: false,
-        isSuccess: false,
+        status: "idle",
         error: undefined,
         data: undefined,
       }
     : {
         // if there is initial data
-        isError: false,
-        isSuccess: true,
+        status: "success",
         error: undefined,
         data: initialData,
       }
