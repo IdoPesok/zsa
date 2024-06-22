@@ -29,6 +29,8 @@ export interface TCompleteProcedureInternals<
 > {
   /** The chained input schema */
   inputSchema: TInputSchemaFn<any, any> | TInputSchema
+  /** The final static input schema of the handler */
+  staticMergedInputSchema?: any
   /** An ordered array of handlers */
   handlerChain: TAnyZodSafeFunctionHandler[]
   /** The last handler in the chain */
@@ -77,6 +79,7 @@ export class CompleteProcedure<
       procedureHandlerChain: this.$internals.handlerChain,
       onErrorFns: this.$internals.onErrorFns,
       onStartFns: this.$internals.onStartFns,
+      staticMergedInputSchema: this.$internals.staticMergedInputSchema,
       onSuccessFns: this.$internals.onSuccessFns,
       onCompleteFns: this.$internals.onCompleteFns,
       timeout: this.$internals.timeout,
@@ -169,6 +172,9 @@ export const chainServerActionProcedures = <
     lastHandler: second.$internals.lastHandler,
     timeout: second.$internals.timeout || first.$internals.timeout,
     retryConfig: second.$internals.retryConfig || first.$internals.retryConfig,
+    staticMergedInputSchema:
+      second.$internals.staticMergedInputSchema ||
+      first.$internals.staticMergedInputSchema,
     shapeErrorFns: mergeArraysAndRemoveDuplicates(
       first.$internals.shapeErrorFns,
       second.$internals.shapeErrorFns

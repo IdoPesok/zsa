@@ -321,11 +321,36 @@ export class ZodSafeFunction<
     TIsProcedure,
     TType
   > {
+    const isStatic = typeof schema !== "function"
+
+    let staticMergedInputSchema
+
+    if (
+      !this.$internals.inputSchema &&
+      !this.$internals.staticMergedInputSchema &&
+      isStatic
+    ) {
+      // if the first schema is static, use it as the static merged input schema
+      staticMergedInputSchema = schema
+    } else if (
+      this.$internals.staticMergedInputSchema &&
+      typeof this.$internals.staticMergedInputSchema !== "function" &&
+      instanceofZodTypeObject(this.$internals.staticMergedInputSchema) &&
+      instanceofZodTypeObject(schema as z.ZodType) &&
+      isStatic
+    ) {
+      // if the next schema is static, merge it with the static merged input schema
+      staticMergedInputSchema = this.$internals.staticMergedInputSchema.merge(
+        schema as any
+      )
+    }
+
     return new ZodSafeFunction({
       ...this.$internals,
       // @ts-expect-error
       inputSchema: schema,
       inputType: opts?.type,
+      staticMergedInputSchema,
     }) as any
   }
 
@@ -682,7 +707,11 @@ export class ZodSafeFunction<
 
     let final
 
-    if (!opts?.previousInputSchema) {
+    if (this.$internals.staticMergedInputSchema) {
+      // if we have a static merged input schema, return it
+      // no need to generate a new schema every time
+      final = this.$internals.staticMergedInputSchema
+    } else if (!opts?.previousInputSchema) {
       // if there is no previous input schema, return current schema
       final = inputSchema
     } else if (!inputSchema) {
@@ -1053,6 +1082,7 @@ export class ZodSafeFunction<
         lastHandler: handler,
         onCompleteFns: this.$internals.onCompleteFns,
         onErrorFns: this.$internals.onErrorFns,
+        staticMergedInputSchema: this.$internals.staticMergedInputSchema,
         onStartFns: this.$internals.onStartFns,
         onSuccessFns: this.$internals.onSuccessFns,
         timeout: this.$internals.timeout,
@@ -1083,6 +1113,8 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
   "json"
 > {
   return new ZodSafeFunction({
+    staticMergedInputSchema:
+      parentProcedure?.$internals.staticMergedInputSchema,
     inputSchema: parentProcedure?.$internals.inputSchema || undefined,
     outputSchema: undefined,
     shapeErrorFns: parentProcedure?.$internals.shapeErrorFns || undefined,
@@ -1139,6 +1171,7 @@ export function createServerAction(): TZodSafeFunction<
 > {
   return new ZodSafeFunction({
     inputSchema: undefined,
+    staticMergedInputSchema: undefined,
     outputSchema: undefined,
     shapeErrorFns: undefined,
     procedureHandlerChain: [],
