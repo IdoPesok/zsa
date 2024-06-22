@@ -144,9 +144,8 @@ export const useServerAction = <
         } else {
           setResult({
             error: err,
-            isError: true,
             data: undefined,
-            isSuccess: false,
+            status: "error",
           })
         }
 
@@ -164,10 +163,9 @@ export const useServerAction = <
       }
 
       const res = {
-        isError: false,
         error: undefined,
         data: data ?? undefined,
-        isSuccess: true,
+        status: "success" as const,
       }
 
       setResult(res)
@@ -237,10 +235,9 @@ export const useServerAction = <
       }
 
       setResult({
-        isError: false,
         error: undefined,
         data: data ?? undefined,
-        isSuccess: true,
+        status: "success",
       })
     },
     [execute]
