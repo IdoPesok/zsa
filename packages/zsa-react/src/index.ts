@@ -142,7 +142,12 @@ export const useServerAction = <
         if (oldResult.status === "filled") {
           setResult(oldResult.result)
         } else {
-          setResult({ error: err, isError: true, data: undefined })
+          setResult({
+            error: err,
+            isError: true,
+            data: undefined,
+            isSuccess: false,
+          })
         }
 
         // clear the old data
@@ -162,6 +167,7 @@ export const useServerAction = <
         isError: false,
         error: undefined,
         data: data ?? undefined,
+        isSuccess: true,
       }
 
       setResult(res)
@@ -234,6 +240,7 @@ export const useServerAction = <
         isError: false,
         error: undefined,
         data: data ?? undefined,
+        isSuccess: true,
       })
     },
     [execute]
