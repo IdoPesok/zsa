@@ -124,6 +124,12 @@ export const resetAction = publicAction.handler(async () => {
   return CLIENT_TEST_DATA.resultMessages.resetAction
 })
 
+export const undefinedSuccessAction = publicAction
+  .input(z.object({ ms: z.number() }))
+  .handler(async ({ input: { ms } }) => {
+    await sleep(ms)
+  })
+
 export const loadingHelloWorldAction = publicAction
   .input(z.object({ ms: z.number() }))
   .handler(async ({ input: { ms } }) => {

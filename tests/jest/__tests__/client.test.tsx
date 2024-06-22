@@ -7,6 +7,7 @@ import OptimisticUpdatesUI from "app/tests/client/optimistic-updates/page"
 import ResetUI from "app/tests/client/reset/page"
 import RetryStatesUI from "app/tests/client/retry-states/page"
 import StatesUI from "app/tests/client/states/page"
+import UndefinedSuccessActionUI from "app/tests/client/undefined-success-action/page"
 import InfiniteQueryUI from "app/tests/client/use-server-action-infinite-query/page"
 import MutationUI from "app/tests/client/use-server-action-mutation/page"
 import QueryUI from "app/tests/client/use-server-action-query/page"
@@ -42,6 +43,30 @@ describe("client", () => {
         expect(resultElement).toHaveTextContent(
           CLIENT_TEST_DATA.resultMessages.helloWorldAction
         )
+      })
+    })
+  })
+
+  describe.only("undefined success execute", () => {
+    it('basic useServerAction that returns "hello world"', async () => {
+      render(<UndefinedSuccessActionUI />)
+
+      let resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
+
+      expect(resultElement).toHaveTextContent("false")
+
+      // Try using getByText if getByRole is not working
+      const invokeButton = screen.getByRole(CLIENT_TEST_DATA.roles.invoke)
+      fireEvent.click(invokeButton)
+
+      await waitFor(() => {
+        resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
+        expect(resultElement).toHaveTextContent(CLIENT_TEST_DATA.loadingMessage)
+      })
+
+      await waitFor(() => {
+        resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
+        expect(resultElement).toHaveTextContent("true")
       })
     })
   })
