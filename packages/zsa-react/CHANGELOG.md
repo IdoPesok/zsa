@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.8
+
+### Patch Changes
+
+- 388c36b: Fix isSuccess with undefined data
+
 ## 0.1.7
 
 ### Patch Changes
