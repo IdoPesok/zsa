@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.1.9
+
+### Patch Changes
+
+- 79ddeee: Fix side effects not being called with execute form action
+
 ## 0.1.8
 
 ### Patch Changes
