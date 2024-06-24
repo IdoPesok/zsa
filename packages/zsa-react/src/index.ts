@@ -213,6 +213,7 @@ export const useServerAction = <
         startTransition(() => {
           internalExecute(opts[0])
         })
+        executeRef.current = resolve
         resolve(null)
       })
     },
