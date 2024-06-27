@@ -47,7 +47,7 @@ describe("client", () => {
     })
   })
 
-  describe.only("undefined success execute", () => {
+  describe("undefined success execute", () => {
     it('basic useServerAction that returns "hello world"', async () => {
       render(<UndefinedSuccessActionUI />)
 
