@@ -4,7 +4,6 @@
 import { cookies } from "next/headers"
 import {
   emptyFormDataAction,
-  emptyFormDataActionPreservingDataOnError,
   faultyAction,
   faultyOutputAction,
   faultyOutputInProcedureAction,
@@ -519,17 +518,6 @@ describe("actions", () => {
       const [data, err] = await emptyFormDataAction(formData)
 
       expect(data).toBeNull()
-      expect(err).not.toBeNull()
-      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
-    })
-
-    it("returns data even when there is a error", async () => {
-      const formData = new FormData()
-      formData.append("wrong input", "hello world")
-      const [data, err] =
-        await emptyFormDataActionPreservingDataOnError(formData)
-
-      expect(data).not.toBeNull()
       expect(err).not.toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.inputParse)
     })

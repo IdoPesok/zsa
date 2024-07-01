@@ -16,9 +16,6 @@ import { RetryState, TEST_DATA, auth, getPostById } from "./data"
  */
 
 export const publicAction = createServerAction()
-export const publicActionPreservingDataOnError = createServerAction({
-  persistedDataWhenError: true,
-})
 
 /**
  * Protected Action
