@@ -28,14 +28,20 @@ export type TOldResult<TServerAction extends TAnyZodSafeFunctionHandler> =
  */
 export type TServerActionResult<
   TServerAction extends TAnyZodSafeFunctionHandler,
+  TPersistError extends boolean = false,
+  TPersistData extends boolean = false,
 > =
   | {
       // pending state (not optimistic)
       isPending: true
       isOptimistic: false
-      data: undefined
+      data: TPersistData extends true
+        ? inferServerActionReturnData<TServerAction> | undefined
+        : undefined
       isError: false
-      error: undefined
+      error: TPersistError extends true
+        ? inferServerActionError<TServerAction> | undefined
+        : undefined
       isSuccess: false
       status: "pending"
     }
@@ -84,11 +90,15 @@ export type TServerActionResult<
  */
 export const calculateResultFromState = <
   TServerAction extends TAnyZodSafeFunctionHandler,
+  TPersistData extends boolean = false,
+  TPersistError extends boolean = false,
 >(state: {
   isPending: boolean
   oldResult: TOldResult<TServerAction>
   result: TInnerResult<TServerAction>
-}): TServerActionResult<TServerAction> => {
+  persistDataWhilePending?: TPersistData
+  persistErrorWhilePending?: TPersistError
+}): TServerActionResult<TServerAction, TPersistData, TPersistError> => {
   const { isPending, oldResult, result } = state
 
   if (isPending && oldResult.status === "empty") {

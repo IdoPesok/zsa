@@ -20,6 +20,8 @@ import { RetryConfig, getRetryDelay } from "./retries"
 
 export const useServerAction = <
   const TServerAction extends TAnyZodSafeFunctionHandler,
+  TPersistError extends boolean = false,
+  TPersistData extends boolean = false,
 >(
   serverAction: TServerAction,
   opts?: {
@@ -32,13 +34,11 @@ export const useServerAction = <
 
     initialData?: inferServerActionReturnData<TServerAction>
     retry?: RetryConfig<TServerAction>
-    persistErrorWhilePending?: boolean
-    persistDataWhilePending?: boolean
+    persistErrorWhilePending?: TPersistError
+    persistDataWhilePending?: TPersistData
   }
 ) => {
   const initialData = opts?.initialData
-  const persistError = opts?.persistErrorWhilePending ?? false
-  const persistData = opts?.persistDataWhilePending ?? false
 
   // store the result in state and a ref
   const [result, $setResult] = useState<TInnerResult<TServerAction>>(
@@ -326,10 +326,16 @@ export const useServerAction = <
     }
   }, [])
 
-  const final = calculateResultFromState<TServerAction>({
+  const final = calculateResultFromState<
+    TServerAction,
+    TPersistData,
+    TPersistError
+  >({
     isPending,
     oldResult,
     result: resultRef.current,
+    persistDataWhilePending: opts?.persistDataWhilePending,
+    persistErrorWhilePending: opts?.persistErrorWhilePending,
   })
 
   return {
