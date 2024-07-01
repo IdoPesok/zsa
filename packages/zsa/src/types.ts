@@ -290,6 +290,9 @@ export interface TInternals<
   /** The final input schema of the handler */
   inputSchema: TInputSchemaFn<any, any> | TInputSchema
 
+  /** The final static input schema of the handler */
+  staticMergedInputSchema?: any
+
   /** The final output schema of the handler */
   outputSchema: TOutputSchema | TOutputSchemaFn<any>
 
