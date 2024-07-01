@@ -1,6 +1,6 @@
 {
   "name": "zsa",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publishConfig": {
     "access": "public"
   },
@@ -32,11 +32,12 @@
     "dev": "npm run build -- --watch",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf .next"
   },
-  "dependencies": {
-    "typescript": "latest",
+  "peerDependencies": {
     "zod": "^3.23.5"
   },
   "devDependencies": {
-    "tsup": "^8.0.2"
+    "tsup": "^8.0.2",
+    "typescript": "latest",
+    "zod": "^3.23.5"
   }
 }
