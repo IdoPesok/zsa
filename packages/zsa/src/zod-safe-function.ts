@@ -637,7 +637,6 @@ export class ZodSafeFunction<
       flattenedErrors = data.flatten()
     }
 
-    // finally return the error
     return [
       null,
       {
