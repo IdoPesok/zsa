@@ -270,7 +270,7 @@ describe("client", () => {
     })
   })
 
-  describe.only("useServerAction error states", () => {
+  describe("useServerAction error states", () => {
     it("handles error states correctly", async () => {
       render(<ErrorStatesUI />)
 
