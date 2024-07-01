@@ -66,10 +66,30 @@ export const isKeyAnArrayInZodSchema = (key: string, schema: z.ZodTypeAny) => {
   return isArray
 }
 
-export const formDataToJson = (formData: FormData, inputSchema: z.ZodType) => {
+/**
+ * Convert a FormData object into a JSON object.
+ * We use this method to return a zod schema values as JSON
+ * When returned in a server action data must be serializable.
+ * File inputs are not serialiable so when there is a validation
+ * error we do clean up of those values
+ *
+ * Docs:
+ * https://react.dev/reference/rsc/use-server#serializable-parameters-and-return-values
+ */
+export const formDataToJson = ({
+  formData,
+  inputSchema,
+  safeValue = false
+}: {
+  formData: FormData,
+  inputSchema: z.ZodType,
+  safeValue?: boolean
+}) => {
   const json: Record<string, any> = {}
 
-  formData.forEach((value, key) => {
+  formData.forEach((val, key) => {
+    // File values can't be serialized into JSON
+    const value = safeValue && val instanceof Blob ? undefined : val
     const isArraySchema = isKeyAnArrayInZodSchema(key, inputSchema)
 
     // Reflect.has in favor of: object.hasOwnProperty(key)

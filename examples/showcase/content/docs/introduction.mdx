@@ -14,7 +14,7 @@ _and much more!_
 
 To get started, you can install `zsa` using any package manager:
 
-```bash 
+```bash
 npm i zsa zsa-react zod
 ```
 
@@ -58,6 +58,10 @@ Let's break down the code:
   handler's input is does not match input schema.
 </Info>
 
+### createServerAction
+You can initialize a server action with the following options:
+  - `persistedDataWhenError` (optional, default: `false`)
+  It will persist the data when an error occurs. This is useful when you want to return the data even if an error occurs.
 ## Calling from the server
 
 Server actions can also be called directly from the server without the need for a try/catch block.
