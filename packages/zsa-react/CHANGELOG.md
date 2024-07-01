@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.2.1
+
+### Patch Changes
+
+- 8da516d: Added `persistDataWhilePending` and `persistErrorWhilePending` options to `useServerAction` hook.
+
 ## 0.2.0
 
 ### Minor Changes
