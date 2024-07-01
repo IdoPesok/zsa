@@ -335,9 +335,6 @@ export interface TInternals<
 
   /** A function to run when the handler errors to customize the error */
   shapeErrorFns: Array<TShapeErrorFn> | undefined
-
-  /** boolean indicating if the previous data is returned when there is an error **/
-  persistedDataWhenError?: boolean | undefined
 }
 
 export type InputTypeOptions = "formData" | "json" | "state"

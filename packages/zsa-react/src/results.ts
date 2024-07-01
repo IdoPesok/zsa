@@ -88,18 +88,16 @@ export const calculateResultFromState = <
   isPending: boolean
   oldResult: TOldResult<TServerAction>
   result: TInnerResult<TServerAction>
-  persistedData?: boolean
-  persistedError?: boolean
 }): TServerActionResult<TServerAction> => {
-  const { isPending, oldResult, result, persistedData, persistedError } = state
+  const { isPending, oldResult, result } = state
 
   if (isPending && oldResult.status === "empty") {
     return {
       isPending: true,
       isOptimistic: false,
-      data: persistedData ? result.data : undefined,
+      data: undefined,
       isError: false,
-      error: persistedError ? result.error : undefined,
+      error: undefined,
       isSuccess: false,
       status: "pending",
     }
@@ -132,7 +130,7 @@ export const calculateResultFromState = <
     // error state
     return {
       isPending: false,
-      data: persistedData ? result.data : undefined,
+      data: undefined,
       isError: true,
       error: result.error as any,
       isOptimistic: false,

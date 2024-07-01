@@ -62,11 +62,7 @@ export class CompleteProcedure<
   }
 
   /** make a server action with the current procedure */
-  createServerAction(
-    { persistedDataWhenError }: { persistedDataWhenError?: boolean } = {
-      persistedDataWhenError: false,
-    }
-  ): TZodSafeFunction<
+  createServerAction(): TZodSafeFunction<
     TInputSchema,
     undefined,
     TError,
@@ -86,7 +82,6 @@ export class CompleteProcedure<
       timeout: this.$internals.timeout,
       retryConfig: this.$internals.retryConfig,
       shapeErrorFns: this.$internals.shapeErrorFns,
-      persistedDataWhenError,
     }) as any
   }
 }

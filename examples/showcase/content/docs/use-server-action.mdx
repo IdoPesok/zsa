@@ -126,8 +126,8 @@ function MyComponent() {
   - `retry`: An object specifying the retry behavior:
     - `maxAttempts`: The maximum number of retry attempts.
     - `delay`: The delay in milliseconds between retry attempts, or a function that takes the current attempt number and error, and returns the delay.
-  - `persistedError`: When you want to persist the error state while the server action is pending. Default is `false`.
-  - `persistedData`: When you want to persist the data state while the server action is pending. Default is `false`. This is helpful if you have form fields that you want to keep filled even when there is an error on other fields.
+  - `persistErrorWhilePending`: When you want to persist the error state while the server action is pending. Default is `false`.
+  - `persistDataWhilePending`: When you want to persist the data state while the server action is pending. Default is `false`. This is helpful if you have form fields that you want to keep filled even when there is an error on other fields.
 
 
 ## Return Value
