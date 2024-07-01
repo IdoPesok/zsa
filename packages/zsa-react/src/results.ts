@@ -105,9 +105,9 @@ export const calculateResultFromState = <
     return {
       isPending: true,
       isOptimistic: false,
-      data: undefined,
+      data: state.persistDataWhilePending ? result.data : undefined,
       isError: false,
-      error: undefined,
+      error: state.persistErrorWhilePending ? result.error : undefined,
       isSuccess: false,
       status: "pending",
     }
