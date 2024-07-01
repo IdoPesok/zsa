@@ -155,6 +155,15 @@ export const errorAction = publicAction
     throw new Error(TEST_DATA.errors.string)
   })
 
+export const errorActionWithPause = publicAction
+  .input(async () => {
+    await new Promise((r) => setTimeout(r, 2000))
+    return z.object({ number: z.number().min(10) })
+  })
+  .handler(async () => {
+    throw new Error(TEST_DATA.errors.string)
+  })
+
 export const callbacksAction = publicAction
   .input(z.object({ shouldError: z.boolean() }))
   .handler(async ({ input: { shouldError } }) => {

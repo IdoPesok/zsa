@@ -4,6 +4,7 @@ import ErrorStatesUI from "app/tests/client/error-states/page"
 import UserGreetingUI from "app/tests/client/get-user-greeting-action/page"
 import HelloWorldUI from "app/tests/client/hello-world-action/page"
 import OptimisticUpdatesUI from "app/tests/client/optimistic-updates/page"
+import PersistedErrorStatesUI from "app/tests/client/persisted-error-states/page"
 import ResetUI from "app/tests/client/reset/page"
 import RetryStatesUI from "app/tests/client/retry-states/page"
 import StatesUI from "app/tests/client/states/page"
@@ -269,7 +270,7 @@ describe("client", () => {
     })
   })
 
-  describe("useServerAction error states", () => {
+  describe.only("useServerAction error states", () => {
     it("handles error states correctly", async () => {
       render(<ErrorStatesUI />)
 
@@ -293,6 +294,53 @@ describe("client", () => {
           `["Number must be greater than or equal to 10"]`
         )
       })
+    })
+
+    it("handles persisted error states correctly", async () => {
+      render(<PersistedErrorStatesUI />)
+
+      let invokeButton = screen.getByRole(CLIENT_TEST_DATA.roles.invoke)
+      fireEvent.click(invokeButton)
+
+      const checkErrors = () => {
+        const fieldErrorsElement = screen.getByRole("field-errors")
+        expect(fieldErrorsElement).toHaveTextContent(
+          `["Number must be greater than or equal to 10"]`
+        )
+      }
+
+      // check initial errors
+      await waitFor(
+        () => {
+          expect(invokeButton).toBeEnabled()
+          checkErrors()
+        },
+        { timeout: 5000 }
+      )
+
+      // click button again
+      invokeButton = screen.getByRole(CLIENT_TEST_DATA.roles.invoke)
+      fireEvent.click(invokeButton)
+
+      // wait for load to start
+      await new Promise((r) => setTimeout(r, 1000)) // wait for 1 second
+
+      // check isPending && errors (persisted)
+      await waitFor(() => {
+        expect(invokeButton).toBeDisabled()
+        checkErrors()
+      })
+
+      // check once pending is over error is still there
+      await waitFor(
+        () => {
+          expect(invokeButton).toBeEnabled()
+          checkErrors()
+        },
+        {
+          timeout: 5000,
+        }
+      )
     })
   })
 
