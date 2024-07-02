@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import {
   TAnyZodSafeFunctionHandler,
+  TUseServerActionResponse,
   inferServerActionError,
+  inferServerActionInputRaw,
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
@@ -33,19 +35,21 @@ export const useServerAction = <
     onFinish?: (result: inferServerActionReturnType<TServerAction>) => void
 
     initialData?: inferServerActionReturnData<TServerAction>
+    initialInput?: inferServerActionInputRaw<TServerAction>
     retry?: RetryConfig<TServerAction>
     persistErrorWhilePending?: TPersistError
     persistDataWhilePending?: TPersistData
   }
 ) => {
   const initialData = opts?.initialData
+  const initialInput = opts?.initialInput
 
   // store the result in state and a ref
   const [result, $setResult] = useState<TInnerResult<TServerAction>>(
-    getEmptyResult(initialData)
+    getEmptyResult(initialData, initialInput)
   )
   const resultRef = useRef<TInnerResult<TServerAction>>(
-    getEmptyResult(initialData)
+    getEmptyResult(initialData, initialInput)
   )
 
   // store the old result in state and a ref
@@ -116,15 +120,27 @@ export const useServerAction = <
       status.current = "pending"
       setExecuting(true)
 
-      let data, err
+      let data, err, actionInput
 
-      await serverAction(input, overrideData).then((response) => {
+      await serverAction(
+        input,
+        overrideData,
+        // @ts-expect-error we can't pass the source from here but there is an exception for it
+        {
+          isFromUseServerAction: true,
+        }
+      ).then((response) => {
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
-          ;[data, err] = response
+          const { input: $actionInput, returned } =
+            response as unknown as TUseServerActionResponse<TServerAction>
+          ;[data, err] = returned
+          actionInput = $actionInput
         }
       })
+
+      if (!actionInput) throw new Error("Internal error")
 
       if (err) {
         let retryDelay = getRetryDelay(opts?.retry, retryCount.current, err)
@@ -149,6 +165,7 @@ export const useServerAction = <
             error: err,
             data: undefined,
             status: "error",
+            input: actionInput,
           })
         }
 
@@ -169,9 +186,10 @@ export const useServerAction = <
         error: undefined,
         data: data ?? undefined,
         status: "success" as const,
+        input: actionInput,
       }
 
-      setResult(res)
+      setResult(res as any)
 
       // clear the old data
       setOldResult({
@@ -238,10 +256,12 @@ export const useServerAction = <
         })
       }
 
+      // @ts-expect-error
       setResult({
         error: undefined,
         data: data ?? undefined,
         status: "success",
+        input: undefined,
       })
     },
     [execute]
