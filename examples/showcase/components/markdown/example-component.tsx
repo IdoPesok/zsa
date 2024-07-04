@@ -1,4 +1,5 @@
 import { BasicForm } from "@/content/docs/examples/basic-form/basic-form-example"
+import { BindFormExample } from "@/content/docs/examples/bind-form-example/bind-form-example"
 import DocsPage from "@/content/docs/examples/docs/swagger-docs"
 import { ExecuteFormAction } from "@/content/docs/examples/execute-form-action/execute-form-action"
 import FormDataExample from "@/content/docs/examples/form-data/form-data-example"
@@ -18,6 +19,8 @@ function ExampleComponent({ id }: { id: string }) {
       return <RandomNumberExampleDisplay />
     case "random-number-example-refetch":
       return <RandomNumberExampleRefetch />
+    case "bind-form-example":
+      return <BindFormExample />
     case "hello-world-action":
       return <HelloWorld />
     case "increment-example":

@@ -17,6 +17,7 @@ import {
   getEmptyResult,
 } from "./results"
 import { RetryConfig, getRetryDelay } from "./retries"
+import { mergePossibleObjects } from "./utils"
 
 export const useServerAction = <
   const TServerAction extends TAnyZodSafeFunctionHandler,
@@ -32,6 +33,10 @@ export const useServerAction = <
     onStart?: () => void
     onFinish?: (result: inferServerActionReturnType<TServerAction>) => void
 
+    bind?: Parameters<TServerAction>[0] extends FormData
+      ? Parameters<TServerAction>[1]
+      : undefined
+
     initialData?: inferServerActionReturnData<TServerAction>
     retry?: RetryConfig<TServerAction>
     persistErrorWhilePending?: TPersistError
@@ -39,6 +44,7 @@ export const useServerAction = <
   }
 ) => {
   const initialData = opts?.initialData
+  const bindArgs = opts?.bind
 
   // store the result in state and a ref
   const [result, $setResult] = useState<TInnerResult<TServerAction>>(
@@ -199,7 +205,7 @@ export const useServerAction = <
       return await new Promise((resolve) => {
         executeRef.current = resolve
         startTransition(() => {
-          internalExecute(opts[0], opts[1])
+          internalExecute(opts[0], mergePossibleObjects(bindArgs, opts[1]))
         })
       })
     },
@@ -214,7 +220,7 @@ export const useServerAction = <
     ): Promise<null> => {
       return await new Promise((resolve) => {
         startTransition(() => {
-          internalExecute(opts[0])
+          internalExecute(opts[0], bindArgs)
         })
         executeRef.current = resolve
         resolve(null)
