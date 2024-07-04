@@ -51,7 +51,7 @@ In this example:
 
 1. We create a `authedProcedure` that verifies the user is logged in by calling `getUser()`.
 2. If successful, it returns the user's email and id. If not, it throws an error.
-3. We create an `updateEmail` by chaining `createServerAction()` off the procedure. Invoking this action will now the procedure's handler before running its own handler, thus ensuring that only authed users can use this server action.
+3. We create an `updateEmail` by chaining `createServerAction()` off the procedure. Invoking this action will now call the procedure's handler before running its own handler, thus ensuring that only authed users can use this server action.
 
 ## Chaining procedures
 
