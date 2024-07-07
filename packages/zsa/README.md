@@ -29,4 +29,12 @@ View the full documentation and examples on [zsa.vercel.app](https://zsa.vercel.
 
 If you need help with anything, feel free to DM ([@ido_pesok](https://twitter.com/ido_pesok)) on X.
 
+## Disclaimer
+
+This is a personal project and is not associated with any company or organization. While I strive to make this project as reliable and useful as possible, it is provided "as is" without any guarantees or warranties.
+
+**Use at your own risk.** You are responsible for reviewing, testing, and validating the code to ensure it meets your requirements and for any consequences that may arise from its use.
+
+I will do my best to maintain and improve this project, but please understand that as a personal project, support and updates may be limited.
+
 ## [Contributors](https://github.com/IdoPesok/zsa/graphs/contributors)
