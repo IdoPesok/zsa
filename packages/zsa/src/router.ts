@@ -4,22 +4,25 @@ interface TAnyActionMap {
   [key: string]: TAnyZodSafeFunctionHandler
 }
 
-export interface TRouterAction<
-  TActionMap extends TAnyActionMap,
-  TActionKey extends keyof TActionMap,
-> {
-  (
+export interface TRouterAction<TActionMap extends TAnyActionMap> {
+  <TActionKey extends keyof TActionMap>(
     key: TActionKey,
     ...args: Parameters<TActionMap[TActionKey]>
   ): Promise<ReturnType<TActionMap[TActionKey]>>
 }
 
-export type TAnyRouterAction = TRouterAction<any, any>
+export type TAnyRouterAction = TRouterAction<any>
 
 type TMergeActionMap<
   T extends TAnyActionMap,
   U extends TAnyActionMap,
-> = ServerActionRouter<T & U>
+> = ServerActionRouter<{
+  [K in keyof T | keyof U]: K extends keyof T
+    ? T[K]
+    : K extends keyof U
+      ? U[K]
+      : never
+}>
 
 class ServerActionRouter<const TActionMap extends TAnyActionMap> {
   $MAP: TActionMap
@@ -92,15 +95,14 @@ export const createRouterAction = <
 >(
   router: TRouter
 ) => {
-  type TActionMap = TRouter["$MAP"]
-  const routerFn: TRouterAction<TActionMap, keyof TRouter["$MAP"]> = async <
-    TActionKey extends keyof TRouter,
-  >(
+  type TRet = TRouterAction<TRouter["$MAP"]>
+
+  const routerFn: TRet = async <const TActionKey extends keyof TRouter["$MAP"]>(
     /** The key of the action to execute */
     key: TActionKey,
     /** The input to the action */
-    ...args: Parameters<TActionMap[TActionKey]>
-  ): Promise<ReturnType<TActionMap[TActionKey]>> => {
+    ...args: Parameters<TRouter["$MAP"][TActionKey]>
+  ): Promise<ReturnType<TRouter["$MAP"][TActionKey]>> => {
     if (!router.$MAP[key]) {
       throw new Error(`Action "${key as string}" not found in router`)
     }
@@ -111,4 +113,4 @@ export const createRouterAction = <
 }
 
 export type inferMapFromRouterAction<T extends TAnyRouterAction> =
-  T extends TRouterAction<infer TActionMap, any> ? TActionMap : never
+  T extends TRouterAction<infer TActionMap> ? TActionMap : never

@@ -4,7 +4,12 @@ import { sleep } from "lib/utils"
 import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 import { z } from "zod"
-import { ZSAError, createServerAction } from "zsa"
+import {
+  ZSAError,
+  createRouterAction,
+  createServerAction,
+  createServerActionRouter,
+} from "zsa"
 import { CLIENT_TEST_DATA, TEST_DATA } from "./data"
 import {
   adminAction,
@@ -654,3 +659,15 @@ export const dynamicSchemasAction = publicAction
       randomNumber: Math.random() * (max - min) + min,
     }
   })
+
+const actionsRouterInner = createServerActionRouter()
+  .add("formData", formDataAction)
+  .add("getUserId", getUserIdAction)
+  .add("inputNumber", inputNumberAction)
+  .add("loadingHelloWorld", loadingHelloWorldAction)
+
+export const actionsRouter = createRouterAction(
+  createServerActionRouter()
+    .join("actions", actionsRouterInner)
+    .add("helloWorld", helloWorldAction)
+)

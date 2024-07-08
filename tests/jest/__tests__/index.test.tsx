@@ -3,6 +3,7 @@
  */
 import { cookies } from "next/headers"
 import {
+  actionsRouter,
   emptyFormDataAction,
   faultyAction,
   faultyOutputAction,
@@ -69,6 +70,14 @@ describe("actions", () => {
       expect(err).toBeNull()
     })
 
+    it('returns "hello world" from the inner router', async () => {
+      const [data, err] = await actionsRouter("helloWorld")
+      const testType: typeof data = "hello world"
+      expect(data).toEqual("hello world")
+      expect(testType).toEqual("hello world")
+      expect(err).toBeNull()
+    })
+
     it("throws an error when trying to attack opts", async () => {
       expect(async () => {
         await helloWorldAction(undefined, undefined, {
@@ -95,6 +104,17 @@ describe("actions", () => {
       })
 
       const [data, err] = await getUserIdAction()
+      expect(data).toBeNull()
+      expect(err?.code).toEqual(TEST_DATA.errors.notAuthorized)
+      expect((err as any)?.stack).not.toBeDefined()
+    })
+
+    it("returns an error when not authenticated in the router", async () => {
+      ;(cookies as jest.Mock).mockReturnValue({
+        get: (v: string) => null,
+      })
+
+      const [data, err] = await actionsRouter("actions.getUserId")
       expect(data).toBeNull()
       expect(err?.code).toEqual(TEST_DATA.errors.notAuthorized)
       expect((err as any)?.stack).not.toBeDefined()
@@ -404,8 +424,27 @@ describe("actions", () => {
       expect(err).toBeNull()
     })
 
+    it("returns the input number [router]", async () => {
+      const [data, err] = await actionsRouter("actions.inputNumber", {
+        number: 100,
+      })
+      expect(data).toEqual({ number: 100 })
+      expect(err).toBeNull()
+    })
+
     it("throws when the input number is invalid", async () => {
       const [data, err] = await inputNumberAction({ number: 0 })
+      expect(data).toBeNull()
+      expect(err?.code).toBe(TEST_DATA.errors.inputParse)
+      expect(err?.fieldErrors?.number).not.toBeUndefined()
+      expect(err?.formattedErrors?.number?._errors).not.toBeUndefined()
+      expect(err?.formErrors).toHaveLength(0)
+    })
+
+    it("throws when the input number is invalid [router]", async () => {
+      const [data, err] = await actionsRouter("actions.inputNumber", {
+        number: 0,
+      })
       expect(data).toBeNull()
       expect(err?.code).toBe(TEST_DATA.errors.inputParse)
       expect(err?.fieldErrors?.number).not.toBeUndefined()
@@ -462,6 +501,23 @@ describe("actions", () => {
       formData.append("email", "test@example.com")
       formData.append("number", "100")
       const [data, err] = await formDataAction(formData, {
+        email: "test@example123.com",
+      })
+
+      expect(data).toEqual({
+        name: "test",
+        email: "test@example123.com",
+        number: 100,
+      })
+      expect(err).toBeNull()
+    })
+
+    it("returns the form data from the inner router", async () => {
+      const formData = new FormData()
+      formData.append("name", "test")
+      formData.append("email", "test@example.com")
+      formData.append("number", "100")
+      const [data, err] = await actionsRouter("actions.formData", formData, {
         email: "test@example123.com",
       })
 
