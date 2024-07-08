@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import {
-  TAnyServerActionRouterFn,
+  TAnyRouterAction,
   TAnyZodSafeFunctionHandler,
-  inferMapFromServerActionRouterFn,
+  inferMapFromRouterAction,
   inferServerActionReturnType,
 } from "zsa"
 import { TSetOptimisticInput, evaluateOptimisticInput } from "./optimistic"
@@ -24,9 +24,15 @@ export const useServerAction = <
   const TServerAction extends TAnyZodSafeFunctionHandler,
   TPersistError extends boolean = false,
   TPersistData extends boolean = false,
+  TUseRouterKey extends boolean = false,
 >(
   serverAction: TServerAction,
-  opts?: TUseServerActionOpts<TServerAction, TPersistError, TPersistData>
+  opts?: TUseServerActionOpts<
+    TServerAction,
+    TPersistError,
+    TPersistData,
+    TUseRouterKey
+  >
 ) => {
   const initialData = opts?.initialData
   const bindArgs = opts?.bind
@@ -347,24 +353,26 @@ export const useServerAction = <
   }
 }
 
-export const useServerActionRouter = <
-  TRouter extends TAnyServerActionRouterFn,
-  TServerActionKey extends keyof inferMapFromServerActionRouterFn<TRouter>,
+export const useRouterAction = <
+  TRouter extends TAnyRouterAction,
+  TServerActionKey extends keyof inferMapFromRouterAction<TRouter>,
   TPersistError extends boolean = false,
   TPersistData extends boolean = false,
 >(
   router: TRouter,
   serverActionKey: TServerActionKey,
   opts?: TUseServerActionOpts<
-    inferMapFromServerActionRouterFn<TRouter>[TServerActionKey],
+    inferMapFromRouterAction<TRouter>[TServerActionKey],
     TPersistError,
-    TPersistData
+    TPersistData,
+    false
   >
 ) => {
   const hookData = useServerAction<
-    inferMapFromServerActionRouterFn<TRouter>[TServerActionKey],
+    inferMapFromRouterAction<TRouter>[TServerActionKey],
     TPersistError,
-    TPersistData
+    TPersistData,
+    true
   >(router as any, {
     ...(opts || {}),
     routerKey: serverActionKey as string,

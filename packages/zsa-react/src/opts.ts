@@ -10,6 +10,7 @@ export interface TUseServerActionOpts<
   TServerAction extends TAnyZodSafeFunctionHandler,
   TPersistError extends boolean,
   TPersistData extends boolean,
+  TUseRouterKey extends boolean,
 > {
   onError?: (args: { err: inferServerActionError<TServerAction> }) => void
   onSuccess?: (args: {
@@ -27,5 +28,5 @@ export interface TUseServerActionOpts<
   persistErrorWhilePending?: TPersistError
   persistDataWhilePending?: TPersistData
 
-  routerKey?: string
+  routerKey?: TUseRouterKey extends true ? string : undefined
 }
