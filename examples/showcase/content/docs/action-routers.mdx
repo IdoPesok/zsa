@@ -1,0 +1,130 @@
+---
+title: "Action Routers"
+group: "Goodies"
+groupOrder: -10
+---
+
+The primary advantage of using routers in ZSA is the ability to expose multiple server actions through a single endpoint. This approach significantly simplifies your server-side code and provides a clean, organized structure for your API.
+
+## Key Concept
+
+With ZSA routers, you only need to use the "use server" directive once, regardless of how many actions you define. This is a game-changer for organizing and managing server actions in Next.js applications.
+
+## `createServerActionRouter`
+
+`createServerActionRouter` allows you to group related actions without exposing them individually.
+
+### Usage
+
+```typescript title="api/users.ts"
+const userRouter = createServerActionRouter()
+  .add("getUsers", getUsers)
+  .add("newUser", newUser)
+  .add("editUser", editUser)
+```
+
+```typescript title="api/posts.ts"
+const postsRouter = createServerActionRouter()
+  .add("getPosts", getPosts)
+  .add("newPost", newPost)
+  .add("editPost", editPost)
+```
+
+```typescript title="api/index.ts"
+"use server" // [!code highlight]
+
+import { createRouterAction, createServerActionRouter } from 'zsa'
+import { userRouter } from './users'
+import { postsRouter } from './posts'
+
+const router = createServerActionRouter()
+  .join("users", userRouter)
+  .join("posts", postsRouter)
+
+export const api = createRouterAction(router) // [!code highlight]
+```
+
+In this example, we only use "use server" once, in the file where we create and export our unified API.
+
+## Router Methods
+
+ZSA routers use two key methods to structure server actions: `add` and `join`.
+
+### add
+
+`add` attaches individual server actions to a router.
+
+```typescript
+const userRouter = createServerActionRouter()
+  .add("getUsers", getUsers)
+  .add("newUser", newUser)
+```
+
+### join
+
+`join` combines multiple routers into a larger structure.
+
+```typescript
+const mainRouter = createServerActionRouter()
+  .join("users", userRouter)
+  .join("posts", postsRouter)
+```
+
+### Combined Usage
+
+```typescript
+const api = createRouterAction(
+  createServerActionRouter()
+    .join("users", createServerActionRouter()
+      .add("getUsers", getUsers)
+      .add("newUser", newUser)
+    )
+    .join("posts", createServerActionRouter()
+      .add("getPosts", getPosts)
+      .add("newPost", newPost)
+    )
+    .add("globalSearch", globalSearch)
+)
+```
+
+This structure allows client-side calls like:
+- `api("users.getUsers", ...)`
+- `api("posts.newPost", ...)`
+- `api("globalSearch", ...)`
+
+By using `add` and `join`, you can create a well-organized, scalable API structure within a single exposed server endpoint.
+
+## Benefits of the Single Endpoint Approach
+
+1. **Simplified Server-Side Code**: Only one file needs the "use server" directive.
+2. **Improved Organization**: Actions are grouped logically but exposed through a single point.
+3. **Easier Maintenance**: Adding or modifying actions doesn't require creating new server endpoints.
+4. **Reduced Boilerplate**: No need to write "use server" for each individual action.
+5. **Better Performance**: Potentially fewer network requests as all actions go through one endpoint.
+
+## `useRouterAction`
+
+On the client side, `useRouterAction` provides a seamless way to interact with your unified API.
+
+### Usage
+
+```typescript
+import { useRouterAction } from 'zsa-react'
+
+const MyComponent = () => {
+  const { execute } = useRouterAction(api, "users.newUser")
+
+  const handleCreateUser = async () => {
+    const [data, err] = await execute({ name: "New User" })
+    // Handle result...
+  }
+
+  // ... rest of the component
+}
+```
+
+With this setup, client components can easily access any server action through the single `api` endpoint, maintaining type safety and simplifying the overall architecture of your application.
+
+## Conclusion
+
+By leveraging ZSA routers and exposing a single endpoint, you can create a more maintainable, organized, and efficient server action architecture in your Next.js applications. This approach aligns with best practices for server-side code organization while taking full advantage of Next.js server actions.
