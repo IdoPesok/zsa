@@ -685,3 +685,28 @@ export const BindFormExample = () => {
 Here is the result:
 
 <ExampleComponent id="bind-form-example" />
+
+### On Submit
+
+If the action is a form action, you can also send more fields in the second argument of the `execute` function. This is useful for sending additional fields that are not part of the form.
+
+```tsx title="bind-form-on-submit.tsx"
+const { execute } = useServerAction(produceNewMessage)
+
+return (
+  <form
+    onSubmit={async (event) => {
+      event.preventDefault()
+      const formData = new FormData(event.currentTarget)
+      const [data, err] = await execute(formData, {
+        otherArg1: "binded", // [!code highlight]
+      })
+
+      if (err) {
+        // handle error
+        return
+      }
+    }}
+  />
+)
+```

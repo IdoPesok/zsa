@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.2.2
+
+### Patch Changes
+
+- 7607390: Added bind option for formData actions
+
 ## 0.2.1
 
 ### Patch Changes
