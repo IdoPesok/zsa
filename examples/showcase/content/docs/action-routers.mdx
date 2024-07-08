@@ -94,15 +94,7 @@ This structure allows client-side calls like:
 
 By using `add` and `join`, you can create a well-organized, scalable API structure within a single exposed server endpoint.
 
-## Benefits of the Single Endpoint Approach
-
-1. **Simplified Server-Side Code**: Only one file needs the "use server" directive.
-2. **Improved Organization**: Actions are grouped logically but exposed through a single point.
-3. **Easier Maintenance**: Adding or modifying actions doesn't require creating new server endpoints.
-4. **Reduced Boilerplate**: No need to write "use server" for each individual action.
-5. **Better Performance**: Potentially fewer network requests as all actions go through one endpoint.
-
-## `useRouterAction`
+## useRouterAction
 
 On the client side, `useRouterAction` provides a seamless way to interact with your unified API.
 
