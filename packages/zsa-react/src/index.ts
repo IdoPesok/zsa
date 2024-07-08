@@ -100,16 +100,7 @@ export const useServerAction = <
 
       // if the retry ids don't match, we should not refetch
       if (isFromRetryId && lastRetryId.current !== isFromRetryId) {
-        return [
-          null,
-          {
-            message: "Could not successfully execute the server action",
-            data: "Could not successfully execute the server action",
-            stack: "",
-            name: "ZSAError",
-            code: "ERROR",
-          },
-        ] as any
+        return
       }
 
       // start a new retry count
@@ -146,8 +137,6 @@ export const useServerAction = <
         }
       })
 
-      if (!actionInput) throw new Error("Internal error")
-
       if (err) {
         let retryDelay = getRetryDelay(opts?.retry, retryCount.current, err)
         if (retryDelay >= 0) {
@@ -171,7 +160,7 @@ export const useServerAction = <
             error: err,
             data: undefined,
             status: "error",
-            input: actionInput,
+            input: actionInput as any,
           })
         }
 
@@ -185,7 +174,7 @@ export const useServerAction = <
         status.current = "error"
         setExecuting(false)
 
-        return [data, err] as any
+        return
       }
 
       const res = {
@@ -206,8 +195,6 @@ export const useServerAction = <
       // success state
       status.current = "success"
       setExecuting(false)
-
-      return [data, err] as any
     },
     [serverAction]
   )

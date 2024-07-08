@@ -19,7 +19,7 @@ export default function CallbacksUI() {
     onFinish: CLIENT_TEST_DATA.initialMessage,
   })
 
-  const { execute } = useServerAction(callbacksAction, {
+  const { execute, input } = useServerAction(callbacksAction, {
     onStart: () =>
       setCallbackData((prev) => ({
         ...prev,
@@ -72,6 +72,7 @@ export default function CallbacksUI() {
       <div role="onSuccess">{callbackData.onSuccess.toString()}</div>
       <div role="onError">{callbackData.onError.toString()}</div>
       <div role="onFinish">{callbackData.onFinish.toString()}</div>
+      <div role="input">{String(input?.shouldError)}</div>
     </div>
   )
 }

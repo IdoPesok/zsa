@@ -97,6 +97,11 @@ describe("client", () => {
         expect(resultElement).toHaveTextContent(
           CLIENT_TEST_DATA.resultMessages.getUserGreetingAction
         )
+
+        const inputElement = screen.getByRole("input")
+        expect(inputElement).toHaveTextContent(
+          CLIENT_TEST_DATA.sleep.toString()
+        )
       })
     })
   })
@@ -149,6 +154,11 @@ describe("client", () => {
       })
 
       await waitFor(() => {
+        const inputElement = screen.getByRole("input")
+        expect(inputElement).toHaveTextContent("false")
+      })
+
+      await waitFor(() => {
         resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
         expect(resultElement).toHaveTextContent(
           CLIENT_TEST_DATA.resultMessages.callbacksAction
@@ -198,6 +208,11 @@ describe("client", () => {
       await waitFor(() => {
         const onFinishElement = screen.getByRole("onFinish")
         expect(onFinishElement).toHaveTextContent("ERROR")
+      })
+
+      await waitFor(() => {
+        const inputElement = screen.getByRole("input")
+        expect(inputElement).toHaveTextContent("true")
       })
 
       await waitFor(() => {
