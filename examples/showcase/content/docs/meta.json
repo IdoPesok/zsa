@@ -25,6 +25,7 @@
     "configuring-openapi",
     "---Goodies---",
     "best-practices",
+    "action-routers",
     "infer-types"
   ]
 }

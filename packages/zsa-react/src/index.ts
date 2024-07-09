@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import {
+  TAnyRouterAction,
   TAnyZodSafeFunctionHandler,
-  inferServerActionError,
-  inferServerActionReturnData,
+  inferMapFromRouterAction,
   inferServerActionReturnType,
 } from "zsa"
 import { TSetOptimisticInput, evaluateOptimisticInput } from "./optimistic"
+import { TUseServerActionOpts } from "./opts"
 import {
   TInnerResult,
   TOldResult,
@@ -16,32 +17,22 @@ import {
   getEmptyOldResult,
   getEmptyResult,
 } from "./results"
-import { RetryConfig, getRetryDelay } from "./retries"
+import { getRetryDelay } from "./retries"
 import { mergePossibleObjects } from "./utils"
 
 export const useServerAction = <
   const TServerAction extends TAnyZodSafeFunctionHandler,
   TPersistError extends boolean = false,
   TPersistData extends boolean = false,
+  TUseRouterKey extends boolean = false,
 >(
   serverAction: TServerAction,
-  opts?: {
-    onError?: (args: { err: inferServerActionError<TServerAction> }) => void
-    onSuccess?: (args: {
-      data: inferServerActionReturnData<TServerAction>
-    }) => void
-    onStart?: () => void
-    onFinish?: (result: inferServerActionReturnType<TServerAction>) => void
-
-    bind?: Parameters<TServerAction>[0] extends FormData
-      ? Parameters<TServerAction>[1]
-      : undefined
-
-    initialData?: inferServerActionReturnData<TServerAction>
-    retry?: RetryConfig<TServerAction>
-    persistErrorWhilePending?: TPersistError
-    persistDataWhilePending?: TPersistData
-  }
+  opts?: TUseServerActionOpts<
+    TServerAction,
+    TPersistError,
+    TPersistData,
+    TUseRouterKey
+  >
 ) => {
   const initialData = opts?.initialData
   const bindArgs = opts?.bind
@@ -124,13 +115,22 @@ export const useServerAction = <
 
       let data, err
 
-      await serverAction(input, overrideData).then((response) => {
+      const handleResponse = (response: any) => {
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
           ;[data, err] = response
         }
-      })
+      }
+
+      if (!opts?.routerKey) {
+        await serverAction(input, overrideData).then(handleResponse)
+      } else {
+        // if we have a router key, pass it to the server action
+        await serverAction(opts.routerKey, input, overrideData).then(
+          handleResponse
+        )
+      }
 
       if (err) {
         let retryDelay = getRetryDelay(opts?.retry, retryCount.current, err)
@@ -351,4 +351,32 @@ export const useServerAction = <
     setOptimistic,
     executeFormAction,
   }
+}
+
+export const useRouterAction = <
+  TRouter extends TAnyRouterAction,
+  TServerActionKey extends keyof inferMapFromRouterAction<TRouter>,
+  TPersistError extends boolean = false,
+  TPersistData extends boolean = false,
+>(
+  router: TRouter,
+  serverActionKey: TServerActionKey,
+  opts?: TUseServerActionOpts<
+    inferMapFromRouterAction<TRouter>[TServerActionKey],
+    TPersistError,
+    TPersistData,
+    false
+  >
+) => {
+  const hookData = useServerAction<
+    inferMapFromRouterAction<TRouter>[TServerActionKey],
+    TPersistError,
+    TPersistData,
+    true
+  >(router as any, {
+    ...(opts || {}),
+    routerKey: serverActionKey as string,
+  })
+
+  return hookData
 }

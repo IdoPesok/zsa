@@ -3,6 +3,7 @@ import CallbacksUI from "app/tests/client/callbacks/page"
 import ErrorStatesUI from "app/tests/client/error-states/page"
 import UserGreetingUI from "app/tests/client/get-user-greeting-action/page"
 import HelloWorldUI from "app/tests/client/hello-world-action/page"
+import HelloWorldRouterUI from "app/tests/client/hello-world-router-action/page"
 import OptimisticUpdatesUI from "app/tests/client/optimistic-updates/page"
 import PersistedErrorStatesUI from "app/tests/client/persisted-error-states/page"
 import ResetUI from "app/tests/client/reset/page"
@@ -25,6 +26,30 @@ describe("client", () => {
   describe("basic useServerAction execute", () => {
     it('basic useServerAction that returns "hello world"', async () => {
       render(<HelloWorldUI />)
+
+      let resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
+
+      expect(resultElement).toHaveTextContent(CLIENT_TEST_DATA.initialMessage)
+
+      // Try using getByText if getByRole is not working
+      const invokeButton = screen.getByRole(CLIENT_TEST_DATA.roles.invoke)
+      fireEvent.click(invokeButton)
+
+      await waitFor(() => {
+        resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
+        expect(resultElement).toHaveTextContent(CLIENT_TEST_DATA.loadingMessage)
+      })
+
+      await waitFor(() => {
+        resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
+        expect(resultElement).toHaveTextContent(
+          CLIENT_TEST_DATA.resultMessages.helloWorldAction
+        )
+      })
+    })
+
+    it('basic useServerAction that returns "hello world" [router]', async () => {
+      render(<HelloWorldRouterUI />)
 
       let resultElement = screen.getByRole(CLIENT_TEST_DATA.roles.result)
 
