@@ -8,7 +8,7 @@ Learn how to use ZSA with forms.
 
 ## Basic Form
 
-You can use the `useServerAction` hook with a regular form. Set the `type` to `"formData"` to indicate that the input is a `FormData` object.
+You can use a server action directly with a regular form. Set the `type` to `"formData"` to indicate that the input is a `FormData` object.
 
 ```typescript title="actions.ts"
 "use server"
@@ -53,7 +53,7 @@ export default function FormExample() {
 }
 ```
 
-### On Submit
+### Submit with `useServerAction`
 
 However if you do it this way you will not have access to the `data` and `error` variables. To get the data and error you can use the `useServerAction` hook.
 
