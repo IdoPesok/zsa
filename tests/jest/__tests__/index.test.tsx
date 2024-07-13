@@ -3,6 +3,7 @@
  */
 import { cookies } from "next/headers"
 import {
+  booleanFormDataAction,
   emptyFormDataAction,
   faultyAction,
   faultyOutputAction,
@@ -502,6 +503,24 @@ describe("actions", () => {
 
       expect(data).toEqual(["test", "test2"])
       expect(err).toBeNull()
+    })
+
+    it("returns a boolean value", async () => {
+      const formData = new FormData()
+      formData.append("value", "true")
+      const [data, err] = await booleanFormDataAction(formData)
+
+      expect(data).toEqual(true)
+      expect(err).toBeNull()
+    })
+
+    it("fails to return a boolean value", async () => {
+      const formData = new FormData()
+      formData.append("value", "invalid")
+      const [data, err] = await booleanFormDataAction(formData)
+
+      expect(data).toBeNull()
+      expect(err).not.toBeNull()
     })
 
     it("returns the default input schema", async () => {
