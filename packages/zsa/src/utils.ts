@@ -46,22 +46,41 @@ export const instanceofZodTypeArray = (
   return instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodArray)
 }
 
-export const isKeyAnArrayInZodSchema = (key: string, schema: z.ZodTypeAny) => {
+export const instanceofZodTypeBoolean = (
+  type: z.ZodTypeAny
+): type is z.ZodBoolean => {
+  return instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodBoolean)
+}
+
+const unwrapKeyInZodSchema = (key: string, schema: z.ZodTypeAny) => {
   const unwrapped = unwrapZodType(schema, true)
   const isObject = instanceofZodTypeObject(unwrapped)
 
-  if (!isObject) return false
+  if (!isObject) return null
 
   const shape = unwrapped.shape
 
-  if (!(key in shape)) return false
+  if (!(key in shape)) return null
 
   const value = shape[key]
 
-  if (!value) return false
+  if (!value) return null
 
-  const unwrappedValue = unwrapZodType(value, true)
+  return unwrapZodType(value, true)
+}
+
+export const isKeyAnArrayInZodSchema = (key: string, schema: z.ZodTypeAny) => {
+  const unwrappedValue = unwrapKeyInZodSchema(key, schema)
+  if (unwrappedValue === null) return false
   const isArray = instanceofZodTypeArray(unwrappedValue)
+
+  return isArray
+}
+
+export const isKeyABooleanInZodSchema = (key: string, schema: z.ZodTypeAny) => {
+  const unwrappedValue = unwrapKeyInZodSchema(key, schema)
+  if (unwrappedValue === null) return false
+  const isArray = instanceofZodTypeBoolean(unwrappedValue)
 
   return isArray
 }
@@ -71,10 +90,17 @@ export const formDataToJson = (formData: FormData, inputSchema: z.ZodType) => {
 
   formData.forEach((value, key) => {
     const isArraySchema = isKeyAnArrayInZodSchema(key, inputSchema)
+    const isBooleanSchema = isKeyABooleanInZodSchema(key, inputSchema)
 
     // Reflect.has in favor of: object.hasOwnProperty(key)
     if (!Reflect.has(json, key)) {
       json[key] = isArraySchema ? [value] : value
+
+      if (isBooleanSchema) {
+        if (json[key] === "true") json[key] = true
+        if (json[key] === "false") json[key] = false
+      }
+
       return
     }
 

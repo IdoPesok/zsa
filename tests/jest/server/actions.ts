@@ -450,6 +450,19 @@ export const multiEntryFormDataAction = publicAction
     return input.name
   })
 
+export const booleanFormDataAction = publicAction
+  .input(
+    z.object({
+      value: z.boolean(),
+    }),
+    {
+      type: "formData",
+    }
+  )
+  .handler(async ({ input }) => {
+    return input.value
+  })
+
 export const multiEntryStateAction = publicAction
   .input(
     z.object({
