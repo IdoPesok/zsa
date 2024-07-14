@@ -1,5 +1,13 @@
 # server-actions-wrapper
 
+## 0.2.1
+
+### Patch Changes
+
+- 6b422db: Added ability to pass a key factory for mutation keys
+- Updated dependencies [754e219]
+  - zsa@0.5.1
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.5.1
+
+### Patch Changes
+
+- 754e219: Coerce booleans in form data
+
 ## 0.5.0
 
 ### Minor Changes
