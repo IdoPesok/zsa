@@ -31,7 +31,10 @@ export const createServerActionsKeyFactory = <
 }
 
 export const setupServerActionHooks = <
-  const TFactory extends
+  const TQueryFactory extends
+    | Readonly<ServerActionsKeyFactory<string[]>>
+    | undefined,
+  const TMutationFactory extends
     | Readonly<ServerActionsKeyFactory<string[]>>
     | undefined,
 >(args: {
@@ -40,13 +43,18 @@ export const setupServerActionHooks = <
     useMutation: typeof import("@tanstack/react-query").useMutation
     useInfiniteQuery: typeof import("@tanstack/react-query").useInfiniteQuery
   }
-  queryKeyFactory?: TFactory
+  queryKeyFactory?: TQueryFactory
+  mutationKeyFactory?: TMutationFactory
 }) => {
   const { useQuery, useMutation, useInfiniteQuery } = args.hooks
 
-  type TQueryKey = TFactory extends undefined
+  type TQueryKey = TQueryFactory extends undefined
     ? Readonly<unknown[]>
-    : Readonly<ServerActionKeys<Exclude<TFactory, undefined>>>
+    : Readonly<ServerActionKeys<Exclude<TQueryFactory, undefined>>>
+
+  type TMutationKey = TMutationFactory extends undefined
+    ? Readonly<unknown[]>
+    : Readonly<ServerActionKeys<Exclude<TMutationFactory, undefined>>>
 
   const useServerActionInfiniteQuery = <
     TPageParam extends unknown,
@@ -184,6 +192,7 @@ export const setupServerActionHooks = <
       "mutationFn"
     > & {
       returnError?: TReturnError
+      mutationKey?: TMutationKey
     },
     queryClient?: Parameters<typeof useMutation>[1]
   ): ReturnType<TUseMutation<THandler, TReturnError>> => {
