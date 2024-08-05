@@ -315,6 +315,9 @@ export interface TInternals<
   /** the type of input */
   inputType?: InputTypeOptions
 
+  /** skip input parsing */
+  skipInputParsing?: boolean
+
   /** A function to run when the handler starts */
   onStartFns?: Array<TOnStartFn<any, any>> | undefined
 
