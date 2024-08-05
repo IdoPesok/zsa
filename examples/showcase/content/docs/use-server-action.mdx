@@ -144,6 +144,7 @@ function MyComponent() {
 - `execute`: A function to execute the server action with the provided input.
 - `setOptimistic`: A function to set an optimistic update for the `data` value. It accepts either the new data directly or a function that receives the current data and returns the new data.
 - `reset`: A function to reset the state of the server action to its initial values.
+- `input`: The last input evaluated by the server action to get to the current state. This value will be the input before parsing and validation. If the input is FormData, it will be represented as a JSON object.
 
 ## Retry Behavior
 

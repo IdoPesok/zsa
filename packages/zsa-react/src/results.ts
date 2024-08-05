@@ -1,17 +1,32 @@
 import {
   TAnyZodSafeFunctionHandler,
   inferServerActionError,
+  inferServerActionInputRaw,
   inferServerActionReturnData,
 } from "zsa"
 
 /**
  * A result object for the hook
  */
-export type TInnerResult<TServerAction extends TAnyZodSafeFunctionHandler> = {
-  status: "success" | "error" | "idle"
-  error: undefined | inferServerActionError<TServerAction>
-  data: undefined | inferServerActionReturnData<TServerAction>
-}
+export type TInnerResult<TServerAction extends TAnyZodSafeFunctionHandler> =
+  | {
+      status: "success"
+      error: undefined
+      data: inferServerActionReturnData<TServerAction>
+      input: inferServerActionInputRaw<TServerAction>
+    }
+  | {
+      status: "error"
+      error: inferServerActionError<TServerAction>
+      data: undefined
+      input: inferServerActionInputRaw<TServerAction>
+    }
+  | {
+      status: "idle"
+      error: undefined
+      data: undefined
+      input: undefined
+    }
 
 export type TOldResult<TServerAction extends TAnyZodSafeFunctionHandler> =
   | {
@@ -44,6 +59,7 @@ export type TServerActionResult<
         : undefined
       isSuccess: false
       status: "pending"
+      input: undefined
     }
   | {
       // pending state (optimistic)
@@ -54,6 +70,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "pending"
+      input: undefined
     }
   | {
       // idle state
@@ -64,6 +81,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: false
       status: "idle"
+      input: undefined
     }
   | {
       // error state
@@ -74,6 +92,7 @@ export type TServerActionResult<
       error: inferServerActionError<TServerAction>
       isSuccess: false
       status: "error"
+      input: inferServerActionInputRaw<TServerAction>
     }
   | {
       isPending: false
@@ -83,6 +102,7 @@ export type TServerActionResult<
       error: undefined
       isSuccess: true
       status: "success"
+      input: inferServerActionInputRaw<TServerAction>
     }
 
 /**
@@ -110,6 +130,7 @@ export const calculateResultFromState = <
       error: state.persistErrorWhilePending ? result.error : undefined,
       isSuccess: false,
       status: "pending",
+      input: undefined,
     }
   } else if (
     isPending &&
@@ -124,6 +145,7 @@ export const calculateResultFromState = <
       error: undefined,
       isSuccess: false,
       status: "pending",
+      input: undefined,
     }
   } else if (result.status === "success") {
     // success state
@@ -135,6 +157,7 @@ export const calculateResultFromState = <
       error: undefined,
       isSuccess: true,
       status: "success",
+      input: result.input,
     }
   } else if (result.status === "error") {
     // error state
@@ -146,6 +169,7 @@ export const calculateResultFromState = <
       isOptimistic: false,
       isSuccess: false,
       status: "error",
+      input: result.input,
     }
   } else {
     // idle state
@@ -157,6 +181,7 @@ export const calculateResultFromState = <
       error: undefined,
       isSuccess: false,
       status: "idle",
+      input: undefined,
     }
   }
 }
@@ -164,7 +189,8 @@ export const calculateResultFromState = <
 export const getEmptyResult = <
   TServerAction extends TAnyZodSafeFunctionHandler,
 >(
-  initialData?: inferServerActionReturnData<TServerAction>
+  initialData?: inferServerActionReturnData<TServerAction>,
+  initialInput?: inferServerActionInputRaw<TServerAction>
 ): TInnerResult<TServerAction> =>
   initialData === undefined
     ? // if there is no initial data
@@ -172,12 +198,14 @@ export const getEmptyResult = <
         status: "idle",
         error: undefined,
         data: undefined,
+        input: undefined,
       }
     : {
         // if there is initial data
         status: "success",
         error: undefined,
         data: initialData,
+        input: initialInput as any,
       }
 
 export const getEmptyOldResult = () =>
