@@ -10,6 +10,7 @@ import HelloWorld from "@/content/docs/examples/react-query/hello-world-action"
 import RandomNumberExampleDisplay from "@/content/docs/examples/refetching-queries/random-number-example-display"
 import RandomNumberExampleRefetch from "@/content/docs/examples/refetching-queries/random-number-example-refetch"
 import UseActionStateExample from "@/content/docs/examples/use-action-state/use-action-state-example"
+import UseActionStateSkipInputParsingExample from "@/content/docs/examples/use-action-state/use-action-state-skip-input-parsing-example"
 import UseActionCustomStateExample from "@/content/docs/examples/use-form-state/use-form-state-example"
 import { memo } from "react"
 
@@ -31,6 +32,8 @@ function ExampleComponent({ id }: { id: string }) {
       return <UseActionCustomStateExample />
     case "use-action-state":
       return <UseActionStateExample />
+    case "use-action-state-skip-input-parsing":
+      return <UseActionStateSkipInputParsingExample />
     case "multi-entry":
       return <MultiEntryExample />
     case "basic-form":

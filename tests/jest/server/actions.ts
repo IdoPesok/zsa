@@ -410,6 +410,31 @@ export const stateInputAction = publicAction
     return input.number
   })
 
+export const skipInputParsingStateAction = publicAction
+  .input(z.custom<FormData>(), {
+    type: "state",
+    skipInputParsing: true,
+  })
+  .handler(async ({ input, previousState }) => {
+    const payload = Object.fromEntries(input)
+
+    const result = z.object({
+      number: z.coerce.number()
+    }).safeParse(payload)
+
+    if (result.error) {
+      throw result.error
+    }
+
+    const [data, err] = previousState
+
+    if (data) {
+      return data * 2
+    }
+
+    return result.data.number
+  })
+
 export const stateInputProcedureAction = previousStateAction
   .input(z.undefined(), {
     type: "state",
