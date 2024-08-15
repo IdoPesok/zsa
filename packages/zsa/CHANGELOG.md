@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.6.0
+
+### Minor Changes
+
+- fff91bd: 042238d - Add skipInputParsing option to skip parsing the input data and receive a raw payload
+
 ## 0.5.1
 
 ### Patch Changes
