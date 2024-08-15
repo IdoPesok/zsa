@@ -310,7 +310,8 @@ export class ZodSafeFunction<
   >(
     schema: T,
     opts?: {
-      type?: TType
+      type?: TType,
+      skipInputParsing?: boolean
     }
   ): TZodSafeFunction<
     TZodMerge<TInputSchema, TFinalInputSchema<T>>,
@@ -326,6 +327,7 @@ export class ZodSafeFunction<
       // @ts-expect-error
       inputSchema: schema,
       inputType: opts?.type,
+      skipInputParsing: opts?.skipInputParsing,
     }) as any
   }
 
@@ -717,6 +719,10 @@ export class ZodSafeFunction<
       ctx,
       opts,
     })
+
+    if (this.$internals.skipInputParsing) {
+      return $data;
+    }
 
     let data = $data
 

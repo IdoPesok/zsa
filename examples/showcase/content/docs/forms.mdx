@@ -454,6 +454,78 @@ Let's check out the result!
 
 <ExampleComponent id="use-form-state" />
 
+### Skip Input Parsing
+
+What if you want to receive a raw payload, such as FormData object, and handle it yourself? This is useful for example when using the `@conform-to/react` library. Let's see how we can do that.
+
+```typescript title="actions.ts"
+"use server"
+
+import z from "zod"
+import { createServerAction } from "zsa"
+
+export const produceNewMessage = createServerAction()
+  .input(
+    z.custom<FormData>(), // [!code highlight]
+    {
+      type: "state", // [!code highlight]
+      skipInputParsing: true // [!code highlight]
+    }
+  )
+  .handler(async ({ input }) => {
+    const payload = Object.fromEntries(input)
+
+    const result = z.object({
+      name: z.string().min(5)
+    }).safeParse(payload)
+
+    if (result.error) {
+      throw result.error
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    return "Hello, " + result.data.name
+  })
+```
+
+Then on the client side, you can use the `useActionState` hook to execute the action and handle the result.
+
+```tsx title="use-action-state-skip-input-parsing.tsx"
+"use client"
+
+import { useActionState } from "react";
+import { produceNewMessage } from "./actions";
+
+export default function UseActionStateSkipInputParsingExample() {
+  let [[data, err], submitAction, isPending] = useActionState( // [!code highlight]
+    produceNewMessage, // [!code highlight]
+    [null, null] // or [initialData, null] // [!code highlight]
+  ); // [!code highlight]
+
+  return (
+    <Card className="not-prose">
+      <CardHeader>
+        <CardTitle>Skip Input Parsing</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form action={submitAction} className="flex flex-col gap-4"> // [!code highlight]
+          <Input name="name" placeholder="Enter your name..." />
+          <Button disabled={isPending}>Create message</Button>
+        </form>
+        {isPending && <div>Loading...</div>}
+        {data && <p>Message: {data}</p>}
+        {err && <div>Error: {JSON.stringify(err)}</div>}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+Here is the result:
+
+<ExampleComponent id="use-action-state-skip-input-parsing" />
+
 ## File Upload
 
 ZSA supports file and/or image uploads within forms. To handle file uploads, you need to specify the expected file type in the server action using `z.instanceof(File)` and include a file input in your form.

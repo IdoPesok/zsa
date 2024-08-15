@@ -36,6 +36,7 @@ import {
   outputFunctionActionError,
   procedureChainAuthAction,
   procedureChainAuthActionWithCounter,
+  skipInputParsingStateAction,
   shapeErrorActionThatReturnsInput,
   shapeErrorActionThatReturnsOutput,
   stateInputAction,
@@ -570,6 +571,19 @@ describe("actions", () => {
         new FormData()
       )
       expect(data).toEqual(4)
+      expect(err).toBeNull()
+    })
+
+    it("allows skiping input parsing", async () => {
+      const formData = new FormData()
+      formData.append("number", "5")
+      // test without previous state
+      let [data, err] = await skipInputParsingStateAction([null, null], formData)
+      expect(data).toEqual(5)
+      expect(err).toBeNull()
+      // test with previous state
+      ;[data, err] = await skipInputParsingStateAction([data, err], formData)
+      expect(data).toEqual(10)
       expect(err).toBeNull()
     })
   })
