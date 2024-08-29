@@ -6,16 +6,15 @@ groupOrder: 6
 
 It's likely that you may need to use your server actions for querying data on the client side. In order to do this, we recommend using `zsa` with `@tanstack/react-query` (aka [React Query](https://tanstack.com/query/latest/docs/framework/react/overview)).
 
+<Warning>
+**IMPORTANT**: Although it is available in the library, please be advised against using server actions to query data. Server actions are currently optimised for mutations. This may be deprecated in the future. Apologies for any confusion. For better results, you should create an API route and fetch data normally using a GET request.
+</Warning>
+
 <Note>
   *React Query* is the leading solution for asynchronous querying and state
   management in React. By using React Query, you will have all the functionality
   of React Query for using your `zsa` server actions on the client side.
 </Note>
-
-<Warning>
-Please use the latest version of `@tanstack/react-query` for best
-results.
-</Warning>
 
 ## Installation
 
