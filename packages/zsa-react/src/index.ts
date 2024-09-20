@@ -73,16 +73,22 @@ export const useServerAction = <
   const status = useRef<TServerActionResult<TServerAction>["status"]>("idle")
 
   // set the result state and ref
-  const setResult = useCallback((result: TInnerResult<TServerAction>) => {
-    $setResult(result)
-    resultRef.current = result
-  }, [])
+  const setResult = useCallback(
+    (result: TInnerResult<TServerAction>) => {
+      $setResult(result)
+      resultRef.current = result
+    },
+    [$setResult]
+  )
 
   // set the old result state and ref
-  const setOldResult = useCallback((oldResult: TOldResult<TServerAction>) => {
-    $setOldResult(oldResult)
-    oldResultRef.current = oldResult
-  }, [])
+  const setOldResult = useCallback(
+    (oldResult: TOldResult<TServerAction>) => {
+      $setOldResult(oldResult)
+      oldResultRef.current = oldResult
+    },
+    [$setOldResult]
+  )
 
   const internalExecute = useCallback(
     async (
@@ -302,7 +308,7 @@ export const useServerAction = <
     executeRef.current = undefined
     status.current = "idle"
     isRunningCallbacks.current = false
-  }, [])
+  }, [opts?.onError, opts?.onFinish, opts?.onSuccess])
 
   // check if the status is pending
   // NOTE: during retries, the status is "pending" but the transition is not
