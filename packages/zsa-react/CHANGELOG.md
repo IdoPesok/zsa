@@ -1,5 +1,11 @@
 # server-actions-wrapper
 
+## 0.2.3
+
+### Patch Changes
+
+- 0264368: Fix dependency array for callbacks
+
 ## 0.2.2
 
 ### Patch Changes
