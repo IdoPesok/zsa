@@ -23,13 +23,26 @@ npm i zsa zsa-react zsa-react-query zsa-openapi zod
 
 ## Documentation
 
-View the full documentation and examples on [zsa.vercel.app](https://zsa.vercel.app/docs/introduction).
+View the full documentation and examples on [zsa.vercel.app](https://zsa.vercel.app/docs/introduction). The documentation includes:
+
+- Getting started guide
+- In-depth explanations of core concepts
+- Examples for building fully typesafe server actions
+
+If you're looking to learn how to get the most out of `zsa`, [the documentation](https://zsa.vercel.app/docs/introduction) is the best place to start.
+
+## Contributing
+
+We welcome contributions from the community! If you have an idea for a new feature, a bug fix, or any other improvement, please open an issue or submit a pull request, but be sure to read the [contributing guidelines](https://github.com/IdoPesok/zsa/blob/main/CONTRIBUTING.md) first.
 
 ## Support
 
-If you need help with anything, feel free to DM ([@ido_pesok](https://twitter.com/ido_pesok)) on X.
+If you encounter any issues or have questions, feel free to reach out via:
 
-## Disclaimer
+- **Discussions**: Visit the [Github discussions](https://github.com/IdoPesok/zsa/discussions) page to ask questions, share ideas, or discuss anything related to `zsa`.
+- **Direct support**: For direct inquiries, you can DM ([@ido_pesok](https://twitter.com/ido_pesok)).
+
+## ⚠️ Disclaimer
 
 This is a personal project and is not associated with any company or organization. While I strive to make this project as reliable and useful as possible, it is provided "as is" without any guarantees or warranties.
 
@@ -37,4 +50,12 @@ This is a personal project and is not associated with any company or organizatio
 
 I will do my best to maintain and improve this project, but please understand that as a personal project, support and updates may be limited.
 
-## [Contributors](https://github.com/IdoPesok/zsa/graphs/contributors)
+## Contributors
+
+Here's a shoutout to all the amazing contributors who are helping to make `zsa` better. Thank you for your hard work and dedication!
+
+<a href="https://github.com/IdoPesok/zsa/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=IdoPesok/zsa" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
