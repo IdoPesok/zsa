@@ -44,5 +44,7 @@ export const mockNextRequest = (args: {
     data.json = () => args.body
   }
 
+  data.clone = (): NextRequest => ({...data})
+
   return data as unknown as NextRequest
 }

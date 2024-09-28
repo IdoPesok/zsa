@@ -431,10 +431,10 @@ const getDataFromRequest = async (
         requestContentType?.startsWith(MULTI_PART_CONTENT_TYPE)
       ) {
         // if its form data
-        data = await request.formData()
+        data = await request.clone().formData()
       } else if (requestContentType?.startsWith(JSON_CONTENT_TYPE)) {
         // if its json
-        data = await request.json()
+        data = await request.clone().json()
       }
     } catch (err) {
       data = undefined
