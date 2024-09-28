@@ -1,5 +1,11 @@
 # zsa-openapi
 
+## 0.3.1
+
+### Patch Changes
+
+- 0227e26: Add clone() before consuming the request
+
 ## 0.3.0
 
 ### Minor Changes
