@@ -29,6 +29,7 @@ import {
   TShapeErrorFn,
   TShapeErrorNotSet,
   TStateHandlerFunc,
+  TUseServerActionResponse,
   TZodMerge,
   TZodSafeFunctionDefaultOmitted,
   TimeoutStatus,
@@ -41,20 +42,61 @@ import {
   instanceofZodTypeObject,
 } from "./utils"
 
+/**
+ * log if someone is trying to manipulate the opts
+ * NOTE: even without this new check it is safe => no need for advisory because
+ * - attacker can try to manipulate ctx but procedures will still run safely
+ *     -> this is because the opts ctx always comes from procedure (check for isProcedure)
+ * - schemas can't be returned (classes will be blocked)
+ * - override input schema can't be passed in (classes will be blocked)
+ * adding this to throw an auto not authorized error and an extra layer of protection can't hurt
+ */
 const validateOpts = (opts?: THandlerOpts<any>) => {
-  // log if someone is trying to manipulate the opts
-  // NOTE: even without this new check it is safe => no need for advisory because
-  // - attacker can try to manipulate ctx but procedures will still run safely
-  //     -> this is because the opts ctx always comes from procedure (check for isProcedure)
-  // - schemas can't be returned (classes will be blocked)
-  // - override input schema can't be passed in (classes will be blocked)
-  // adding this to throw an auto not authorized error and an extra layer of protection can't hurt
+  try {
+    if (
+      // if the only opt is isFromUseServerAction, this is an exception
+      // all this will do is send back the input raw for the hook to use
+      JSON.stringify(opts) === JSON.stringify({ isFromUseServerAction: true })
+    ) {
+      opts = {
+        isFromUseServerAction: true,
+        source: new TOptsSource(() => true),
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   if (
     opts &&
     (!(opts.source instanceof TOptsSource) || !opts.source.validate())
   ) {
     throw new Error("Invalid opts, must originate from the server")
   }
+}
+
+const packageDataForExit = (
+  data: any,
+  inputRaw: any,
+  opts?: THandlerOpts<any>
+) => {
+  if (opts && opts.isFromUseServerAction) {
+    if (typeof inputRaw === "object") {
+      // get rid of anything that isn't JSON serializable (Files)
+      for (const key of Object.keys(inputRaw)) {
+        if (inputRaw[key] instanceof Blob) {
+          inputRaw[key] = undefined
+        }
+      }
+    }
+
+    return {
+      input: inputRaw,
+      returned: data,
+    } satisfies TUseServerActionResponse<any>
+  }
+
+  return data
 }
 
 /** A helper type to hold any zod safe function */
@@ -564,11 +606,14 @@ export class ZodSafeFunction<
   }
 
   /** helper function to handle errors with timeout checkpoints */
-  public async handleError(
-    err: any,
-    inputRaw: any,
+  public async handleError(args: {
+    err: any
+    inputRaw: any
     inputParsed: any
-  ): Promise<[null, TZSAError<TInputSchema>]> {
+    opts?: THandlerOpts<any>
+  }): Promise<[null, TZSAError<TInputSchema>]> {
+    const { err, inputRaw, inputParsed, opts } = args
+
     // we need to throw any NEXT_REDIRECT errors so that next can
     // properly handle them.
 
@@ -621,7 +666,7 @@ export class ZodSafeFunction<
     }
 
     if (this.$internals.shapeErrorFns !== undefined) {
-      return [null, customError as any]
+      return packageDataForExit([null, customError as any], inputRaw, opts)
     }
 
     const stringifyIfNeeded = (data: any) =>
@@ -639,18 +684,22 @@ export class ZodSafeFunction<
       flattenedErrors = data.flatten()
     }
 
-    return [
-      null,
-      {
-        data: stringifyIfNeeded(customError.data),
-        name: customError.name,
-        message: stringifyIfNeeded(customError.message),
-        code: customError.code,
-        fieldErrors: flattenedErrors?.fieldErrors,
-        formErrors: flattenedErrors?.formErrors,
-        formattedErrors: formattedErrors as any,
-      } as any,
-    ]
+    return packageDataForExit(
+      [
+        null,
+        {
+          data: stringifyIfNeeded(customError.data),
+          name: customError.name,
+          message: stringifyIfNeeded(customError.message),
+          code: customError.code,
+          fieldErrors: flattenedErrors?.fieldErrors,
+          formErrors: flattenedErrors?.formErrors,
+          formattedErrors: formattedErrors as any,
+        } as any,
+      ],
+      inputRaw,
+      opts
+    )
   }
 
   public async evaluateInputSchema(args: {
@@ -706,13 +755,16 @@ export class ZodSafeFunction<
   }
 
   /** helper function to parse input data given the active input schema */
-  public async parseInputData(
-    $data: any,
-    overrideData: any,
-    timeoutStatus: TimeoutStatus,
-    ctx: TProcedureChainOutput,
+  public async parseInputData(args: {
+    $data: any
+    overrideData: any
+    timeoutStatus: TimeoutStatus
+    ctx: TProcedureChainOutput
+    onFinalRawArgs: (args: any) => void
     opts?: THandlerOpts<TProcedureChainOutput>
-  ): Promise<TSchemaOutput<TInputSchema>> {
+  }): Promise<TSchemaOutput<TInputSchema>> {
+    const { $data, overrideData, timeoutStatus, ctx, opts } = args
+
     this.checkTimeoutStatus(timeoutStatus) // checkpoint
 
     const inputSchema = await this.evaluateInputSchema({
@@ -749,6 +801,7 @@ export class ZodSafeFunction<
       data = undefined
     }
 
+    args.onFinalRawArgs?.(data)
     opts?.onArgs?.(data)
 
     // we got data, handle start
@@ -960,13 +1013,16 @@ export class ZodSafeFunction<
         }
 
         // parse the input data
-        const input = await this.parseInputData(
-          args,
-          overrideArgs,
+        const input = await this.parseInputData({
+          $data: args,
+          overrideData: overrideArgs,
           timeoutStatus,
           ctx,
-          opts
-        )
+          onFinalRawArgs: (finalRawArgs) => {
+            args = finalRawArgs
+          },
+          opts,
+        })
 
         // send on parsed args
         opts?.onParsedArgs?.(input)
@@ -996,7 +1052,7 @@ export class ZodSafeFunction<
 
         await this.handleSuccess(input, parsed, timeoutStatus)
 
-        return [parsed, null]
+        return packageDataForExit([parsed, null], args, opts)
       } catch (err) {
         const retryDelay = this.getRetryDelay(err, opts?.attempts || 1)
 
@@ -1009,7 +1065,12 @@ export class ZodSafeFunction<
           })
         }
 
-        return await this.handleError(err, args, parsedArgs)
+        return await this.handleError({
+          err,
+          inputRaw: args,
+          inputParsed: parsedArgs,
+          opts,
+        })
       }
     }
 
@@ -1043,7 +1104,12 @@ export class ZodSafeFunction<
         .then((r) => r)
         .catch((err) => {
           timeoutStatus.isTimeout = true
-          return this.handleError(err, gotArgs, gotParsedArgs)
+          return this.handleError({
+            err,
+            inputRaw: gotArgs,
+            inputParsed: gotParsedArgs,
+            opts,
+          })
         })
     }
 
@@ -1100,6 +1166,43 @@ export function createZodSafeFunction<TIsProcedure extends boolean>(
     onSuccessFns: parentProcedure?.$internals.onSuccessFns,
   }) as any
 }
+
+// helper type to infer the input schema of a server action
+export type inferServerActionInputSchema<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> =
+  TAction extends TStateHandlerFunc<infer TInputSchema, any, any, any>
+    ? TInputSchema
+    : TAction extends TNoInputHandlerFunc<
+          any,
+          infer TInputSchema,
+          any,
+          any,
+          any,
+          any
+        >
+      ? TInputSchema
+      : TAction extends THandlerFunc<
+            infer TInputSchema,
+            any,
+            any,
+            any,
+            any,
+            any,
+            any
+          >
+        ? TInputSchema
+        : never
+
+// helper type to infer the raw input of a server action
+export type inferServerActionInputRaw<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> = TSchemaInput<inferServerActionInputSchema<TAction>>
+
+// helper type to infer the parsed input of a server action
+export type inferServerActionInputParsed<
+  TAction extends TAnyZodSafeFunctionHandler | TAnyStateHandlerFunc,
+> = TSchemaOutput<inferServerActionInputSchema<TAction>>
 
 // helper type to infer the return data of a server action
 export type inferServerActionReturnData<

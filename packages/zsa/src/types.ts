@@ -12,6 +12,10 @@ import {
   TZSAError,
   ZSAError,
 } from "./errors"
+import {
+  inferServerActionInputRaw,
+  inferServerActionReturnType,
+} from "./zod-safe-function"
 
 export type TFinalError<
   TInputSchema extends z.ZodType | undefined,
@@ -143,6 +147,8 @@ export interface THandlerOpts<TProcedureChainOutput extends any> {
   onInputSchema?: (schema: z.ZodType) => void
   /** previous input schema */
   previousInputSchema?: z.ZodType
+  /** is from use server action */
+  isFromUseServerAction?: boolean
 }
 
 /** A function type for a handler that does not have an input */
@@ -422,3 +428,10 @@ export type TZodMerge<
       ? T1 // only return T1 if T2 is undefined
       : T2
   : T2
+
+export interface TUseServerActionResponse<
+  TServerAction extends TAnyZodSafeFunctionHandler,
+> {
+  input: inferServerActionInputRaw<TServerAction>
+  returned: inferServerActionReturnType<TServerAction>
+}
