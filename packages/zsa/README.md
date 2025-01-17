@@ -50,6 +50,24 @@ This is a personal project and is not associated with any company or organizatio
 
 I will do my best to maintain and improve this project, but please understand that as a personal project, support and updates may be limited.
 
+### Future Updates
+
+#### Next.js 15 Compatibility
+At this time, this project does not support **Next.js 15**, and I likely won’t have the bandwidth to make the necessary updates myself. If this is a feature you’d like to see, contributions are highly encouraged! 
+
+If you’re interested in helping:
+- Please feel free to open a Pull Request (PR) with the required updates.
+- I’ll do my best to review and merge PRs as time allows.
+
+#### Open Source – Fork or Maintain
+This project is open source, so feel free to fork it, modify it, or use it however you like! If you’re interested in taking on a more active role as a maintainer, please don’t hesitate to ping me.
+
+#### Recommended Alternatives
+For those seeking a library that already supports **Next.js 15**, I recommend checking out [**next-safe-action**](https://next-safe-action.dev/). It offers excellent compatibility and features for safe server actions in Next.js.
+
+#### Long-Term Outlook
+While I can’t promise regular updates to this project moving forward, I hope it can still serve as a useful resource for those interested. Thanks for your understanding and support! 🙏
+
 ## Contributors
 
 Here's a shoutout to all the amazing contributors who are helping to make `zsa` better. Thank you for your hard work and dedication!
