@@ -8,7 +8,9 @@ import { useServerAction } from "zsa-react"
 export default function UserGreetingUI() {
   const [result, setResult] = useState<string>(CLIENT_TEST_DATA.initialMessage)
 
-  const { isPending, execute } = useServerAction(loadingGetUserGreetingAction)
+  const { isPending, execute, input } = useServerAction(
+    loadingGetUserGreetingAction
+  )
 
   return (
     <div>
@@ -26,6 +28,7 @@ export default function UserGreetingUI() {
       <div role="result">
         {isPending ? CLIENT_TEST_DATA.loadingMessage : result}
       </div>
+      <div role="input">{input?.ms}</div>
     </div>
   )
 }

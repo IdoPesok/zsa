@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import {
   TAnyZodSafeFunctionHandler,
+  TUseServerActionResponse,
   inferServerActionError,
+  inferServerActionInputRaw,
   inferServerActionReturnData,
   inferServerActionReturnType,
 } from "zsa"
@@ -38,20 +40,22 @@ export const useServerAction = <
       : undefined
 
     initialData?: inferServerActionReturnData<TServerAction>
+    initialInput?: inferServerActionInputRaw<TServerAction>
     retry?: RetryConfig<TServerAction>
     persistErrorWhilePending?: TPersistError
     persistDataWhilePending?: TPersistData
   }
 ) => {
   const initialData = opts?.initialData
+  const initialInput = opts?.initialInput
   const bindArgs = opts?.bind
 
   // store the result in state and a ref
   const [result, $setResult] = useState<TInnerResult<TServerAction>>(
-    getEmptyResult(initialData)
+    getEmptyResult(initialData, initialInput)
   )
   const resultRef = useRef<TInnerResult<TServerAction>>(
-    getEmptyResult(initialData)
+    getEmptyResult(initialData, initialInput)
   )
 
   // store the old result in state and a ref
@@ -102,16 +106,7 @@ export const useServerAction = <
 
       // if the retry ids don't match, we should not refetch
       if (isFromRetryId && lastRetryId.current !== isFromRetryId) {
-        return [
-          null,
-          {
-            message: "Could not successfully execute the server action",
-            data: "Could not successfully execute the server action",
-            stack: "",
-            name: "ZSAError",
-            code: "ERROR",
-          },
-        ] as any
+        return
       }
 
       // start a new retry count
@@ -128,13 +123,23 @@ export const useServerAction = <
       status.current = "pending"
       setExecuting(true)
 
-      let data, err
+      let data, err, actionInput
 
-      await serverAction(input, overrideData).then((response) => {
+      await serverAction(
+        input,
+        overrideData,
+        // @ts-expect-error we can't pass the source from here but there is an exception for it
+        {
+          isFromUseServerAction: true,
+        }
+      ).then((response) => {
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
-          ;[data, err] = response
+          const { input: $actionInput, returned } =
+            response as unknown as TUseServerActionResponse<TServerAction>
+          ;[data, err] = returned
+          actionInput = $actionInput
         }
       })
 
@@ -161,6 +166,7 @@ export const useServerAction = <
             error: err,
             data: undefined,
             status: "error",
+            input: actionInput as any,
           })
         }
 
@@ -174,16 +180,17 @@ export const useServerAction = <
         status.current = "error"
         setExecuting(false)
 
-        return [data, err] as any
+        return
       }
 
       const res = {
         error: undefined,
         data: data ?? undefined,
         status: "success" as const,
+        input: actionInput,
       }
 
-      setResult(res)
+      setResult(res as any)
 
       // clear the old data
       setOldResult({
@@ -194,8 +201,6 @@ export const useServerAction = <
       // success state
       status.current = "success"
       setExecuting(false)
-
-      return [data, err] as any
     },
     [serverAction]
   )
@@ -250,10 +255,12 @@ export const useServerAction = <
         })
       }
 
+      // @ts-expect-error
       setResult({
         error: undefined,
         data: data ?? undefined,
         status: "success",
+        input: undefined,
       })
     },
     [execute]
