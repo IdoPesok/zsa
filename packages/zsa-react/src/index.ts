@@ -223,13 +223,13 @@ export const useServerAction = <
       ...opts: Parameters<TServerAction>[0] extends undefined
         ? []
         : [Parameters<TServerAction>[0]]
-    ): Promise<null> => {
+    ): Promise<void> => {
       return await new Promise((resolve) => {
         startTransition(() => {
           internalExecute(opts[0], bindArgs)
         })
         executeRef.current = resolve
-        resolve(null)
+        resolve()
       })
     },
     [internalExecute]
