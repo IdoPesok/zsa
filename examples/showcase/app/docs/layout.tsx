@@ -11,10 +11,26 @@ export default async function RootDocsLayout({
   children,
 }: {
   children: ReactNode
-}) {
-  const data = await fetch("https://api.github.com/repos/IdoPesok/zsa")
-  const stargazersCount = (await data.json()).stargazers_count
-
+  }) {
+  let stargazersCount=0
+  // try {
+  //   const data = await fetch("https://api.github.com/repos/IdoPesok/zsa")
+  //    stargazersCount = (await data.json()).stargazers_count
+    
+  // } catch (error) {
+  //   console.log("error");
+    
+  // }
+ try {
+    const data = await fetch("https://api.github.com/repos/IdoPesok/zsa");
+    // Handle non-OK responses (e.g., 404, 500)
+    if (!data.ok) {
+      throw new Error(`HTTP Error: ${data.status} ${data.statusText}`);
+    }
+   stargazersCount = (await data.json()).stargazers_count
+  } catch (error) {
+    console.error("Error fetching stargazers count:", error);
+  }
   return (
     <DocsLayout
       tree={pageTree}
