@@ -114,13 +114,17 @@ The format of PR titles follow [Conventional Commits](https://www.conventionalco
 
 An example:
 
-`feat(core): Add `fooBar` config
+```bash
+feat(core): Add `fooBar` config
 ^    ^      ^
 |    |      |__ Subject
 |    |_______ Scope (optional)
-|____________ Type`
+|____________ Type
+```
 
 If your PR contains any breaking changes, please append a ! after the type/scope, then add the release: breaking change GitHub label
 
+```bash
 fix!: remove deprecated `fooBar` config
 fix(core)!: remove deprecated `fooBar` config
+```
