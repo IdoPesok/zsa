@@ -12,8 +12,8 @@ export default async function RootDocsLayout({
 }: {
   children: ReactNode
 }) {
-  // const data = await fetch("https://api.github.com/repos/IdoPesok/zsa")
-  // const stargazersCount = (await data.json()).stargazers_count
+  const data = await fetch("https://api.github.com/repos/IdoPesok/zsa")
+  const stargazersCount = (await data.json()).stargazers_count
 
   return (
     <DocsLayout
@@ -26,7 +26,7 @@ export default async function RootDocsLayout({
               <Network className="size-5" />
               ZSA
             </span>
-            <StargazersButton count={0} />
+            <StargazersButton count={stargazersCount} />
           </div>
         ),
       }}
