@@ -11,7 +11,7 @@ import { useServerActionQuery } from "@/lib/hooks/server-action-hooks"
 import { getRandomNumber } from "./actions"
 
 export default function RandomNumberDisplay() {
-  const { isLoading, isRefetching, isSuccess, data } = useServerActionQuery(
+  const { isLoading, isRefetching, isSuccess, data ,isError  } = useServerActionQuery(
     getRandomNumber,
     {
       input: {
@@ -33,8 +33,9 @@ export default function RandomNumberDisplay() {
       <CardContent className="flex flex-col gap-4">
         <p>Random number:</p>
         {isSuccess && <>{JSON.stringify(data.number)}</>}
-        {isLoading ? " loading..." : ""}
-        {isRefetching ? " refetching..." : ""}
+        {isLoading && " loading..."}
+        {isRefetching && " refetching..."}
+        {isError && "Error fetching data" }
       </CardContent>
     </Card>
   )
