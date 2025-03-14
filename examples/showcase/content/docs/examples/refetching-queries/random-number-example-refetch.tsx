@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query"
 
 export default function RandomNumberRefetch() {
   const queryClient = useQueryClient()
-
+ 
   return (
     <Card className="p-4 w-full ">
       <Button
