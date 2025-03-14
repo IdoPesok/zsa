@@ -107,3 +107,20 @@ Feel free to explore the codebase and make changes to any of the packages. Remem
 If you encounter any bugs, have feature requests, or want to discuss potential improvements, please open an issue on the GitHub repository. When creating an issue, provide a clear and concise description of the problem or suggestion, along with any relevant information or examples.
 
 We appreciate your contributions and look forward to collaborating with you to make the `zsa` project even better!
+
+## Format of PR titles
+
+The format of PR titles follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+
+An example:
+
+`feat(core): Add `fooBar` config
+^    ^      ^
+|    |      |__ Subject
+|    |_______ Scope (optional)
+|____________ Type`
+
+If your PR contains any breaking changes, please append a ! after the type/scope, then add the release: breaking change GitHub label
+
+fix!: remove deprecated `fooBar` config
+fix(core)!: remove deprecated `fooBar` config
