@@ -13,14 +13,6 @@ export default async function RootDocsLayout({
   children: ReactNode
   }) {
   let stargazersCount=0
-  // try {
-  //   const data = await fetch("https://api.github.com/repos/IdoPesok/zsa")
-  //    stargazersCount = (await data.json()).stargazers_count
-    
-  // } catch (error) {
-  //   console.log("error");
-    
-  // }
  try {
     const data = await fetch("https://api.github.com/repos/IdoPesok/zsa");
     // Handle non-OK responses (e.g., 404, 500)
