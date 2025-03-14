@@ -93,7 +93,7 @@ import { useServerActionQuery } from "@/lib/hooks/server-action-hooks"
 import { getRandomNumber } from "./actions"
 
 export default function RandomNumberDisplay() {
-  const { isLoading, isRefetching, isSuccess, data } = useServerActionQuery(getRandomNumber, {
+  const { isLoading, isRefetching, isSuccess, data, isError } = useServerActionQuery(getRandomNumber, {
     input: {
       min: 0,
       max: 100,
@@ -114,9 +114,9 @@ export default function RandomNumberDisplay() {
         {isSuccess && (  // [!code highlight]
           <>{JSON.stringify(data.number)}</>  // [!code highlight]
         )}  // [!code highlight]
-        {isLoading ? " loading..." : ""}  // [!code highlight]
-        {isRefetching ? " refetching..." : ""}  // [!code highlight]
-
+        {isLoading && " loading..."}  // [!code highlight]
+        {isRefetching && " refetching..."}  // [!code highlight]
+        {isError && "Error fetching data" } // [!code highlight]
       </CardContent>
     </Card>
   )
