@@ -7,6 +7,6 @@ export async function generateSpec() {
   return await generateOpenApiDocument(openApiRouter, {
     title: "ZSA OpenAPI",
     version: "1.0.0",
-    baseUrl: "http://localhost:3000",
+    baseUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   })
 }

@@ -4,6 +4,7 @@ import { pathToRegexp } from "path-to-regexp"
 import {
   TAnyZodSafeFunctionHandler,
   TOptsSource,
+  ZSAError,
   ZSAResponseMeta,
   inferServerActionError,
   inferServerActionInput,
@@ -534,12 +535,26 @@ const getResponseFromAction = async <
 
     let status = getErrorStatusFromZSAError(error)
 
-    responseMeta.headers.set(
-      "content-type",
-      typeof error === "string" ? "text/plain" : "application/json"
-    )
+    // Sanitize unexpected (non-ZSA) errors to avoid leaking internal details
+    // such as stack traces or implementation specifics to API consumers.
+    // ZSA errors and shaped errors are intentional and returned as-is.
+    let responseBody: string
+    if (error instanceof ZSAError || shapeError) {
+      responseMeta.headers.set(
+        "content-type",
+        typeof error === "string" ? "text/plain" : "application/json"
+      )
+      responseBody = stringifyIfNeeded(error)
+    } else {
+      responseMeta.headers.set("content-type", "application/json")
+      responseBody = JSON.stringify({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Internal Server Error",
+      })
+      status = 500
+    }
 
-    return new Response(stringifyIfNeeded(error), {
+    return new Response(responseBody, {
       status,
       headers: responseMeta.headers,
     })
