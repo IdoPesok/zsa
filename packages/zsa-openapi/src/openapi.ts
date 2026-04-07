@@ -541,6 +541,7 @@ const getResponseFromAction = async <
         ? {
             code: error.code,
             message: error.message ?? "An unexpected error occurred",
+            ...(error.name ? { name: error.name } : {}),
             ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
             ...(error.formErrors ? { formErrors: error.formErrors } : {}),
             ...(error.formattedErrors
