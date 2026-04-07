@@ -85,10 +85,18 @@ export const isKeyABooleanInZodSchema = (key: string, schema: z.ZodTypeAny) => {
   return isArray
 }
 
+/** Keys that must never be set on a plain object to prevent prototype pollution */
+const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"])
+
 export const formDataToJson = (formData: FormData, inputSchema: z.ZodType) => {
-  const json: Record<string, any> = {}
+  const json: Record<string, any> = Object.create(null)
 
   formData.forEach((value, key) => {
+    // Prevent prototype pollution via crafted FormData keys
+    if (UNSAFE_KEYS.has(key)) {
+      return
+    }
+
     const isArraySchema = isKeyAnArrayInZodSchema(key, inputSchema)
     const isBooleanSchema = isKeyABooleanInZodSchema(key, inputSchema)
 

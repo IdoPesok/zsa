@@ -534,12 +534,27 @@ const getResponseFromAction = async <
 
     let status = getErrorStatusFromZSAError(error)
 
+    // Sanitize the error response to avoid leaking internal details
+    // (e.g. stack traces, raw exception messages) to the client.
+    const safeError =
+      typeof error === "object" && error !== null
+        ? {
+            code: error.code,
+            message: error.message ?? "An unexpected error occurred",
+            ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+            ...(error.formErrors ? { formErrors: error.formErrors } : {}),
+            ...(error.formattedErrors
+              ? { formattedErrors: error.formattedErrors }
+              : {}),
+          }
+        : error
+
     responseMeta.headers.set(
       "content-type",
-      typeof error === "string" ? "text/plain" : "application/json"
+      typeof safeError === "string" ? "text/plain" : "application/json"
     )
 
-    return new Response(stringifyIfNeeded(error), {
+    return new Response(stringifyIfNeeded(safeError), {
       status,
       headers: responseMeta.headers,
     })
