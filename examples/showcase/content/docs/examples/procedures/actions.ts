@@ -106,14 +106,8 @@ const updatePostName = ownsPostProcedure
   .createServerAction()
   .input(z.object({ newPostName: z.string() }))
   .handler(async ({ input, ctx }) => {
-    console.log({
-      // input contains postId and newPostName
-      newPostName: input.newPostName,
-      postId: input.postId,
-      // ctx contains user and post returned by procedures
-      user: ctx.user,
-      post: ctx.post,
-    })
+    // input contains postId and newPostName
+    // ctx contains user and post returned by procedures
 
     return "GREAT SUCCESS"
   })

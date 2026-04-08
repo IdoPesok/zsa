@@ -539,7 +539,14 @@ const getResponseFromAction = async <
       typeof error === "string" ? "text/plain" : "application/json"
     )
 
-    return new Response(stringifyIfNeeded(error), {
+    // Sanitize error response to avoid leaking internal details (e.g. stack traces)
+    let sanitizedError = error
+    if (typeof error === "object" && error !== null && !shapeError) {
+      const { stack, cause, ...safeFields } = error
+      sanitizedError = safeFields
+    }
+
+    return new Response(stringifyIfNeeded(sanitizedError), {
       status,
       headers: responseMeta.headers,
     })

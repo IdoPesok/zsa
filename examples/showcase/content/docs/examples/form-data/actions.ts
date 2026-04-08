@@ -14,7 +14,6 @@ export const myFormDataAction = createServerAction()
     }
   )
   .handler(async ({ input }) => {
-    console.log("got input", input)
     // Process the input data
     return {
       message: `Received data: ${input.name}, ${input.email}`,

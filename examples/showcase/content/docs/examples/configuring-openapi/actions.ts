@@ -44,7 +44,7 @@ export const getReplyWithHeaders = createServerAction()
       // authenticate with headers
       const apiKey = request.headers.get("authorization")?.split(" ")[1]
 
-      if (!apiKey || apiKey !== "123") {
+      if (!apiKey || apiKey !== process.env.API_KEY) {
         throw new Error("NOT_AUTHORIZED")
       }
 
