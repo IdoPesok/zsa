@@ -48,6 +48,17 @@ export interface OpenApiAction<THandler extends TAnyZodSafeFunctionHandler> {
   path: string
   summary?: string
   description?: string
+  /**
+   * Marks this operation as requiring authentication in the generated
+   * OpenAPI document (sets the `security` field on the operation).
+   *
+   * This flag is OpenAPI-spec metadata only — it has no effect at request
+   * time. `createRouteHandlers`, `setupApiHandler`, and
+   * `createRouteHandlersForAction` will still invoke the underlying server
+   * action regardless of this value. To actually block unauthenticated
+   * requests, enforce auth inside a `createServerActionProcedure` chained
+   * onto the action.
+   */
   protect?: boolean
   tags?: string[]
   headers?: (OpenAPIV3.ParameterBaseObject & { name: string; in?: "header" })[]
