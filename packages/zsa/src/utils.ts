@@ -1,4 +1,30 @@
 import { z } from "zod"
+import { TOptsSource } from "./types"
+
+/**
+ * Create a server-origin opts source used to tag internal handler options so
+ * they can be distinguished from user-supplied opts.
+ */
+export const createOptsSource = () => new TOptsSource(() => true)
+
+/**
+ * JSON-stringify a value unless it is already a string.
+ */
+export const stringifyIfNeeded = (data: unknown): string =>
+  typeof data === "string" ? data : JSON.stringify(data)
+
+/**
+ * Extract both flattened and formatted error shapes from a Zod error.
+ * Used when building ZSAError input/output parse error payloads.
+ */
+export const formatZodError = <T extends z.ZodType>(err: z.ZodError<T>) => {
+  const flattened = err.flatten()
+  return {
+    fieldErrors: flattened.fieldErrors,
+    formErrors: flattened.formErrors,
+    formattedErrors: err.format(),
+  }
+}
 
 export const instanceofZodTypeKind = <Z extends z.ZodFirstPartyTypeKind>(
   type: z.ZodTypeAny,

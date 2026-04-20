@@ -37,8 +37,11 @@ import {
 import {
   ZodTypeLikeVoid,
   canDataBeUndefinedForSchema,
+  createOptsSource,
+  formatZodError,
   formDataToJson,
   instanceofZodTypeObject,
+  stringifyIfNeeded,
 } from "./utils"
 
 const validateOpts = (opts?: THandlerOpts<any>) => {
@@ -186,7 +189,7 @@ export class ZodSafeFunction<
         request,
         responseMeta,
         previousState,
-        source: new TOptsSource(() => true),
+        source: createOptsSource(),
         previousInputSchema: inputSchema,
         onInputSchema: (schema) => {
           inputSchema = schema
@@ -228,7 +231,7 @@ export class ZodSafeFunction<
     for (const procedureHandler of this.$internals.procedureHandlerChain) {
       // run each procedure node
       await procedureHandler(undefined, undefined, {
-        source: new TOptsSource(() => true),
+        source: createOptsSource(),
         previousInputSchema: inputSchema,
         returnInputSchema: true,
         onInputSchema: (schema) => {
@@ -239,7 +242,7 @@ export class ZodSafeFunction<
 
     if (!args.opts) {
       args.opts = {
-        source: new TOptsSource(() => true),
+        source: createOptsSource(),
       }
     }
 
@@ -504,15 +507,8 @@ export class ZodSafeFunction<
         await this.$internals.onOutputParseError(safe.error)
       }
 
-      const flattenedErrors = safe.error.flatten()
-      const formattedErrors = safe.error.format()
-
       throw new ZSAError("OUTPUT_PARSE_ERROR", safe.error, {
-        outputParseErrors: {
-          fieldErrors: flattenedErrors?.fieldErrors,
-          formErrors: flattenedErrors?.formErrors,
-          formattedErrors: formattedErrors,
-        },
+        outputParseErrors: formatZodError(safe.error),
       })
     }
     return safe.data
@@ -624,20 +620,12 @@ export class ZodSafeFunction<
       return [null, customError as any]
     }
 
-    const stringifyIfNeeded = (data: any) =>
-      typeof data === "string" ? data : JSON.stringify(data)
-
     // get zod errors
-    let formattedErrors
-    let flattenedErrors
     const data = err.data
-    if (
-      data instanceof z.ZodError &&
-      customError.code === "INPUT_PARSE_ERROR"
-    ) {
-      formattedErrors = data.format()
-      flattenedErrors = data.flatten()
-    }
+    const zodErrors =
+      data instanceof z.ZodError && customError.code === "INPUT_PARSE_ERROR"
+        ? formatZodError(data)
+        : undefined
 
     return [
       null,
@@ -646,9 +634,9 @@ export class ZodSafeFunction<
         name: customError.name,
         message: stringifyIfNeeded(customError.message),
         code: customError.code,
-        fieldErrors: flattenedErrors?.fieldErrors,
-        formErrors: flattenedErrors?.formErrors,
-        formattedErrors: formattedErrors as any,
+        fieldErrors: zodErrors?.fieldErrors,
+        formErrors: zodErrors?.formErrors,
+        formattedErrors: zodErrors?.formattedErrors as any,
       } as any,
     ]
   }
@@ -775,17 +763,9 @@ export class ZodSafeFunction<
         await this.$internals.onInputParseError(safe.error)
       }
 
-      // retrieve the zod errors
-      const flattenedErrors = safe.error.flatten()
-      const formattedErrors = safe.error.format()
-
       // throw the error
       throw new ZSAError("INPUT_PARSE_ERROR", safe.error, {
-        inputParseErrors: {
-          fieldErrors: flattenedErrors?.fieldErrors,
-          formErrors: flattenedErrors?.formErrors,
-          formattedErrors: formattedErrors,
-        },
+        inputParseErrors: formatZodError(safe.error),
       })
     }
 
@@ -947,7 +927,7 @@ export class ZodSafeFunction<
               if (!opts) {
                 // make sure opts is not undefined
                 opts = {
-                  source: new TOptsSource(() => true),
+                  source: createOptsSource(),
                 }
               }
 
@@ -1005,7 +985,7 @@ export class ZodSafeFunction<
           return await wrapper($args, overrideArgs, {
             ...(opts || {}),
             attempts: (opts?.attempts || 1) + 1,
-            source: new TOptsSource(() => true),
+            source: createOptsSource(),
           })
         }
 
@@ -1036,7 +1016,7 @@ export class ZodSafeFunction<
           onParsedArgs: (parsedArgs) => {
             gotParsedArgs = parsedArgs
           },
-          source: new TOptsSource(() => true),
+          source: createOptsSource(),
         }),
         this.getTimeoutErrorPromise(timeoutMs),
       ])
