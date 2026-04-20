@@ -86,14 +86,21 @@ export const isKeyABooleanInZodSchema = (key: string, schema: z.ZodTypeAny) => {
 }
 
 export const formDataToJson = (formData: FormData, inputSchema: z.ZodType) => {
-  const json: Record<string, any> = {}
+  // Use a null-prototype object so that form field names which happen to
+  // collide with names on Object.prototype (e.g. "__proto__", "constructor",
+  // "hasOwnProperty") are treated as plain keys and cannot mutate the
+  // prototype chain via the "__proto__" setter.
+  const json: Record<string, any> = Object.create(null)
 
   formData.forEach((value, key) => {
     const isArraySchema = isKeyAnArrayInZodSchema(key, inputSchema)
     const isBooleanSchema = isKeyABooleanInZodSchema(key, inputSchema)
 
-    // Reflect.has in favor of: object.hasOwnProperty(key)
-    if (!Reflect.has(json, key)) {
+    // Only check own properties; an inherited property must not be considered
+    // "already set". With a null-prototype object this is equivalent to
+    // `key in json`, but we keep the explicit own-property check so the
+    // intent is obvious.
+    if (!Object.prototype.hasOwnProperty.call(json, key)) {
       json[key] = isArraySchema ? [value] : value
 
       if (isBooleanSchema) {
