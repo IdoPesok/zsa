@@ -130,13 +130,29 @@ export const useServerAction = <
 
       let data, err
 
-      await serverAction(input, overrideData).then((response) => {
+      try {
+        const response = await serverAction(input, overrideData)
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
           ;[data, err] = response
         }
-      })
+      } catch (thrown) {
+        // the server action threw instead of returning a [data, err] tuple
+        // (network failure, unexpected runtime error, etc.). without this
+        // catch the rejection escapes startTransition -- executeRef.current
+        // is never resolved and execute() hangs forever. normalize to a
+        // ZSAError-shaped object so downstream error handling still works.
+        const message =
+          thrown instanceof Error ? thrown.message : String(thrown)
+        err = {
+          message,
+          data: message,
+          stack: thrown instanceof Error ? (thrown.stack ?? "") : "",
+          name: thrown instanceof Error ? thrown.name : "Error",
+          code: "ERROR",
+        } as any
+      }
 
       if (err) {
         let retryDelay = getRetryDelay(opts?.retry, retryCount.current, err)
@@ -148,7 +164,29 @@ export const useServerAction = <
               internalExecute(input, overrideData, {
                 ...(args || {}),
                 isFromRetryId: retryId,
-              }).then(resolve)
+              })
+                .then(resolve)
+                .catch((retryErr) => {
+                  // a rejection here would leave the outer Promise unresolved
+                  // and hang execute() forever. normalize into a tuple so
+                  // callers always get a deterministic result.
+                  const message =
+                    retryErr instanceof Error
+                      ? retryErr.message
+                      : String(retryErr)
+                  resolve([
+                    null,
+                    {
+                      message,
+                      data: message,
+                      stack:
+                        retryErr instanceof Error ? (retryErr.stack ?? "") : "",
+                      name:
+                        retryErr instanceof Error ? retryErr.name : "Error",
+                      code: "ERROR",
+                    },
+                  ] as any)
+                })
             }, retryDelay)
           )
         }
