@@ -618,7 +618,7 @@ export const createRouteHandlers = (
         ).split("/")
 
         if (basePathSplit.length !== pathSplit.length) {
-          return {} as any
+          return null
         }
 
         // copy over the params
