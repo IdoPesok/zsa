@@ -47,6 +47,7 @@ import {
 import { RetryState, TEST_DATA } from "server/data"
 import { z } from "zod"
 import {
+  createServerAction,
   createServerActionProcedure,
   inferServerActionError,
   inferServerActionInput,
@@ -947,6 +948,67 @@ describe("actions", () => {
 
       expect(onInputParseErrorMock).not.toHaveBeenCalled()
       expect(onOutputParseErrorMock).toHaveBeenCalled()
+    })
+
+    it("does not mask the original error when an onError callback throws", async () => {
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {})
+
+      try {
+        const action = createServerAction()
+          .input(z.object({}))
+          .onError(() => {
+            throw new Error("callback boom")
+          })
+          .handler(async () => {
+            throw new Error("original boom")
+          })
+
+        const [data, err] = await action({})
+        expect(data).toBeNull()
+        expect(err).not.toBeNull()
+        expect(err?.message).toBe("original boom")
+
+        expect(consoleErrorSpy).toHaveBeenCalled()
+        const loggedMessages = consoleErrorSpy.mock.calls.map((args) =>
+          String(args[0])
+        )
+        expect(
+          loggedMessages.some((m) => m.includes("onError callback threw"))
+        ).toBe(true)
+      } finally {
+        consoleErrorSpy.mockRestore()
+      }
+    })
+
+    it("does not turn a successful action into a failure when an onSuccess callback throws", async () => {
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {})
+
+      try {
+        const action = createServerAction()
+          .input(z.object({}))
+          .onSuccess(() => {
+            throw new Error("onSuccess boom")
+          })
+          .handler(async () => "ok")
+
+        const [data, err] = await action({})
+        expect(err).toBeNull()
+        expect(data).toBe("ok")
+
+        expect(consoleErrorSpy).toHaveBeenCalled()
+        const loggedMessages = consoleErrorSpy.mock.calls.map((args) =>
+          String(args[0])
+        )
+        expect(
+          loggedMessages.some((m) => m.includes("onSuccess callback threw"))
+        ).toBe(true)
+      } finally {
+        consoleErrorSpy.mockRestore()
+      }
     })
   })
 

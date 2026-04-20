@@ -142,14 +142,27 @@ export class ZodSafeFunction<
 
       let retryDelay = 0
       if (typeof config.delay === "function") {
-        retryDelay = config.delay(currentAttempt, err)
+        try {
+          retryDelay = config.delay(currentAttempt, err)
+        } catch (delayErr) {
+          // a user-supplied delay function threw. don't swallow silently --
+          // surface the bug so it can be diagnosed, and skip the retry.
+          // eslint-disable-next-line no-console
+          console.error(
+            "[zsa] retry.delay callback threw; skipping retry.",
+            delayErr
+          )
+          return -1
+        }
       } else if (typeof config.delay === "number") {
         retryDelay = config.delay
       }
 
       if (shouldRetry) return retryDelay
       return -1
-    } catch {
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[zsa] unexpected error computing retry delay.", err)
       return -1
     }
   }
@@ -542,9 +555,17 @@ export class ZodSafeFunction<
     // callbacks run on the main action thread
     if (this.$internals.isProcedure) return
 
-    // run on success callbacks
+    // run on success callbacks. these are side-effect callbacks (logging,
+    // analytics, etc.), so a throw from one of them should not turn a
+    // successful action into a failure. surface the error via console.error
+    // and continue.
     for (const fn of this.$internals.onSuccessFns || []) {
-      await fn({ args, data })
+      try {
+        await fn({ args, data })
+      } catch (cbErr) {
+        // eslint-disable-next-line no-console
+        console.error("[zsa] onSuccess callback threw; ignoring.", cbErr)
+      }
       this.checkTimeoutStatus(timeoutStatus) // checkpoint
     }
 
@@ -552,13 +573,18 @@ export class ZodSafeFunction<
 
     // run on complete callbacks
     for (const fn of this.$internals.onCompleteFns || []) {
-      await fn({
-        isSuccess: true,
-        isError: false,
-        status: "success",
-        args,
-        data,
-      })
+      try {
+        await fn({
+          isSuccess: true,
+          isError: false,
+          status: "success",
+          args,
+          data,
+        })
+      } catch (cbErr) {
+        // eslint-disable-next-line no-console
+        console.error("[zsa] onComplete callback threw; ignoring.", cbErr)
+      }
       this.checkTimeoutStatus(timeoutStatus) // checkpoint
     }
   }
@@ -605,19 +631,31 @@ export class ZodSafeFunction<
       customError = err instanceof ZSAError ? err : new ZSAError("ERROR", err)
     }
 
-    // run on error callbacks
+    // run on error callbacks. a throw from a user-supplied onError callback
+    // must not replace or mask the original action error -- surface the
+    // callback error via console.error and continue propagating the original.
     for (const fn of this.$internals.onErrorFns || []) {
-      await fn(customError)
+      try {
+        await fn(customError)
+      } catch (cbErr) {
+        // eslint-disable-next-line no-console
+        console.error("[zsa] onError callback threw; ignoring.", cbErr)
+      }
     }
 
     // run on complete callbacks
     for (const fn of this.$internals.onCompleteFns || []) {
-      await fn({
-        isSuccess: false,
-        isError: true,
-        status: "error",
-        error: customError,
-      })
+      try {
+        await fn({
+          isSuccess: false,
+          isError: true,
+          status: "error",
+          error: customError,
+        })
+      } catch (cbErr) {
+        // eslint-disable-next-line no-console
+        console.error("[zsa] onComplete callback threw; ignoring.", cbErr)
+      }
     }
 
     if (this.$internals.shapeErrorFns !== undefined) {

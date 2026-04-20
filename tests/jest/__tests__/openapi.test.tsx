@@ -213,6 +213,33 @@ describe("openapi", () => {
       })
     })
 
+    it("should return 400 when the JSON body is malformed [POST]", async () => {
+      const { POST } = createRouteHandlers(openapiRouter)
+
+      const headers = new Headers()
+      headers.append("content-type", "application/json")
+      headers.append("content-length", "14")
+
+      const data: any = {
+        nextUrl: {
+          pathname: "/api/calculations/multiply/100",
+          searchParams: new URLSearchParams(),
+        },
+        method: "POST",
+        headers,
+        json: () => {
+          throw new SyntaxError("Unexpected token in JSON")
+        },
+      }
+      data.clone = () => ({ ...data })
+
+      const response = await POST(data)
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json).toEqual({ error: "Invalid request body" })
+    })
+
     it("should fail to use form data with json only router [POST]", async () => {
       const { GET } = createRouteHandlers(jsonOnlyRouter)
 

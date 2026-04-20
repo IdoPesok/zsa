@@ -425,6 +425,17 @@ const getDataFromRequest = async (
       }
     }
 
+    // determine whether the request actually has a body before attempting to
+    // parse. a missing / empty body should keep the legacy "no input" behavior
+    // (letting schema defaults kick in), but a present-but-malformed body
+    // should no longer be silently swallowed.
+    const contentLengthHeader = request.headers.get("content-length")
+    const contentLength = contentLengthHeader
+      ? parseInt(contentLengthHeader, 10)
+      : NaN
+    const transferEncoding = request.headers.get("transfer-encoding")
+    const hasBody = contentLength > 0 || Boolean(transferEncoding)
+
     try {
       if (
         requestContentType?.startsWith(FORM_DATA_CONTENT_TYPE) ||
@@ -437,6 +448,18 @@ const getDataFromRequest = async (
         data = await request.clone().json()
       }
     } catch (err) {
+      if (hasBody) {
+        // a malformed body (invalid JSON, bad multipart, etc.) is a real
+        // client error -- propagate it so the handler can surface a 400
+        // instead of silently running the action with `undefined` input.
+        return {
+          data: undefined,
+          searchParamsJson,
+          requestError: "BODY_PARSE_ERROR" as const,
+        }
+      }
+      // no real body was supplied (empty POST, missing json() on the mock,
+      // etc.) -- preserve the legacy behavior of treating as "no input".
       data = undefined
     }
   }
@@ -464,6 +487,14 @@ const getResponseFromAction = async <
   if (requestError === "UNSUPPORTED_CONTENT_TYPE") {
     return new Response(JSON.stringify({ error: "Unsupported Media Type" }), {
       status: 415,
+    })
+  }
+
+  // handle a malformed request body (e.g. invalid JSON)
+  if (requestError === "BODY_PARSE_ERROR") {
+    return new Response(JSON.stringify({ error: "Invalid request body" }), {
+      status: 400,
+      headers: { "content-type": "application/json" },
     })
   }
 
@@ -523,7 +554,15 @@ const getResponseFromAction = async <
     if (shapeError) {
       try {
         error = shapeError(error)
-      } catch (error: any) {
+      } catch (shapeErr: any) {
+        // a user-supplied shapeError function threw. don't swallow silently --
+        // surface the callback bug so it can be diagnosed, then fall back to
+        // the original error.
+        // eslint-disable-next-line no-console
+        console.error(
+          "[zsa-openapi] shapeError callback threw; falling back to original error.",
+          shapeErr
+        )
         error = $error
       }
     }
@@ -568,15 +607,21 @@ export const createRouteHandlers = (
 ) => {
   const parseRequest = async (
     request: NextRequest
-  ): Promise<null | {
-    input: Record<string, any> | undefined
-    overrideInput?: Record<string, any> | undefined
-    params: Record<string, string>
-    searchParams: Record<string, string>
-    action: TAnyZodSafeFunctionHandler
-    body: Record<string, any> | undefined
-    requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"]
-  }> => {
+  ): Promise<
+    | null
+    | { internalError: unknown }
+    | {
+        input: Record<string, any> | undefined
+        overrideInput?: Record<string, any> | undefined
+        params: Record<string, string>
+        searchParams: Record<string, string>
+        action: TAnyZodSafeFunctionHandler
+        body: Record<string, any> | undefined
+        requestError: Awaited<
+          ReturnType<typeof getDataFromRequest>
+        >["requestError"]
+      }
+  > => {
     try {
       // find the matching action from the router
       const foundMatch = router.$INTERNALS.actions.find((action) => {
@@ -668,13 +713,28 @@ export const createRouteHandlers = (
         requestError: requestError,
       }
     } catch (error: unknown) {
-      return null
+      // an error in request parsing (path matching, body reading, etc.) is a
+      // real internal failure -- silently returning null would surface as a
+      // misleading 404. capture the error so the handler can respond with a
+      // 500 and so the failure is visible in server logs.
+      // eslint-disable-next-line no-console
+      console.error(
+        "[zsa-openapi] unexpected error while parsing request.",
+        error
+      )
+      return { internalError: error }
     }
   }
 
   const handler: ApiRouteHandler = async (request: NextRequest) => {
     const parsedData = await parseRequest(request)
     if (!parsedData) return new Response("", { status: 404 })
+    if ("internalError" in parsedData) {
+      return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      })
+    }
 
     return await getResponseFromAction({
       request,
