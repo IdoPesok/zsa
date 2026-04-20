@@ -35,5 +35,11 @@
     "types.d.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "__tests__/zsa-react-utils.test.tsx",
+    "__tests__/zsa-openapi-utils.test.tsx",
+    "__tests__/zsa-openapi-zod.test.tsx",
+    "__tests__/zsa-openapi-schema.test.tsx"
+  ]
 }
