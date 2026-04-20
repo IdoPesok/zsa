@@ -16,6 +16,7 @@ import {
   getUserGreetingAction,
   getUserIdAction,
   helloWorldAction,
+  faultyRetryDelayAction,
   helloWorldExponentialRetryAction,
   helloWorldProcedureTimeoutAction,
   helloWorldProtectedTimeoutAction,
@@ -292,6 +293,24 @@ describe("actions", () => {
       const [data, err] = await helloWorldRetryAction()
       expect(data).toBeNull()
       expect(err).not.toBeNull()
+    })
+
+    it("surfaces the original error when the retry delay callback throws", async () => {
+      const consoleSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {})
+
+      const [data, err] = await faultyRetryDelayAction()
+
+      expect(data).toBeNull()
+      // we should still get the original handler error, not a delay-callback
+      // error, and it should not silently succeed.
+      expect(err).not.toBeNull()
+      expect(err?.message).toMatch(/original handler failure/)
+      // the retry-config failure must still be surfaced so it is diagnosable.
+      expect(consoleSpy).toHaveBeenCalled()
+
+      consoleSpy.mockRestore()
     })
 
     it("returns a retry error with exponential delay", async () => {

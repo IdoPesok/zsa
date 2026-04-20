@@ -213,6 +213,24 @@ describe("openapi", () => {
       })
     })
 
+    it("should respond with 400 for malformed JSON bodies [POST]", async () => {
+      const { POST } = createRouteHandlers(openapiRouter)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/multiply/100",
+      })
+      // simulate malformed JSON payload
+      ;(request as any).text = () => "{not-valid-json"
+      ;(request as any).clone = () => request
+
+      const response = await POST(request)
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.error).toBe("Invalid or malformed request body")
+    })
+
     it("should fail to use form data with json only router [POST]", async () => {
       const { GET } = createRouteHandlers(jsonOnlyRouter)
 
@@ -444,6 +462,38 @@ describe("openapi", () => {
       expect(json.code).toBe("INPUT_PARSE_ERROR")
       expect(json.message).toBeDefined()
       expect(json.name).toBeDefined()
+    })
+
+    it("it should fall back to the original error when shapeError throws [POST]", async () => {
+      const consoleSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {})
+
+      const { POST } = createRouteHandlersForAction(divideAction, {
+        shapeError: () => {
+          throw new Error("shapeError blew up")
+        },
+      })
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/divide/100",
+        body: {
+          number2: "0",
+        },
+      })
+
+      const response = await POST(request, {
+        params: {
+          number1: "100",
+        },
+      })
+      // the handler should not crash; it should respond with the original
+      // error rather than silently swallow the shapeError failure.
+      expect(response.status).toBe(400)
+      expect(consoleSpy).toHaveBeenCalled()
+
+      consoleSpy.mockRestore()
     })
 
     it("it should fail to divide a number by zero and return a custom error [POST]", async () => {

@@ -149,7 +149,14 @@ export class ZodSafeFunction<
 
       if (shouldRetry) return retryDelay
       return -1
-    } catch {
+    } catch (retryConfigError) {
+      // Don't swallow silently: surface the failure so users can diagnose
+      // misbehaving `retry.delay` callbacks. We still return -1 so that the
+      // original action error propagates through `handleError`.
+      console.error(
+        "[zsa] Error while computing retry delay; skipping retry.",
+        retryConfigError
+      )
       return -1
     }
   }
@@ -572,7 +579,12 @@ export class ZodSafeFunction<
     // we need to throw any NEXT_REDIRECT errors so that next can
     // properly handle them.
 
-    if (err.message === "NEXT_REDIRECT" || err.message === "NEXT_NOT_FOUND") {
+    if (
+      err &&
+      typeof err === "object" &&
+      "message" in err &&
+      (err.message === "NEXT_REDIRECT" || err.message === "NEXT_NOT_FOUND")
+    ) {
       throw err
     }
 

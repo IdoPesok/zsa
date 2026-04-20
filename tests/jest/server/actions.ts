@@ -240,6 +240,19 @@ export const helloWorldExponentialRetryAction = publicAction
     throw new Error("forcing retry")
   })
 
+// Action whose retry.delay callback itself throws. Used to assert that a
+// misbehaving delay callback does not swallow the original handler error.
+export const faultyRetryDelayAction = publicAction
+  .retry({
+    maxAttempts: TEST_DATA.retries.maxAttempts,
+    delay: () => {
+      throw new Error("delay blew up")
+    },
+  })
+  .handler(async () => {
+    throw new Error("original handler failure")
+  })
+
 export const helloWorldRetryProcedureAction = retryAction.handler(async () => {
   return "hello world" as const
 })

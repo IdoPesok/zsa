@@ -40,11 +40,15 @@ export const mockNextRequest = (args: {
 
   if (args.formData) {
     data.formData = () => args.formData
+    data.text = () => ""
   } else if (args.body) {
     data.json = () => args.body
+    data.text = () => JSON.stringify(args.body)
+  } else {
+    data.text = () => ""
   }
 
-  data.clone = (): NextRequest => ({...data})
+  data.clone = (): NextRequest => ({ ...data })
 
   return data as unknown as NextRequest
 }
