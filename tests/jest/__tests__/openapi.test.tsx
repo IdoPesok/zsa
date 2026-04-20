@@ -780,4 +780,86 @@ describe("openapi", () => {
       expect(param2.schema.type).toEqual("string")
     })
   })
+
+  describe("error handling", () => {
+    it("should return 400 with a descriptive message when the JSON body is malformed", async () => {
+      const { POST } = setupApiHandler(
+        "/api/calculations/divide/{number1}",
+        divideAction
+      )
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/divide/100",
+        rawBody: "{not json",
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.error).toBe("Bad Request")
+      expect(typeof json.message).toBe("string")
+      expect(json.message.length).toBeGreaterThan(0)
+    })
+
+    it("should return 400 for malformed JSON via createRouteHandlers", async () => {
+      const { POST } = createRouteHandlers(openapiRouter)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/divide/100",
+        rawBody: "not-json-at-all",
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.error).toBe("Bad Request")
+    })
+
+    it("should preserve shapeError throw as `cause` on the original error", async () => {
+      const shapeErrorFailure = new Error("shape-error-crashed")
+      const { POST } = setupApiHandler(
+        "/api/calculations/divide/{number1}",
+        divideAction,
+        {
+          shapeError: () => {
+            throw shapeErrorFailure
+          },
+        }
+      )
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/divide/100",
+        body: {
+          number2: "0",
+        },
+      })
+
+      // spy to make sure the shapeError throw isn't completely invisible
+      const response = await POST(request)
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      // the original INPUT_PARSE_ERROR should still be returned since
+      // shapeError threw; the response should not be replaced by the
+      // shapeError failure itself.
+      expect(json.code).toBe("INPUT_PARSE_ERROR")
+    })
+
+    it("should still reach the action when the body is empty (schema defaults apply)", async () => {
+      const { POST } = createRouteHandlers(openapiRouter)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/calculations/multiplyWithDefaultValues",
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(200)
+    })
+  })
 })

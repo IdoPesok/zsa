@@ -8,6 +8,12 @@ export const mockNextRequest = (args: {
   pathname: `/${string}`
   searchParams?: Record<string, string>
   body?: Record<string, any>
+  /**
+   * Raw string body. Used to test malformed JSON handling since
+   * `body` goes through the typed `json()` mock and can't represent
+   * syntactically invalid payloads.
+   */
+  rawBody?: string
   formData?: FormData
   headers?: Record<string, string>
 }) => {
@@ -40,11 +46,17 @@ export const mockNextRequest = (args: {
 
   if (args.formData) {
     data.formData = () => args.formData
+  } else if (args.rawBody !== undefined) {
+    const raw = args.rawBody
+    data.text = async () => raw
+    data.json = async () => JSON.parse(raw)
   } else if (args.body) {
-    data.json = () => args.body
+    const body = args.body
+    data.text = async () => JSON.stringify(body)
+    data.json = async () => body
   }
 
-  data.clone = (): NextRequest => ({...data})
+  data.clone = (): NextRequest => ({ ...data })
 
   return data as unknown as NextRequest
 }

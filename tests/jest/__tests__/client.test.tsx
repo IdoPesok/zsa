@@ -9,6 +9,7 @@ import ResetUI from "app/tests/client/reset/page"
 import RetryStatesUI from "app/tests/client/retry-states/page"
 import StatesUI from "app/tests/client/states/page"
 import UndefinedSuccessActionUI from "app/tests/client/undefined-success-action/page"
+import RejectingActionUI from "app/tests/client/rejecting-action/page"
 import InfiniteQueryUI from "app/tests/client/use-server-action-infinite-query/page"
 import MutationUI from "app/tests/client/use-server-action-mutation/page"
 import QueryUI from "app/tests/client/use-server-action-query/page"
@@ -487,6 +488,29 @@ describe("client", () => {
         expect(screen.getByRole("result")).toHaveTextContent(
           "Mutation Result: John"
         )
+      })
+    })
+  })
+
+  describe("useServerAction with a rejecting action", () => {
+    it("resolves the execute() promise with an error tuple instead of hanging when the action throws unexpectedly", async () => {
+      render(<RejectingActionUI />)
+
+      const invokeButton = screen.getByRole(CLIENT_TEST_DATA.roles.invoke)
+      fireEvent.click(invokeButton)
+
+      // If the rejection were unhandled, `execute()` would never resolve and
+      // the result element would remain "initial", leaving this wait to time
+      // out. We verify both that execute() resolves AND that the error
+      // message propagates through the tuple.
+      await waitFor(() => {
+        const result = screen.getByRole(CLIENT_TEST_DATA.roles.result)
+        expect(result.textContent).toContain("boom")
+      })
+
+      // onError callback should have run with the surfaced error
+      await waitFor(() => {
+        expect(screen.getByRole("onError")).toHaveTextContent("boom")
       })
     })
   })

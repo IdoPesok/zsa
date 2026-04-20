@@ -1042,7 +1042,25 @@ export class ZodSafeFunction<
       ])
         .then((r) => r)
         .catch((err) => {
-          timeoutStatus.isTimeout = true
+          // NEXT_REDIRECT / NEXT_NOT_FOUND are rethrown by handleError on purpose
+          // so Next.js can perform the navigation. Propagate them without
+          // re-running callbacks or mislabeling them as timeouts.
+          if (
+            err &&
+            typeof err === "object" &&
+            (err.message === "NEXT_REDIRECT" ||
+              err.message === "NEXT_NOT_FOUND")
+          ) {
+            throw err
+          }
+
+          // Only flag a timeout when the rejection actually came from the
+          // timeout promise. Previously, any error escaping `wrapper` would
+          // incorrectly set `timeoutStatus.isTimeout = true`.
+          if (err instanceof ZSAError && err.code === "TIMEOUT") {
+            timeoutStatus.isTimeout = true
+          }
+
           return this.handleError(err, gotArgs, gotParsedArgs)
         })
     }

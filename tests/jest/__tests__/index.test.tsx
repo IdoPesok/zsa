@@ -455,6 +455,15 @@ describe("actions", () => {
         "NEXT_REDIRECT"
       )
     })
+
+    it("propagates NEXT_REDIRECT through withTimeout without mislabeling it as a timeout", async () => {
+      const { redirectWithTimeoutAction } = await import("server/actions")
+      // Before the fix, a redirect throw escaping `wrapper` into the race's
+      // `.catch` would flip `timeoutStatus.isTimeout = true` and call
+      // `handleError` a second time, double-firing callbacks and wrapping the
+      // redirect as a TIMEOUT. Now the redirect should propagate cleanly.
+      await expect(redirectWithTimeoutAction()).rejects.toThrow("NEXT_REDIRECT")
+    })
   })
 
   describe("form data", () => {

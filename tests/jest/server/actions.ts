@@ -230,6 +230,17 @@ export const helloWorldRetryAction = publicAction
     throw new Error("forcing retry")
   })
 
+// An action that declares a timeout but issues a `redirect()` inside its
+// handler. This exercises the `withTimeout` race path and verifies that
+// NEXT_REDIRECT propagates through rather than being mislabeled as a timeout
+// error by the race's `.catch` handler.
+export const redirectWithTimeoutAction = createServerAction()
+  .timeout(TEST_DATA.timeout + 5000)
+  .handler(async () => {
+    redirect("/slow")
+    return "never" as const
+  })
+
 export const helloWorldExponentialRetryAction = publicAction
   .retry({
     maxAttempts: TEST_DATA.retries.maxAttempts,

@@ -433,10 +433,45 @@ const getDataFromRequest = async (
         // if its form data
         data = await request.clone().formData()
       } else if (requestContentType?.startsWith(JSON_CONTENT_TYPE)) {
-        // if its json
-        data = await request.clone().json()
+        // Read the body as text first so we can distinguish "no body" (e.g. a
+        // POST with no payload, where schema defaults should apply) from a
+        // "malformed body" (which should surface as a 400 rather than a
+        // misleading schema validation error).
+        const cloned = request.clone() as { text?: () => Promise<string> }
+        if (typeof cloned.text === "function") {
+          const bodyText = await cloned.text()
+          if (bodyText.trim() === "") {
+            data = undefined
+          } else {
+            try {
+              data = JSON.parse(bodyText)
+            } catch (parseErr) {
+              return {
+                data: undefined,
+                searchParamsJson,
+                requestError: "BODY_PARSE_ERROR" as const,
+                requestErrorMessage:
+                  parseErr instanceof Error
+                    ? parseErr.message
+                    : String(parseErr),
+              }
+            }
+          }
+        } else {
+          // Fallback for requests that don't expose `text()` (e.g. test mocks).
+          // Preserve the legacy behavior of silently falling back to
+          // `undefined` so schema defaults still apply when no body is
+          // provided. Real NextRequest always supports `text()`.
+          try {
+            data = await request.clone().json()
+          } catch {
+            data = undefined
+          }
+        }
       }
     } catch (err) {
+      // unexpected failure reading the body — fall back to undefined so
+      // existing schema-default behavior is preserved instead of crashing.
       data = undefined
     }
   }
@@ -455,16 +490,39 @@ const getResponseFromAction = async <
   input: inferServerActionInput<TAction> | FormData
   overrideInput: any
   requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"]
+  requestErrorMessage?: string
   shapeError?: TShapeError
 }) => {
-  const { request, action, input, overrideInput, requestError, shapeError } =
-    args
+  const {
+    request,
+    action,
+    input,
+    overrideInput,
+    requestError,
+    requestErrorMessage,
+    shapeError,
+  } = args
 
   // handle unsupported content type
   if (requestError === "UNSUPPORTED_CONTENT_TYPE") {
     return new Response(JSON.stringify({ error: "Unsupported Media Type" }), {
       status: 415,
     })
+  }
+
+  // handle malformed body (e.g. invalid JSON) with a 400 instead of passing
+  // `undefined` through to the action and surfacing a misleading schema error.
+  if (requestError === "BODY_PARSE_ERROR") {
+    return new Response(
+      JSON.stringify({
+        error: "Bad Request",
+        message: requestErrorMessage || "Failed to parse request body",
+      }),
+      {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }
+    )
   }
 
   const responseMeta = new ZSAResponseMeta()
@@ -523,8 +581,22 @@ const getResponseFromAction = async <
     if (shapeError) {
       try {
         error = shapeError(error)
-      } catch (error: any) {
+      } catch (shapeErrorThrown: unknown) {
+        // If the user's shapeError callback throws, fall back to the original
+        // error but preserve the shapeError failure as `cause` so the bug in
+        // the callback is still observable rather than silently swallowed.
         error = $error
+        try {
+          if (
+            error &&
+            typeof error === "object" &&
+            (error as { cause?: unknown }).cause === undefined
+          ) {
+            ;(error as { cause?: unknown }).cause = shapeErrorThrown
+          }
+        } catch {
+          // some error objects have non-writable properties — ignore
+        }
       }
     }
 
@@ -576,10 +648,17 @@ export const createRouteHandlers = (
     action: TAnyZodSafeFunctionHandler
     body: Record<string, any> | undefined
     requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"]
+    requestErrorMessage?: string
   }> => {
+    // find the matching action from the router. Path lookups can throw when
+    // `pathToRegexp` encounters a malformed path; treat that as "no match"
+    // rather than letting it propagate, but do NOT silently swallow errors
+    // that occur after we've matched — those may indicate real bugs and
+    // should surface through the normal error pipeline so `shapeError` /
+    // the 500 handler can see them.
+    let foundMatch
     try {
-      // find the matching action from the router
-      const foundMatch = router.$INTERNALS.actions.find((action) => {
+      foundMatch = router.$INTERNALS.actions.find((action) => {
         if (action.method !== request.method) {
           return false
         }
@@ -600,75 +679,75 @@ export const createRouteHandlers = (
 
         return true
       })
-
-      if (!foundMatch) return null
-
-      const { data, searchParamsJson, requestError } = await getDataFromRequest(
-        request,
-        foundMatch.contentTypes
-      )
-
-      const params: Record<string, string> = {}
-
-      // parse the params from the path
-      if (foundMatch.path.includes("{")) {
-        let basePathSplit = (foundMatch.path as string).split("/")
-        let pathSplit = (
-          request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
-        ).split("/")
-
-        if (basePathSplit.length !== pathSplit.length) {
-          return {} as any
-        }
-
-        // copy over the params
-        for (let i = 0; i < basePathSplit.length; i++) {
-          const basePathPart = basePathSplit[i]
-          const pathPart = pathSplit[i]
-
-          if (!basePathPart || !pathPart) {
-            continue
-          }
-
-          if (basePathPart.startsWith("{") && basePathPart.endsWith("}")) {
-            const foundPathPartName = basePathPart.slice(1, -1)
-            params[foundPathPartName] = pathPart
-          }
-        }
-      }
-
-      if (data instanceof FormData) {
-        return {
-          input: data,
-          overrideInput: {
-            ...searchParamsJson,
-            ...params,
-          },
-          params: {},
-          searchParams: {},
-          action: foundMatch.action,
-          body: undefined,
-          requestError: requestError,
-        }
-      }
-
-      // form the final input to be sent to the action
-      const final = {
-        ...searchParamsJson,
-        ...(data || {}),
-        ...params,
-      }
-
-      return {
-        input: final,
-        params,
-        searchParams: searchParamsJson,
-        action: foundMatch.action,
-        body: data,
-        requestError: requestError,
-      }
-    } catch (error: unknown) {
+    } catch {
       return null
+    }
+
+    if (!foundMatch) return null
+
+    const { data, searchParamsJson, requestError, requestErrorMessage } =
+      await getDataFromRequest(request, foundMatch.contentTypes)
+
+    const params: Record<string, string> = {}
+
+    // parse the params from the path
+    if (foundMatch.path.includes("{")) {
+      let basePathSplit = (foundMatch.path as string).split("/")
+      let pathSplit = (
+        request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
+      ).split("/")
+
+      if (basePathSplit.length !== pathSplit.length) {
+        return {} as any
+      }
+
+      // copy over the params
+      for (let i = 0; i < basePathSplit.length; i++) {
+        const basePathPart = basePathSplit[i]
+        const pathPart = pathSplit[i]
+
+        if (!basePathPart || !pathPart) {
+          continue
+        }
+
+        if (basePathPart.startsWith("{") && basePathPart.endsWith("}")) {
+          const foundPathPartName = basePathPart.slice(1, -1)
+          params[foundPathPartName] = pathPart
+        }
+      }
+    }
+
+    if (data instanceof FormData) {
+      return {
+        input: data,
+        overrideInput: {
+          ...searchParamsJson,
+          ...params,
+        },
+        params: {},
+        searchParams: {},
+        action: foundMatch.action,
+        body: undefined,
+        requestError: requestError,
+        requestErrorMessage,
+      }
+    }
+
+    // form the final input to be sent to the action
+    const final = {
+      ...searchParamsJson,
+      ...(data || {}),
+      ...params,
+    }
+
+    return {
+      input: final,
+      params,
+      searchParams: searchParamsJson,
+      action: foundMatch.action,
+      body: data,
+      requestError: requestError,
+      requestErrorMessage,
     }
   }
 
@@ -682,6 +761,7 @@ export const createRouteHandlers = (
       input: parsedData.input,
       overrideInput: parsedData.overrideInput,
       requestError: parsedData.requestError,
+      requestErrorMessage: parsedData.requestErrorMessage,
       shapeError: opts?.shapeError,
     })
   }
@@ -765,15 +845,14 @@ export function createRouteHandlersForAction<
     request: NextRequest,
     args?: { params?: Record<string, string> }
   ) => {
-    const { data, searchParamsJson, requestError } = await getDataFromRequest(
-      request,
-      opts?.contentTypes
-    )
+    const { data, searchParamsJson, requestError, requestErrorMessage } =
+      await getDataFromRequest(request, opts?.contentTypes)
 
     const partial = {
       request,
       action,
       requestError,
+      requestErrorMessage,
       shapeError: opts?.shapeError as any,
       overrideInput: undefined,
     } as const
