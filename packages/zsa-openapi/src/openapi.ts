@@ -433,11 +433,31 @@ const getDataFromRequest = async (
         // if its form data
         data = await request.clone().formData()
       } else if (requestContentType?.startsWith(JSON_CONTENT_TYPE)) {
-        // if its json
-        data = await request.clone().json()
+        // Read the raw text first so an empty body (common for methods
+        // like POST with no payload) is treated as "no input" instead of
+        // being surfaced as a malformed body error.
+        const rawBody = await request.clone().text()
+        if (rawBody.length > 0) {
+          try {
+            data = JSON.parse(rawBody)
+          } catch (parseErr) {
+            return {
+              data: undefined,
+              searchParamsJson,
+              requestError: "INVALID_REQUEST_BODY" as const,
+            }
+          }
+        }
       }
     } catch (err) {
-      data = undefined
+      // e.g. form-data parsing failures. Surface these as a 400 instead of
+      // silently coercing to `undefined` and letting the action receive
+      // empty input.
+      return {
+        data: undefined,
+        searchParamsJson,
+        requestError: "INVALID_REQUEST_BODY" as const,
+      }
     }
   }
 
@@ -464,7 +484,19 @@ const getResponseFromAction = async <
   if (requestError === "UNSUPPORTED_CONTENT_TYPE") {
     return new Response(JSON.stringify({ error: "Unsupported Media Type" }), {
       status: 415,
+      headers: { "content-type": "application/json" },
     })
+  }
+
+  // handle malformed request bodies
+  if (requestError === "INVALID_REQUEST_BODY") {
+    return new Response(
+      JSON.stringify({ error: "Invalid or malformed request body" }),
+      {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }
+    )
   }
 
   const responseMeta = new ZSAResponseMeta()
@@ -523,7 +555,13 @@ const getResponseFromAction = async <
     if (shapeError) {
       try {
         error = shapeError(error)
-      } catch (error: any) {
+      } catch (shapeErrorFailure: any) {
+        // If the user's shapeError fn throws, fall back to the original
+        // error but surface the secondary failure so it isn't silently lost.
+        console.error(
+          "[zsa-openapi] shapeError callback threw; falling back to the original error.",
+          shapeErrorFailure
+        )
         error = $error
       }
     }
@@ -566,17 +604,23 @@ export const createRouteHandlers = (
     shapeError?: TShapeError<any>
   }
 ) => {
+  type TParsedRequest =
+    | {
+        input: Record<string, any> | undefined
+        overrideInput?: Record<string, any> | undefined
+        params: Record<string, string>
+        searchParams: Record<string, string>
+        action: TAnyZodSafeFunctionHandler
+        body: Record<string, any> | undefined
+        requestError: Awaited<
+          ReturnType<typeof getDataFromRequest>
+        >["requestError"]
+      }
+    | { requestError: "INTERNAL_PARSE_ERROR" }
+
   const parseRequest = async (
     request: NextRequest
-  ): Promise<null | {
-    input: Record<string, any> | undefined
-    overrideInput?: Record<string, any> | undefined
-    params: Record<string, string>
-    searchParams: Record<string, string>
-    action: TAnyZodSafeFunctionHandler
-    body: Record<string, any> | undefined
-    requestError: Awaited<ReturnType<typeof getDataFromRequest>>["requestError"]
-  }> => {
+  ): Promise<null | TParsedRequest> => {
     try {
       // find the matching action from the router
       const foundMatch = router.$INTERNALS.actions.find((action) => {
@@ -617,8 +661,13 @@ export const createRouteHandlers = (
           request.nextUrl.pathname.split("?")[0] || "NEVER_MATCH"
         ).split("/")
 
+        // Path segment lengths must match (pathToRegexp should already
+        // guarantee this, but guard against inconsistent matchers). Returning
+        // null here causes the handler to respond with a proper 404 instead
+        // of leaking a malformed object that later crashes when invoked as
+        // an action.
         if (basePathSplit.length !== pathSplit.length) {
-          return {} as any
+          return null
         }
 
         // copy over the params
@@ -668,13 +717,38 @@ export const createRouteHandlers = (
         requestError: requestError,
       }
     } catch (error: unknown) {
-      return null
+      // Unexpected router/parsing failure. Previously this was silently
+      // converted into a 404, which hid real bugs. Log it and return a 500
+      // so callers see the failure and it shows up in server logs.
+      console.error(
+        "[zsa-openapi] Unexpected error while matching the incoming request.",
+        error
+      )
+      return { requestError: "INTERNAL_PARSE_ERROR" as const }
     }
   }
 
   const handler: ApiRouteHandler = async (request: NextRequest) => {
     const parsedData = await parseRequest(request)
     if (!parsedData) return new Response("", { status: 404 })
+
+    if (
+      "requestError" in parsedData &&
+      parsedData.requestError === "INTERNAL_PARSE_ERROR"
+    ) {
+      return new Response(
+        JSON.stringify({ error: "Internal Server Error" }),
+        {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        }
+      )
+    }
+
+    if (!("action" in parsedData)) {
+      // defensive: satisfy type narrowing; should be unreachable
+      return new Response("", { status: 404 })
+    }
 
     return await getResponseFromAction({
       request,
