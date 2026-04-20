@@ -39,6 +39,7 @@ import {
   canDataBeUndefinedForSchema,
   formDataToJson,
   instanceofZodTypeObject,
+  stringifyIfNeeded,
 } from "./utils"
 
 const validateOpts = (opts?: THandlerOpts<any>) => {
@@ -623,9 +624,6 @@ export class ZodSafeFunction<
     if (this.$internals.shapeErrorFns !== undefined) {
       return [null, customError as any]
     }
-
-    const stringifyIfNeeded = (data: any) =>
-      typeof data === "string" ? data : JSON.stringify(data)
 
     // get zod errors
     let formattedErrors

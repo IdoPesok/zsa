@@ -126,6 +126,14 @@ export const addToNullishArray = (
   return temp
 }
 
+/**
+ * If `data` is already a string, return it as-is; otherwise JSON-stringify it.
+ * Used when serializing responses/errors for OpenAPI handlers and the action
+ * error return payload.
+ */
+export const stringifyIfNeeded = (data: any): string =>
+  typeof data === "string" ? data : JSON.stringify(data)
+
 export const mergeArraysAndRemoveDuplicates = <T>(
   array1: Array<T> | undefined,
   array2: Array<T> | undefined
