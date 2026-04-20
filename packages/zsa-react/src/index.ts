@@ -130,13 +130,39 @@ export const useServerAction = <
 
       let data, err
 
-      await serverAction(input, overrideData).then((response) => {
+      try {
+        const response = await serverAction(input, overrideData)
         // during a NEXT_REDIRECT exception, response will not be defined,
         // but technically the request was successful even though it threw an error.
         if (response) {
           ;[data, err] = response
         }
-      })
+      } catch (thrown) {
+        // NEXT_REDIRECT / NEXT_NOT_FOUND carry a `digest` property that Next.js
+        // looks for to trigger navigation. Rethrow them so the framework can
+        // handle them normally.
+        if (
+          thrown &&
+          typeof thrown === "object" &&
+          "digest" in thrown &&
+          typeof (thrown as { digest?: unknown }).digest === "string"
+        ) {
+          throw thrown
+        }
+
+        // Anything else (network failures, RSC transport errors, serialization
+        // errors, etc.) would otherwise become an unhandled rejection and leave
+        // `executeRef.current` unresolved, causing `await execute()` to hang.
+        // Surface it as an `err` so the normal error flow runs.
+        const thrownError = thrown instanceof Error ? thrown : undefined
+        err = {
+          message: thrownError?.message ?? String(thrown),
+          data: thrownError?.message ?? String(thrown),
+          stack: thrownError?.stack ?? "",
+          name: thrownError?.name ?? "Error",
+          code: "ERROR",
+        } as any
+      }
 
       if (err) {
         let retryDelay = getRetryDelay(opts?.retry, retryCount.current, err)
