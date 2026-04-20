@@ -18,6 +18,21 @@ type ServerActionsKeyFactory<TKey extends string[]> = {
   [key: string]: (...args: any[]) => TKey
 }
 
+/**
+ * Convert the `[data, err]` tuple returned by a zsa action into a
+ * react-query-friendly return value: throws on `err` and returns the data
+ * otherwise. Short-circuits to `undefined` when the action returned nothing
+ * (e.g. during a `NEXT_REDIRECT`).
+ */
+const unwrapActionResult = <TResult>(
+  result: TResult | undefined | null
+): TResult extends readonly [infer TData, any] ? TData | undefined : never => {
+  if (!result) return undefined as any
+  const [data, err] = result as unknown as [any, any]
+  if (err) throw err
+  return data
+}
+
 type ServerActionKeys<TFactory extends ServerActionsKeyFactory<string[]>> =
   ReturnType<TFactory[keyof TFactory]>
 
@@ -101,17 +116,7 @@ export const setupServerActionHooks = <
         ...options,
         queryFn: async ({ pageParam }) => {
           const input = options.input({ pageParam: pageParam as TPageParam })
-          const result = await action(input)
-
-          if (!result) return
-
-          const [data, err] = result
-
-          if (err) {
-            throw err
-          }
-
-          return data
+          return unwrapActionResult(await action(input))
         },
       },
       queryClient
@@ -154,17 +159,7 @@ export const setupServerActionHooks = <
       {
         ...options,
         queryFn: async () => {
-          const result = await action(options.input)
-
-          if (!result) return
-
-          const [data, err] = result
-
-          if (err) {
-            throw err
-          }
-
-          return data
+          return unwrapActionResult(await action(options.input))
         },
       },
       queryClient
@@ -201,21 +196,12 @@ export const setupServerActionHooks = <
         ...options,
         mutationFn: async (...args) => {
           const result = await action(...args)
-
           // redirect or not found
           if (!result) return
-
-          const [data, err] = result
-
           if (options?.returnError) {
-            return [data, err]
+            return result
           }
-
-          if (err) {
-            throw err
-          }
-
-          return data
+          return unwrapActionResult(result)
         },
       },
       queryClient

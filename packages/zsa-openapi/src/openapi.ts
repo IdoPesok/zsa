@@ -7,6 +7,7 @@ import {
   ZSAResponseMeta,
   inferServerActionError,
   inferServerActionInput,
+  stringifyIfNeeded,
 } from "zsa"
 import {
   acceptsRequestBody,
@@ -15,6 +16,18 @@ import {
 } from "./utils"
 
 export type OpenApiMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE"
+
+/**
+ * Map the same `handler` to each of the HTTP methods exported by a Next.js
+ * route. Keeps the `{ GET, POST, DELETE, PUT, PATCH }` shape co-located.
+ */
+const createMethodHandlers = (handler: ApiRouteHandler) => ({
+  GET: handler,
+  POST: handler,
+  DELETE: handler,
+  PUT: handler,
+  PATCH: handler,
+})
 
 const FORM_DATA_CONTENT_TYPE = "application/x-www-form-urlencoded"
 const MULTI_PART_CONTENT_TYPE = "multipart/form-data"
@@ -155,6 +168,27 @@ class OpenApiServerActionRouter {
     }
   }
 
+  private register<THandler extends TAnyZodSafeFunctionHandler>(
+    method: OpenApiMethod,
+    path: `/${string}`,
+    action: THandler,
+    args?: TOpenApiSpecs
+  ) {
+    this.$INTERNALS.actions.push({
+      ...(this.$INTERNALS.defaults || {}),
+      ...args,
+      method,
+      path: createPath({
+        path,
+        method,
+        actions: this.$INTERNALS.actions,
+        pathPrefix: this.$INTERNALS.pathPrefix,
+      }),
+      action,
+    })
+    return this
+  }
+
   /**
    * Add a server action to the router as a GET route
    *
@@ -170,19 +204,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "GET",
-      path: createPath({
-        path,
-        method: "GET",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.register("GET", path, action, args)
   }
 
   /**
@@ -200,19 +222,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "POST",
-      path: createPath({
-        path,
-        method: "POST",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.register("POST", path, action, args)
   }
 
   /**
@@ -230,19 +240,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "DELETE",
-      path: createPath({
-        path,
-        method: "DELETE",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.register("DELETE", path, action, args)
   }
 
   /**
@@ -260,19 +258,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "PUT",
-      path: createPath({
-        path,
-        method: "PUT",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.register("PUT", path, action, args)
   }
 
   /**
@@ -290,19 +276,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "PATCH",
-      path: createPath({
-        path,
-        method: "PATCH",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.register("PATCH", path, action, args)
   }
 
   /**
@@ -468,9 +442,6 @@ const getResponseFromAction = async <
   }
 
   const responseMeta = new ZSAResponseMeta()
-
-  const stringifyIfNeeded = (data: any) =>
-    typeof data === "string" ? data : JSON.stringify(data)
 
   try {
     const [data, err] = await action(input, overrideInput, {
@@ -686,13 +657,7 @@ export const createRouteHandlers = (
     })
   }
 
-  return {
-    GET: handler,
-    POST: handler,
-    DELETE: handler,
-    PUT: handler,
-    PATCH: handler,
-  }
+  return createMethodHandlers(handler)
 }
 
 /**
@@ -801,11 +766,5 @@ export function createRouteHandlersForAction<
     })
   }
 
-  return {
-    GET: handler,
-    POST: handler,
-    DELETE: handler,
-    PUT: handler,
-    PATCH: handler,
-  }
+  return createMethodHandlers(handler)
 }

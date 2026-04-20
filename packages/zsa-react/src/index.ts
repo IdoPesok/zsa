@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
+import { mergePossibleObjects, useStateWithRef } from "./utils"
 import {
   TAnyZodSafeFunctionHandler,
   inferServerActionError,
@@ -17,7 +18,6 @@ import {
   getEmptyResult,
 } from "./results"
 import { RetryConfig, getRetryDelay } from "./retries"
-import { mergePossibleObjects } from "./utils"
 
 export const useServerAction = <
   const TServerAction extends TAnyZodSafeFunctionHandler,
@@ -47,17 +47,14 @@ export const useServerAction = <
   const bindArgs = opts?.bind
 
   // store the result in state and a ref
-  const [result, $setResult] = useState<TInnerResult<TServerAction>>(
-    getEmptyResult(initialData)
-  )
-  const resultRef = useRef<TInnerResult<TServerAction>>(
-    getEmptyResult(initialData)
-  )
+  const [result, setResult, resultRef] = useStateWithRef<
+    TInnerResult<TServerAction>
+  >(() => getEmptyResult(initialData))
 
   // store the old result in state and a ref
-  const [oldResult, $setOldResult] =
-    useState<TOldResult<TServerAction>>(getEmptyOldResult())
-  const oldResultRef = useRef<TOldResult<TServerAction>>(getEmptyOldResult())
+  const [oldResult, setOldResult, oldResultRef] = useStateWithRef<
+    TOldResult<TServerAction>
+  >(getEmptyOldResult())
 
   // store retry data
   const lastRetryId = useRef(0)
@@ -71,24 +68,6 @@ export const useServerAction = <
   const [isExecuting, setExecuting] = useState(false)
 
   const status = useRef<TServerActionResult<TServerAction>["status"]>("idle")
-
-  // set the result state and ref
-  const setResult = useCallback(
-    (result: TInnerResult<TServerAction>) => {
-      $setResult(result)
-      resultRef.current = result
-    },
-    [$setResult]
-  )
-
-  // set the old result state and ref
-  const setOldResult = useCallback(
-    (oldResult: TOldResult<TServerAction>) => {
-      $setOldResult(oldResult)
-      oldResultRef.current = oldResult
-    },
-    [$setOldResult]
-  )
 
   const internalExecute = useCallback(
     async (
