@@ -18,6 +18,23 @@ type ServerActionsKeyFactory<TKey extends string[]> = {
   [key: string]: (...args: any[]) => TKey
 }
 
+/**
+ * Unwrap the `[data, err]` tuple returned by a zsa action so that react-query
+ * sees a plain "return data / throw err" function.
+ *
+ * When the action short-circuits (e.g. a `redirect()` in the server function)
+ * the result is `undefined`; propagate that as `undefined` so react-query
+ * doesn't treat it as an error.
+ */
+const unwrapActionResult = <TData>(
+  result: readonly [TData, null] | readonly [null, unknown] | undefined
+): TData | undefined => {
+  if (!result) return undefined
+  const [data, err] = result
+  if (err) throw err
+  return data as TData
+}
+
 type ServerActionKeys<TFactory extends ServerActionsKeyFactory<string[]>> =
   ReturnType<TFactory[keyof TFactory]>
 
@@ -101,17 +118,7 @@ export const setupServerActionHooks = <
         ...options,
         queryFn: async ({ pageParam }) => {
           const input = options.input({ pageParam: pageParam as TPageParam })
-          const result = await action(input)
-
-          if (!result) return
-
-          const [data, err] = result
-
-          if (err) {
-            throw err
-          }
-
-          return data
+          return unwrapActionResult(await action(input))
         },
       },
       queryClient
@@ -153,19 +160,7 @@ export const setupServerActionHooks = <
     return useQuery(
       {
         ...options,
-        queryFn: async () => {
-          const result = await action(options.input)
-
-          if (!result) return
-
-          const [data, err] = result
-
-          if (err) {
-            throw err
-          }
-
-          return data
-        },
+        queryFn: async () => unwrapActionResult(await action(options.input)),
       },
       queryClient
     ) as any
@@ -202,20 +197,10 @@ export const setupServerActionHooks = <
         mutationFn: async (...args) => {
           const result = await action(...args)
 
-          // redirect or not found
-          if (!result) return
+          // `returnError: true` forwards the raw `[data, err]` tuple
+          if (options?.returnError) return result
 
-          const [data, err] = result
-
-          if (options?.returnError) {
-            return [data, err]
-          }
-
-          if (err) {
-            throw err
-          }
-
-          return data
+          return unwrapActionResult(result)
         },
       },
       queryClient

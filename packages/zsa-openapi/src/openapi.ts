@@ -3,16 +3,31 @@ import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
 import {
   TAnyZodSafeFunctionHandler,
-  TOptsSource,
   ZSAResponseMeta,
+  createOptsSource,
   inferServerActionError,
   inferServerActionInput,
+  stringifyIfNeeded,
 } from "zsa"
 import {
   acceptsRequestBody,
   getErrorStatusFromZSAError,
   preparePathForMatching,
 } from "./utils"
+
+/**
+ *  Return an object keyed by every HTTP method that maps to the same
+ *  route handler. Used so `createRouteHandlers` and
+ *  `createRouteHandlersForAction` export the same `{ GET, POST, ... }`
+ *  shape without duplicating the literal.
+ */
+const asMethodHandlers = (handler: ApiRouteHandler) => ({
+  GET: handler,
+  POST: handler,
+  DELETE: handler,
+  PUT: handler,
+  PATCH: handler,
+})
 
 export type OpenApiMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE"
 
@@ -155,6 +170,28 @@ class OpenApiServerActionRouter {
     }
   }
 
+  /** shared logic for `get`/`post`/`delete`/`put`/`patch` */
+  private addAction<THandler extends TAnyZodSafeFunctionHandler>(
+    method: OpenApiMethod,
+    path: `/${string}`,
+    action: THandler,
+    args?: TOpenApiSpecs
+  ) {
+    this.$INTERNALS.actions.push({
+      ...(this.$INTERNALS.defaults || {}),
+      ...args,
+      method,
+      path: createPath({
+        path,
+        method,
+        actions: this.$INTERNALS.actions,
+        pathPrefix: this.$INTERNALS.pathPrefix,
+      }),
+      action,
+    })
+    return this
+  }
+
   /**
    * Add a server action to the router as a GET route
    *
@@ -170,19 +207,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "GET",
-      path: createPath({
-        path,
-        method: "GET",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.addAction("GET", path, action, args)
   }
 
   /**
@@ -200,19 +225,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "POST",
-      path: createPath({
-        path,
-        method: "POST",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.addAction("POST", path, action, args)
   }
 
   /**
@@ -230,19 +243,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "DELETE",
-      path: createPath({
-        path,
-        method: "DELETE",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.addAction("DELETE", path, action, args)
   }
 
   /**
@@ -260,19 +261,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "PUT",
-      path: createPath({
-        path,
-        method: "PUT",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.addAction("PUT", path, action, args)
   }
 
   /**
@@ -290,19 +279,7 @@ class OpenApiServerActionRouter {
     action: THandler,
     args?: TOpenApiSpecs
   ) {
-    this.$INTERNALS.actions.push({
-      ...(this.$INTERNALS.defaults || {}),
-      ...args,
-      method: "PATCH",
-      path: createPath({
-        path,
-        method: "PATCH",
-        actions: this.$INTERNALS.actions,
-        pathPrefix: this.$INTERNALS.pathPrefix,
-      }),
-      action,
-    })
-    return this
+    return this.addAction("PATCH", path, action, args)
   }
 
   /**
@@ -469,14 +446,11 @@ const getResponseFromAction = async <
 
   const responseMeta = new ZSAResponseMeta()
 
-  const stringifyIfNeeded = (data: any) =>
-    typeof data === "string" ? data : JSON.stringify(data)
-
   try {
     const [data, err] = await action(input, overrideInput, {
       request: request,
       responseMeta,
-      source: new TOptsSource(() => true),
+      source: createOptsSource(),
       isFromOpenApiHandler: true,
     })
 
@@ -686,13 +660,7 @@ export const createRouteHandlers = (
     })
   }
 
-  return {
-    GET: handler,
-    POST: handler,
-    DELETE: handler,
-    PUT: handler,
-    PATCH: handler,
-  }
+  return asMethodHandlers(handler)
 }
 
 /**
@@ -801,11 +769,5 @@ export function createRouteHandlersForAction<
     })
   }
 
-  return {
-    GET: handler,
-    POST: handler,
-    DELETE: handler,
-    PUT: handler,
-    PATCH: handler,
-  }
+  return asMethodHandlers(handler)
 }
