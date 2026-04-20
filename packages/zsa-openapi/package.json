@@ -41,10 +41,10 @@
     "zod": "^3.23.5"
   },
   "devDependencies": {
-    "next": "^14.2.3",
+    "next": "^14.2.34",
     "openapi-schema-validator": "^12.1.3",
     "openapi-types": "^12.1.3",
-    "path-to-regexp": "^6.2.2",
+    "path-to-regexp": "^6.3.0",
     "react": "^18.3.1",
     "tsup": "^8.0.2",
     "typescript": "latest",
