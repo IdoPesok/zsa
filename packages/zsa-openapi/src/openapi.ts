@@ -2,8 +2,10 @@ import { type NextRequest } from "next/server"
 import { OpenAPIV3 } from "openapi-types"
 import { pathToRegexp } from "path-to-regexp"
 import {
+  INTERNAL_SERVER_ERROR_MESSAGE,
   TAnyZodSafeFunctionHandler,
   TOptsSource,
+  ZSAError,
   ZSAResponseMeta,
   inferServerActionError,
   inferServerActionInput,
@@ -530,6 +532,15 @@ const getResponseFromAction = async <
 
     if (error instanceof Response) {
       return error
+    }
+
+    // never serialize unexpected thrown errors, they may contain internal details
+    if (error instanceof Error && !(error instanceof ZSAError)) {
+      error = {
+        name: "Error",
+        message: INTERNAL_SERVER_ERROR_MESSAGE,
+        code: "ERROR",
+      }
     }
 
     let status = getErrorStatusFromZSAError(error)

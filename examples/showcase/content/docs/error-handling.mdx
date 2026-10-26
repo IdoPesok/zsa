@@ -45,6 +45,22 @@ If the error data is an instance of the built-in `Error` class, the `ZSAError` i
 
 If the error data is a string and the `message` property is not set, the `message` property will be set to the error data.
 
+### Unexpected errors
+
+Any other thrown value (for example `throw new Error("...")` or an error thrown by a database driver) is treated as an unexpected error. Its message and data are **not** sent to the client, since they may contain internal details. The client receives a generic error instead:
+
+```ts
+const [data, error] = await myAction()
+
+if (error) {
+  console.log(error.message) // "Internal Server Error"
+  console.log(error.code) // "ERROR"
+  console.log(error.data) // undefined
+}
+```
+
+The original error is still passed to `onError` and `onComplete` callbacks and to `experimental_shapeError`, so you can log it on the server. To return a message to the client, throw a `ZSAError` or a string.
+
 ## Error Codes
 
 ZSA defines a set of error codes that can be used to identify the type of error that occurred. These error codes are defined in the `ERROR_CODES` enum:

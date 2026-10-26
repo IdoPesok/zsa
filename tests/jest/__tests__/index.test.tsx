@@ -27,6 +27,7 @@ import {
   inputLargeNumberAction,
   inputNumberAction,
   intersectedInputAction,
+  leakyErrorAction,
   multiEntryFormDataAction,
   multiplyAction,
   nextNotFoundAction,
@@ -47,6 +48,9 @@ import {
 import { RetryState, TEST_DATA } from "server/data"
 import { z } from "zod"
 import {
+  INTERNAL_SERVER_ERROR_MESSAGE,
+  ZSAError,
+  createServerAction,
   createServerActionProcedure,
   inferServerActionError,
   inferServerActionInput,
@@ -257,8 +261,46 @@ describe("actions", () => {
         errorType: "class",
       })
       expect(data).toBeNull()
-      expect(err?.code).not.toEqual(TEST_DATA.errors.notAuthorized)
-      expect(err?.message).toEqual(TEST_DATA.errors.string)
+      expect(err?.code).toEqual("ERROR")
+      expect(err?.message).toEqual(INTERNAL_SERVER_ERROR_MESSAGE)
+      expect(JSON.stringify(err)).not.toContain(TEST_DATA.errors.string)
+    })
+  })
+
+  describe("unexpected errors", () => {
+    it("does not leak the message or data of a non ZSAError", async () => {
+      const [data, err] = await leakyErrorAction()
+      expect(data).toBeNull()
+      expect(err?.code).toEqual("ERROR")
+      expect(err?.message).toEqual(INTERNAL_SERVER_ERROR_MESSAGE)
+      expect(err?.data).toBeUndefined()
+      expect(JSON.stringify(err)).not.toContain(TEST_DATA.errors.secretDetail)
+    })
+
+    it("still passes the original error to onError callbacks", async () => {
+      const onError = jest.fn()
+      const action = createServerAction()
+        .onError(onError)
+        .handler(async () => {
+          throw new Error(TEST_DATA.errors.secretDetail)
+        })
+
+      const [, err] = await action()
+      expect(err?.message).toEqual(INTERNAL_SERVER_ERROR_MESSAGE)
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError.mock.calls[0][0].message).toEqual(
+        TEST_DATA.errors.secretDetail
+      )
+    })
+
+    it("keeps the message of a ZSAError", async () => {
+      const action = createServerAction().handler(async () => {
+        throw new ZSAError("CONFLICT", "Post already exists")
+      })
+
+      const [, err] = await action()
+      expect(err?.code).toEqual("CONFLICT")
+      expect(err?.message).toEqual("Post already exists")
     })
   })
 

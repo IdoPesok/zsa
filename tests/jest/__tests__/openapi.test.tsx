@@ -2,6 +2,7 @@ import { mockNextRequest } from "lib/utils"
 import {
   divideAction,
   dynamicSchemasAction,
+  leakyErrorAction,
   multiplyAction,
   nextNotFoundAction,
   nextRedirectAction,
@@ -474,6 +475,28 @@ describe("openapi", () => {
       const json = await response.json()
       expect(json.code).toBe("INPUT_PARSE_ERROR")
       expect(json.message).toBeDefined()
+    })
+  })
+
+  describe("unexpected errors", () => {
+    it("does not leak the message of a non ZSAError in the response body", async () => {
+      const { POST } = createRouteHandlersForAction(leakyErrorAction)
+
+      const request = mockNextRequest({
+        method: "POST",
+        pathname: "/api/leaky",
+        body: {},
+      })
+
+      const response = await POST(request, { params: {} })
+      expect(response.status).toBe(500)
+
+      const body = await response.text()
+      expect(body).not.toContain(TEST_DATA.errors.secretDetail)
+
+      const json = JSON.parse(body)
+      expect(json.code).toBe("ERROR")
+      expect(json.message).toBe("Internal Server Error")
     })
   })
 
