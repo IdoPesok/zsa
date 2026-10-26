@@ -37,6 +37,7 @@ export const TEST_DATA = {
     inputParse: "INPUT_PARSE_ERROR",
     timeout: "TIMEOUT",
     string: "STRING_ERROR",
+    secretDetail: "secret detail",
     doesNotOwnPost: "DOES_NOT_OWN_POST",
   },
   timeout: 2000,

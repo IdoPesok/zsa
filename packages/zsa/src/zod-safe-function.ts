@@ -6,7 +6,7 @@ import {
   TOnStartFn,
   TOnSuccessFn,
 } from "./callbacks"
-import { TZSAError, ZSAError } from "./errors"
+import { INTERNAL_SERVER_ERROR_MESSAGE, TZSAError, ZSAError } from "./errors"
 import { CompleteProcedure, TAnyCompleteProcedure } from "./procedure"
 import {
   InputTypeOptions,
@@ -637,6 +637,20 @@ export class ZodSafeFunction<
     ) {
       formattedErrors = data.format()
       flattenedErrors = data.flatten()
+    }
+
+    // only errors raised on purpose (ZSAError or a thrown string) are exposed
+    // to the caller, anything else may contain internal details
+    if (!(err instanceof ZSAError) && typeof err !== "string") {
+      return [
+        null,
+        {
+          data: undefined,
+          name: "Error",
+          message: INTERNAL_SERVER_ERROR_MESSAGE,
+          code: "ERROR",
+        } as any,
+      ]
     }
 
     return [

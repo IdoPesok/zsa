@@ -164,6 +164,10 @@ export const errorActionWithPause = publicAction
     throw new Error(TEST_DATA.errors.string)
   })
 
+export const leakyErrorAction = publicAction.handler(async () => {
+  throw new Error(TEST_DATA.errors.secretDetail)
+})
+
 export const callbacksAction = publicAction
   .input(z.object({ shouldError: z.boolean() }))
   .handler(async ({ input: { shouldError } }) => {

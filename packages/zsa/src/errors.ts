@@ -77,6 +77,9 @@ export type TReplaceErrorPlaceholders<
 /**
  *  A ZSAError is an error that can be thrown by a server action.
  */
+/** the message returned to the caller for unexpected (non ZSAError) errors */
+export const INTERNAL_SERVER_ERROR_MESSAGE = "Internal Server Error"
+
 export class ZSAError<
   TInputSchema extends z.ZodType | undefined = any,
   TOutputSchema extends z.ZodType | undefined = any,
